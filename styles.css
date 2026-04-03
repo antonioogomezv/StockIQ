@@ -1607,12 +1607,91 @@ footer {
   position: fixed;
   top: 0; left: 0;
   width: 100vw; height: 100vh;
-  background: rgba(244,246,249,0.98);
+  background: var(--bg);
   z-index: 1100;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 24px;
+  overflow-y: auto;
+}
+
+#auth-wrapper {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  width: 100%;
+  max-width: 900px;
+  align-items: center;
+}
+
+/* Left pitch panel */
+#auth-pitch {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+#auth-pitch-logo {
+  font-family: var(--display);
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -1.5px;
+}
+#auth-pitch-logo span { color: var(--accent-green); }
+
+#auth-pitch-headline {
+  font-family: var(--display);
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.25;
+  letter-spacing: -0.5px;
+}
+
+#auth-pitch-sub {
+  font-size: 15px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+#auth-pitch-features {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.auth-feature {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.auth-feature-icon {
+  font-size: 22px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.auth-feature-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.auth-feature-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+#auth-pitch-disclaimer {
+  font-size: 11px;
+  color: var(--text-muted);
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
 }
 
 #auth-modal {
@@ -1621,11 +1700,26 @@ footer {
   border-radius: 24px;
   padding: 40px 36px;
   width: 100%;
-  max-width: 400px;
   box-shadow: 0 8px 40px rgba(0,0,0,0.1);
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+/* Hide logo/tagline inside form on desktop since pitch panel shows it */
+@media (min-width: 700px) {
+  #auth-logo, #auth-tagline { display: none; }
+}
+
+/* Mobile: stack vertically */
+@media (max-width: 700px) {
+  #auth-wrapper {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    max-width: 420px;
+  }
+  #auth-pitch-headline { font-size: 20px; }
+  #auth-pitch-features { display: none; }
 }
 
 #auth-logo {
