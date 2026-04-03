@@ -2386,6 +2386,25 @@ footer {
   #profile-card { flex-direction: column; text-align: center; }
 }
 
+#logout-btn {
+  background: none;
+  border: 1px solid rgba(220,38,38,0.3);
+  color: var(--loss);
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 12px 24px;
+  cursor: pointer;
+  box-shadow: none;
+  width: 100%;
+  transition: all 0.15s;
+}
+#logout-btn:hover {
+  background: rgba(220,38,38,0.06);
+  border-color: var(--loss);
+  transform: none;
+}
+
 #tab-watchlist main {
   padding: 32px 24px;
 }

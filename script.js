@@ -434,7 +434,9 @@ function displayData(data) {
 
   saveScoreHistory(ticker, totalScore);
   let analyzed = parseInt(localStorage.getItem('total-analyzed') || '0');
-  localStorage.setItem('total-analyzed', analyzed + 1);
+  analyzed += 1;
+  localStorage.setItem('total-analyzed', analyzed);
+  saveToFirestore({ stats: { analyzed: analyzed } });
 
   currentTicker = ticker;
   currentScore = totalScore;
@@ -1100,6 +1102,7 @@ function showQuizResult() {
 
 function finishQuiz() {
   localStorage.setItem("userProfile", JSON.stringify(userProfile));
+  saveToFirestore({ userProfile: userProfile });
   document.getElementById("quiz-overlay").style.display = "none";
   updateRiskBadge();
   let nameEl = document.getElementById("onboarding-profile-name");
@@ -1137,6 +1140,7 @@ function addToWatchlist() {
   }
   watchlist.push({ ticker: currentTicker, name: currentName, score: currentScore });
   localStorage.setItem("watchlist", JSON.stringify(watchlist));
+  saveToFirestore({ watchlist: watchlist });
   let btn = document.getElementById("watchlist-btn");
   btn.textContent = "✓ Added";
   btn.classList.add("added");
@@ -1146,6 +1150,7 @@ function addToWatchlist() {
 function removeFromWatchlist(ticker) {
   let watchlist = JSON.parse(localStorage.getItem("watchlist") || "[]").filter(function(i) { return i.ticker !== ticker; });
   localStorage.setItem("watchlist", JSON.stringify(watchlist));
+  saveToFirestore({ watchlist: watchlist });
   renderWatchlist();
 }
 
@@ -1436,6 +1441,7 @@ function addToPortfolio() {
   if (portfolio.find(function(i) { return i.ticker === ticker; })) { showToast(ticker + ' is already in your portfolio!'); return; }
   portfolio.push({ ticker, shares, buyPrice, buyDate });
   localStorage.setItem('portfolio', JSON.stringify(portfolio));
+  saveToFirestore({ portfolio: portfolio });
   document.getElementById('port-ticker').value = '';
   document.getElementById('port-shares').value = '';
   document.getElementById('port-price').value = '';
@@ -1446,6 +1452,7 @@ function addToPortfolio() {
 function removeFromPortfolio(ticker) {
   let portfolio = JSON.parse(localStorage.getItem('portfolio') || '[]').filter(function(i) { return i.ticker !== ticker; });
   localStorage.setItem('portfolio', JSON.stringify(portfolio));
+  saveToFirestore({ portfolio: portfolio });
   renderPortfolio();
 }
 
@@ -1580,6 +1587,7 @@ function savePortfolioValueHistory(value) {
   }
   if (history.length > 60) history = history.slice(-60);
   localStorage.setItem('portfolio-value-history', JSON.stringify(history));
+  saveToFirestore({ portfolioValueHistory: history });
 }
 
 function switchPortfolioChart(view) {
@@ -1854,6 +1862,7 @@ function updateStreak() {
   }
   streakData.lastDate = today;
   localStorage.setItem('streak', JSON.stringify(streakData));
+  saveToFirestore({ stats: { streak: streakData } });
   return streakData.count;
 }
 
@@ -1931,6 +1940,7 @@ function saveUserInfo() {
   let username = document.getElementById('input-username').value.trim().replace(/^@/, '');
   let email    = document.getElementById('input-email').value.trim();
   localStorage.setItem('user-info', JSON.stringify({ name, username, email }));
+  saveToFirestore({ name, username, email });
   loadUserInfo();
   toggleEditProfile();
   showToast('Profile saved');
@@ -2062,6 +2072,11 @@ function showSignUp() {
   document.getElementById('auth-signup').style.display = 'flex';
 }
 
+function showLogin() {
+  document.getElementById('auth-signup').style.display = 'none';
+  document.getElementById('auth-login').style.display = 'flex';
+}
+
 function submitSignUp() {
   let name     = document.getElementById('auth-name').value.trim();
   let email    = document.getElementById('auth-email').value.trim();
@@ -2070,25 +2085,32 @@ function submitSignUp() {
   if (!email || !email.includes('@')) { showToast('Please enter a valid email.'); return; }
   if (password.length < 6) { showToast('Password must be at least 6 characters.'); return; }
 
-  // Check if email already registered
-  let users = JSON.parse(localStorage.getItem('siq-users') || '[]');
-  if (users.find(function(u) { return u.email === email; })) {
-    showToast('An account with this email already exists. Log in instead.');
-    showLogin();
-    return;
-  }
+  let btn = document.querySelector('#auth-signup button');
+  if (btn) btn.textContent = 'Creating account…';
 
-  // Save user (plain password — temporary until Firebase)
-  users.push({ name, email, password });
-  localStorage.setItem('siq-users', JSON.stringify(users));
-  localStorage.setItem('siq-session', JSON.stringify({ name, email }));
-  localStorage.setItem('user-info', JSON.stringify({ name, username: name.split(' ')[0].toLowerCase(), email }));
-
-  document.getElementById('auth-overlay').style.display = 'none';
-  // New user — show quiz
-  if (!userProfile) {
-    document.getElementById('quiz-overlay').style.display = 'flex';
-  }
+  auth.createUserWithEmailAndPassword(email, password)
+    .then(function() {
+      let username = name.split(' ')[0].toLowerCase();
+      return saveToFirestore({
+        name: name,
+        username: username,
+        email: email,
+        createdAt: Date.now()
+      });
+    })
+    .then(function() {
+      document.getElementById('auth-overlay').style.display = 'none';
+      if (!userProfile) {
+        document.getElementById('quiz-overlay').style.display = 'flex';
+      }
+    })
+    .catch(function(err) {
+      if (btn) btn.textContent = 'Create Account';
+      let msg = err.code === 'auth/email-already-in-use'
+        ? 'An account with this email already exists. Log in instead.'
+        : err.message;
+      showToast(msg);
+    });
 }
 
 function submitLogin() {
@@ -2096,42 +2118,107 @@ function submitLogin() {
   let password = document.getElementById('login-password').value;
   if (!email || !password) { showToast('Please fill in all fields.'); return; }
 
-  let users = JSON.parse(localStorage.getItem('siq-users') || '[]');
-  let user = users.find(function(u) { return u.email === email && u.password === password; });
-  if (!user) { showToast('Email or password incorrect.'); return; }
+  let btn = document.querySelector('#auth-login button');
+  if (btn) btn.textContent = 'Logging in…';
 
-  localStorage.setItem('siq-session', JSON.stringify({ name: user.name, email: user.email }));
-  localStorage.setItem('user-info', JSON.stringify({ name: user.name, username: user.name.split(' ')[0].toLowerCase(), email: user.email }));
-
-  document.getElementById('auth-overlay').style.display = 'none';
-  updateRiskBadge();
+  auth.signInWithEmailAndPassword(email, password)
+    .then(function() {
+      document.getElementById('auth-overlay').style.display = 'none';
+    })
+    .catch(function() {
+      if (btn) btn.textContent = 'Log In';
+      showToast('Email or password incorrect.');
+    });
 }
 
-// ── INIT ──
-userProfile = JSON.parse(localStorage.getItem("userProfile") || "null");
-let siqSession = JSON.parse(localStorage.getItem('siq-session') || 'null');
-
-if (!siqSession) {
-  // Not logged in — show auth screen
-  document.getElementById('auth-overlay').style.display = 'flex';
-  document.getElementById('quiz-overlay').style.display = 'none';
-} else if (!userProfile) {
-  // Logged in but no quiz yet
-  document.getElementById('auth-overlay').style.display = 'none';
-  document.getElementById('quiz-overlay').style.display = 'flex';
-} else {
-  // Fully set up
-  document.getElementById('auth-overlay').style.display = 'none';
-  document.getElementById('quiz-overlay').style.display = 'none';
-  updateRiskBadge();
+function logout() {
+  auth.signOut().then(function() {
+    userProfile = null;
+    location.reload();
+  });
 }
 
-updateStreak();
-loadMarketOverview();
-loadTrendingTickers();
-loadSectors();
-setInterval(function() { loadTrendingTickers(true); }, 60000);
-setInterval(function() { loadSectors(); }, 300000);
-renderWatchlist();
-renderSearchHistory();
-showTab('analyze');
+function resetPassword() {
+  let email = document.getElementById('login-email').value.trim();
+  if (!email) { showToast('Enter your email address first.'); return; }
+  auth.sendPasswordResetEmail(email).then(function() {
+    showToast('Password reset email sent!');
+  }).catch(function() {
+    showToast('Could not send reset email. Check the address.');
+  });
+}
+
+// ── INIT — Firebase auth state drives everything ──
+auth.onAuthStateChanged(function(user) {
+  if (!user) {
+    // Not logged in
+    document.getElementById('auth-overlay').style.display = 'flex';
+    document.getElementById('quiz-overlay').style.display = 'none';
+    return;
+  }
+
+  // Logged in — load user data from Firestore
+  loadFirestoreUserData(function(data) {
+    // Restore profile info
+    if (data.name) {
+      localStorage.setItem('user-info', JSON.stringify({
+        name: data.name,
+        username: data.username || data.name.split(' ')[0].toLowerCase(),
+        email: data.email || user.email
+      }));
+    } else {
+      // First time — set basics from auth
+      let name = user.displayName || user.email.split('@')[0];
+      localStorage.setItem('user-info', JSON.stringify({ name: name, username: name, email: user.email }));
+      saveToFirestore({ name: name, username: name, email: user.email, createdAt: Date.now() });
+    }
+
+    // Restore risk profile
+    if (data.userProfile) {
+      userProfile = data.userProfile;
+      localStorage.setItem('userProfile', JSON.stringify(userProfile));
+    } else {
+      userProfile = JSON.parse(localStorage.getItem('userProfile') || 'null');
+    }
+
+    // Restore portfolio
+    if (data.portfolio) {
+      localStorage.setItem('portfolio', JSON.stringify(data.portfolio));
+    }
+
+    // Restore watchlist
+    if (data.watchlist) {
+      localStorage.setItem('watchlist', JSON.stringify(data.watchlist));
+    }
+
+    // Restore stats
+    if (data.stats) {
+      if (data.stats.analyzed) localStorage.setItem('total-analyzed', data.stats.analyzed);
+      if (data.stats.streak) localStorage.setItem('streak', JSON.stringify(data.stats.streak));
+    }
+
+    // Restore portfolio value history
+    if (data.portfolioValueHistory) {
+      localStorage.setItem('portfolio-value-history', JSON.stringify(data.portfolioValueHistory));
+    }
+
+    document.getElementById('auth-overlay').style.display = 'none';
+
+    if (!userProfile) {
+      document.getElementById('quiz-overlay').style.display = 'flex';
+    } else {
+      document.getElementById('quiz-overlay').style.display = 'none';
+      updateRiskBadge();
+    }
+
+    updateStreak();
+    loadMarketOverview();
+    loadTrendingTickers();
+    loadSectors();
+    setInterval(function() { loadTrendingTickers(true); }, 60000);
+    setInterval(function() { loadSectors(); }, 300000);
+    renderWatchlist();
+    renderSearchHistory();
+    showTab('analyze');
+  });
+});
