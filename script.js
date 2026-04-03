@@ -349,6 +349,51 @@ function calculateScore(changePct, week52High, price, pe, metrics, qualScore, rs
   };
 }
 
+function buildScoreExplainer(_bd, pe, margin, growth, beta, rsi, _ma50) {
+  let lines = [];
+
+  // Profit margin
+  if (margin > 20) lines.push({ icon: "↑", color: "#16a34a", text: "Strong profit margins (" + margin.toFixed(1) + "%) — keeps more of every dollar earned" });
+  else if (margin > 5) lines.push({ icon: "→", color: "#d97706", text: "Moderate profit margins (" + margin.toFixed(1) + "%) — decent but room to improve" });
+  else if (margin < 0) lines.push({ icon: "↓", color: "#dc2626", text: "Negative profit margins (" + margin.toFixed(1) + "%) — currently losing money" });
+  else lines.push({ icon: "→", color: "#d97706", text: "Thin profit margins (" + margin.toFixed(1) + "%) — not much profit per dollar of sales" });
+
+  // Revenue growth
+  if (growth > 15) lines.push({ icon: "↑", color: "#16a34a", text: "Strong revenue growth (+" + growth.toFixed(1) + "% YoY) — business is expanding fast" });
+  else if (growth > 0) lines.push({ icon: "→", color: "#d97706", text: "Moderate revenue growth (+" + growth.toFixed(1) + "% YoY) — steady but not explosive" });
+  else lines.push({ icon: "↓", color: "#dc2626", text: "Revenue shrinking (" + growth.toFixed(1) + "% YoY) — sales are declining" });
+
+  // P/E ratio
+  if (pe > 0 && pe < 15) lines.push({ icon: "↑", color: "#16a34a", text: "Low P/E ratio (" + pe.toFixed(1) + ") — may be undervalued relative to earnings" });
+  else if (pe > 0 && pe < 30) lines.push({ icon: "→", color: "#d97706", text: "Average P/E ratio (" + pe.toFixed(1) + ") — fairly priced for current earnings" });
+  else if (pe > 30) lines.push({ icon: "↓", color: "#dc2626", text: "High P/E ratio (" + pe.toFixed(1) + ") — priced for high future growth, adds risk" });
+  else if (pe < 0) lines.push({ icon: "↓", color: "#dc2626", text: "Negative P/E — company is currently unprofitable" });
+
+  // RSI
+  if (rsi !== null) {
+    if (rsi < 30) lines.push({ icon: "↑", color: "#16a34a", text: "RSI " + rsi + " — oversold, possible rebound ahead" });
+    else if (rsi > 70) lines.push({ icon: "↓", color: "#dc2626", text: "RSI " + rsi + " — overbought, may pull back soon" });
+    else lines.push({ icon: "→", color: "#64748b", text: "RSI " + rsi + " — neutral momentum, no extreme signals" });
+  }
+
+  // Beta (risk)
+  if (beta < 1) lines.push({ icon: "↑", color: "#16a34a", text: "Low beta (" + beta.toFixed(2) + ") — less volatile than the market" });
+  else if (beta < 1.5) lines.push({ icon: "→", color: "#d97706", text: "Beta " + beta.toFixed(2) + " — moves similarly to the overall market" });
+  else lines.push({ icon: "↓", color: "#dc2626", text: "High beta (" + beta.toFixed(2) + ") — more volatile than the market, bigger swings" });
+
+  let rows = lines.map(function(l) {
+    return "<div class='score-explainer-row'>" +
+      "<span class='score-explainer-icon' style='color:" + l.color + ";'>" + l.icon + "</span>" +
+      "<span class='score-explainer-text'>" + l.text + "</span>" +
+    "</div>";
+  }).join("");
+
+  return "<div class='score-explainer' id='score-explainer'>" +
+    "<button class='score-explainer-toggle' onclick=\"var e=document.getElementById('score-explainer-body');var b=this;e.style.display=e.style.display==='none'?'block':'none';b.textContent=e.style.display==='none'?'What\\'s driving this score? ▾':'Hide ▴';\">What's driving this score? ▾</button>" +
+    "<div id='score-explainer-body' style='display:none;'>" + rows + "</div>" +
+  "</div>";
+}
+
 function saveScoreHistory(ticker, score) {
   let key = "history_score_" + ticker;
   let history = JSON.parse(localStorage.getItem(key) || "[]");
@@ -477,7 +522,8 @@ function displayData(data) {
       "<div class='score-badge-num' style='color:" + scoreColor + ";'>" + totalScore + "</div>" +
       "<div class='score-badge-label'>/ 100</div>" +
       "<div class='score-badge-tag' style='color:" + scoreColor + ";'>" + scoreLabel + "</div>" +
-    "</div>";
+    "</div>" +
+    buildScoreExplainer(breakdown, pe, margin, growth, beta, rsi, ma50);
 
   let signalEl = document.getElementById("signal");
   if (totalScore >= 65) {
