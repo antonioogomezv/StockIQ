@@ -843,17 +843,41 @@ button:active { transform: translateY(0); }
 #watchlist-empty { display: none; }
 
 .watchlist-item {
+  display: block;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.watchlist-item:last-child { border-bottom: none; }
+
+.wl-main-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 16px 0;
-  border-bottom: 1px solid var(--border);
-  transition: all 0.15s;
+  transition: opacity 0.15s;
 }
+.wl-main-row:hover { opacity: 0.85; }
 
-.watchlist-item:last-child { border-bottom: none; }
-.watchlist-item:hover { opacity: 0.85; }
+.wl-hist-toggle {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s;
+  box-shadow: none;
+}
+.wl-hist-toggle:hover { color: var(--text); border-color: var(--text-muted); transform: none; }
+
+.wl-history-drawer {
+  margin-top: 8px;
+  padding: 0 0 4px 0;
+}
 
 .watchlist-ticker {
   font-family: var(--display);
@@ -1124,6 +1148,42 @@ button:active { transform: translateY(0); }
   margin-top: 8px;
 }
 #company-about h2 { margin-bottom: 12px; }
+
+/* ── Sector comparison collapsible ── */
+.sector-details {
+  margin-top: 16px;
+}
+.sector-summary {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.4px;
+  cursor: pointer;
+  list-style: none;
+  padding: 6px 0;
+  user-select: none;
+}
+.sector-summary::-webkit-details-marker { display: none; }
+.sector-summary:hover { color: var(--text); }
+details[open] .sector-summary { color: var(--text); }
+.sector-rows {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sector-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.sector-label { color: var(--text-muted); min-width: 110px; }
+.sector-val { font-family: var(--mono); font-weight: 600; color: var(--text); }
+.sector-vs { color: var(--text-muted); }
+.sector-verdict { font-weight: 600; }
 
 .company-description {
   font-size: 13px;
@@ -2935,6 +2995,139 @@ footer {
   transition: transform 0.15s, opacity 0.15s;
 }
 #float-dict-btn:hover { transform: scale(1.08); opacity: 0.92; }
+
+/* ── Sell button ── */
+.sell-btn {
+  background: none;
+  border: 1px solid rgba(220,38,38,0.35);
+  color: #ef4444;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  letter-spacing: 0.3px;
+  transition: background 0.15s, border-color 0.15s;
+}
+.sell-btn:hover {
+  background: rgba(220,38,38,0.08);
+  border-color: #ef4444;
+}
+
+/* ── Sell modal (inline, injected below the stock row) ── */
+.sell-modal {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin: 4px 0 8px 0;
+}
+.sell-modal-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+.sell-modal-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.sell-modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 100px;
+}
+.sell-modal-field label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+  letter-spacing: 0.4px;
+}
+.sell-modal-field input {
+  padding: 7px 10px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  font-family: var(--mono);
+  width: 100%;
+  box-sizing: border-box;
+}
+.sell-preview {
+  font-size: 13px;
+  font-family: var(--mono);
+  padding: 8px 10px;
+  border-radius: 7px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  margin-bottom: 10px;
+  min-height: 28px;
+  color: var(--text-muted);
+}
+.sell-modal-actions {
+  display: flex;
+  gap: 8px;
+}
+.sell-confirm-btn {
+  flex: 1;
+  padding: 8px;
+  border-radius: 8px;
+  border: none;
+  background: #ef4444;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.sell-confirm-btn:hover { background: #dc2626; }
+.sell-cancel-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* ── Closed / realized positions ── */
+.closed-positions-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.closed-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.closed-row:last-child { border-bottom: none; }
+.closed-row-left { display: flex; flex-direction: column; gap: 2px; }
+.closed-row-ticker { font-weight: 700; font-size: 14px; }
+.closed-row-detail { font-size: 11px; color: var(--text-muted); }
+.closed-row-gain { font-family: var(--mono); font-size: 13px; font-weight: 600; }
+.closed-total {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: right;
+  font-family: var(--mono);
+}
 
 /* ════════════════════════════════════════
    PHONE  (≤ 640 px)

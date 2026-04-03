@@ -450,16 +450,16 @@ function saveScoreHistory(ticker, score) {
   return history;
 }
 
-function getScoreHistoryHtml(ticker, currentScore) {
+function buildScoreHistoryBars(ticker, currentScore) {
   let key = "history_score_" + ticker;
   let history = JSON.parse(localStorage.getItem(key) || "[]");
-  if (history.length < 2) return "";
+  if (history.length < 2) return { trend: "", bars: "" };
   let prev = history[history.length - 2];
   let diff = currentScore - prev.score;
   let arrow = diff > 0 ? "▲" : diff < 0 ? "▼" : "—";
   let color = diff > 0 ? "#16a34a" : diff < 0 ? "#dc2626" : "#64748b";
   let label = diff > 0 ? "improving" : diff < 0 ? "declining" : "unchanged";
-  let historyBars = history.map(function(h) {
+  let bars = history.map(function(h) {
     let barColor = h.score >= 65 ? "#16a34a" : h.score >= 50 ? "#d97706" : "#dc2626";
     let height = Math.max(20, (h.score / 100) * 60);
     return "<div style='display:flex;flex-direction:column;align-items:center;gap:4px;'>" +
@@ -468,10 +468,16 @@ function getScoreHistoryHtml(ticker, currentScore) {
       "<div style='font-size:9px;color:#64748b;'>" + h.date + "</div>" +
       "</div>";
   }).join("");
-  return "<br><br><strong>Score History:</strong>" +
-    "<br><span style='color:" + color + ";font-weight:600;'>" + arrow + " " + Math.abs(diff) + " points since " + prev.date + " — " + label + "</span>" +
-    "<div style='display:flex;align-items:flex-end;gap:8px;margin-top:12px;padding:12px;background:var(--surface2);border-radius:10px;'>" +
-    historyBars + "</div>";
+  return {
+    trend: "<span style='color:" + color + ";font-weight:600;font-size:12px;'>" + arrow + " " + Math.abs(diff) + " pts since " + prev.date + " — " + label + "</span>",
+    bars: "<div style='display:flex;align-items:flex-end;gap:8px;margin-top:8px;padding:10px;background:var(--surface2);border-radius:10px;'>" + bars + "</div>"
+  };
+}
+
+function getScoreHistoryHtml(ticker, currentScore) {
+  let h = buildScoreHistoryBars(ticker, currentScore);
+  if (!h.bars) return "";
+  return "<br><br><strong>Score History:</strong><br>" + h.trend + h.bars;
 }
 
 function displayData(data) {
@@ -1050,29 +1056,30 @@ function getSectorContext(industry, pe, margin, growth, beta) {
   }
   if (!sector) return "";
   let avg = sectorAverages[sector];
-  let context = "<br><br><strong>Sector Comparison (" + sector + "):</strong><br>";
+  let rows = "";
 
   if (pe > 0 && avg.pe) {
     let diff = (((pe - avg.pe) / avg.pe) * 100).toFixed(0);
     let color = diff > 20 ? "#dc2626" : diff > 0 ? "#d97706" : "#16a34a";
-    context += "<span style='color:#64748b;font-size:12px;'>P/E Ratio: </span><span style='font-size:12px;'>" + pe.toFixed(1) + "</span><span style='color:#64748b;font-size:12px;'> vs sector avg " + avg.pe + " — </span><span style='color:" + color + ";font-size:12px;font-weight:600;'>" + Math.abs(diff) + "% " + (diff > 0 ? "more expensive" : "cheaper") + " than peers</span><br>";
+    rows += "<div class='sector-row'><span class='sector-label'>P/E Ratio</span><span class='sector-val'>" + pe.toFixed(1) + "</span><span class='sector-vs'>vs avg " + avg.pe + "</span><span class='sector-verdict' style='color:" + color + ";'>" + Math.abs(diff) + "% " + (diff > 0 ? "more expensive" : "cheaper") + " than peers</span></div>";
   }
   if (margin !== 0 && avg.margin) {
     let diff = (margin - avg.margin).toFixed(1);
     let color = diff >= 0 ? "#16a34a" : "#dc2626";
-    context += "<span style='color:#64748b;font-size:12px;'>Profit Margin: </span><span style='font-size:12px;'>" + margin.toFixed(1) + "%</span><span style='color:#64748b;font-size:12px;'> vs sector avg " + avg.margin + "% — </span><span style='color:" + color + ";font-size:12px;font-weight:600;'>" + Math.abs(diff) + "% " + (diff >= 0 ? "above" : "below") + " average</span><br>";
+    rows += "<div class='sector-row'><span class='sector-label'>Profit Margin</span><span class='sector-val'>" + margin.toFixed(1) + "%</span><span class='sector-vs'>vs avg " + avg.margin + "%</span><span class='sector-verdict' style='color:" + color + ";'>" + Math.abs(diff) + "% " + (diff >= 0 ? "above" : "below") + " average</span></div>";
   }
   if (growth !== 0 && avg.growth) {
     let diff = (growth - avg.growth).toFixed(1);
     let color = diff >= 0 ? "#16a34a" : "#dc2626";
-    context += "<span style='color:#64748b;font-size:12px;'>Revenue Growth: </span><span style='font-size:12px;'>" + growth.toFixed(1) + "%</span><span style='color:#64748b;font-size:12px;'> vs sector avg " + avg.growth + "% — </span><span style='color:" + color + ";font-size:12px;font-weight:600;'>Growing " + Math.abs(diff) + "% " + (diff >= 0 ? "faster than" : "slower than") + " peers</span><br>";
+    rows += "<div class='sector-row'><span class='sector-label'>Revenue Growth</span><span class='sector-val'>" + growth.toFixed(1) + "%</span><span class='sector-vs'>vs avg " + avg.growth + "%</span><span class='sector-verdict' style='color:" + color + ";'>Growing " + Math.abs(diff) + "% " + (diff >= 0 ? "faster than" : "slower than") + " peers</span></div>";
   }
   if (beta > 0 && avg.beta) {
     let diff = (beta - avg.beta).toFixed(2);
     let color = diff <= 0 ? "#16a34a" : "#d97706";
-    context += "<span style='color:#64748b;font-size:12px;'>Risk (Beta): </span><span style='font-size:12px;'>" + beta.toFixed(2) + "</span><span style='color:#64748b;font-size:12px;'> vs sector avg " + avg.beta + " — </span><span style='color:" + color + ";font-size:12px;font-weight:600;'>" + Math.abs(diff) + " " + (diff <= 0 ? "less volatile" : "more volatile") + " than peers</span><br>";
+    rows += "<div class='sector-row'><span class='sector-label'>Risk (Beta)</span><span class='sector-val'>" + beta.toFixed(2) + "</span><span class='sector-vs'>vs avg " + avg.beta + "</span><span class='sector-verdict' style='color:" + color + ";'>" + Math.abs(diff) + " " + (diff <= 0 ? "less volatile" : "more volatile") + " than peers</span></div>";
   }
-  return context;
+  if (!rows) return "";
+  return "<br><details class='sector-details'><summary class='sector-summary'>Compare to " + sector + " sector ▾</summary><div class='sector-rows'>" + rows + "</div></details>";
 }
 
 function getRiskProfileWarning(beta, totalScore) {
@@ -1256,17 +1263,31 @@ function renderWatchlist() {
     let priceHtml = price == null
       ? "<span class='wl-price'>—</span>"
       : "<span class='wl-price'>$" + price.toFixed(2) + "</span><span class='wl-change' style='color:" + (changePct >= 0 ? "#16a34a" : "#dc2626") + ";'>" + (changePct >= 0 ? "+" : "") + changePct.toFixed(2) + "%</span>";
+    let hist = buildScoreHistoryBars(item.ticker, item.score);
+    let histDrawer = hist.bars
+      ? "<div class='wl-history-drawer' id='wl-hist-" + item.ticker + "' style='display:none;'>" +
+          "<div style='padding:10px 0 4px;'>" + hist.trend + "</div>" +
+          hist.bars +
+        "</div>"
+      : "";
+    let histToggle = hist.bars
+      ? "<button class='wl-hist-toggle' onclick='event.stopPropagation();toggleWlHistory(\"" + item.ticker + "\")'  id='wl-hist-btn-" + item.ticker + "'>History ▾</button>"
+      : "";
     return "<div class='watchlist-item'>" +
-      "<div onclick='loadFromWatchlist(\"" + item.ticker + "\")' style='flex:1;cursor:pointer;'>" +
-        "<div class='watchlist-ticker'>" + escHtml(item.ticker) + "</div>" +
-        "<div class='watchlist-name'>" + escHtml(item.name || "") + "</div>" +
+      "<div class='wl-main-row'>" +
+        "<div onclick='loadFromWatchlist(\"" + item.ticker + "\")' style='flex:1;cursor:pointer;'>" +
+          "<div class='watchlist-ticker'>" + escHtml(item.ticker) + "</div>" +
+          "<div class='watchlist-name'>" + escHtml(item.name || "") + "</div>" +
+        "</div>" +
+        "<div class='wl-price-block'>" + priceHtml + "</div>" +
+        "<div style='display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;'>" +
+          "<div class='watchlist-score' style='color:" + scoreColor + ";'>" + signal + " · " + item.score + "/100</div>" +
+          histToggle +
+          "<button class='wl-add-port-btn' onclick='event.stopPropagation();addWatchlistToPortfolio(\"" + escHtml(item.ticker) + "\"," + (price || 0) + ")' title='Add to Portfolio'>+ Portfolio</button>" +
+          "<button class='watchlist-remove' onclick='event.stopPropagation();removeFromWatchlist(\"" + item.ticker + "\")'>✕</button>" +
+        "</div>" +
       "</div>" +
-      "<div class='wl-price-block'>" + priceHtml + "</div>" +
-      "<div style='display:flex;align-items:center;gap:8px;'>" +
-        "<div class='watchlist-score' style='color:" + scoreColor + ";'>" + signal + " · " + item.score + "/100</div>" +
-        "<button class='wl-add-port-btn' onclick='event.stopPropagation();addWatchlistToPortfolio(\"" + escHtml(item.ticker) + "\"," + (price || 0) + ")' title='Add to Portfolio'>+ Portfolio</button>" +
-        "<button class='watchlist-remove' onclick='event.stopPropagation();removeFromWatchlist(\"" + item.ticker + "\")'>✕</button>" +
-      "</div>" +
+      histDrawer +
     "</div>";
   }
 
@@ -1287,6 +1308,15 @@ function renderWatchlist() {
       return buildRow(item, q.price, q.changePct);
     }).join("");
   });
+}
+
+function toggleWlHistory(ticker) {
+  let drawer = document.getElementById('wl-hist-' + ticker);
+  let btn = document.getElementById('wl-hist-btn-' + ticker);
+  if (!drawer) return;
+  let open = drawer.style.display !== 'none';
+  drawer.style.display = open ? 'none' : 'block';
+  if (btn) btn.textContent = open ? 'History ▾' : 'History ▴';
 }
 
 function addWatchlistToPortfolio(ticker, price) {
@@ -1648,6 +1678,7 @@ function renderPortfolio() {
     let searchWrap = document.getElementById('port-search-wrap');
     if (searchWrap) searchWrap.style.display = 'block';
     renderPortfolioRows(stockData);
+    renderClosedPositions();
 
     if (totalValue > 0) savePortfolioValueHistory(totalValue);
     renderPortfolioChart(stockData, totalValue);
@@ -1661,6 +1692,136 @@ function portSignal(score) {
   let cls = score >= 65 ? 'buy' : score >= 50 ? 'hold' : 'sell';
   let txt = score >= 65 ? 'Strong' : score >= 50 ? 'Watch' : 'Risky';
   return '<span class="signal-pill ' + cls + '">' + txt + '</span>';
+}
+
+function openSellModal(ticker, currentPrice, totalShares) {
+  // Remove any existing modal
+  let existing = document.getElementById('sell-modal-' + ticker);
+  if (existing) { existing.remove(); return; }
+
+  let wrapper = document.querySelector('.port-stock-wrapper[data-ticker="' + ticker + '"]');
+  if (!wrapper) return;
+
+  let modal = document.createElement('div');
+  modal.id = 'sell-modal-' + ticker;
+  modal.className = 'sell-modal';
+  modal.innerHTML =
+    '<div class="sell-modal-title">Sell ' + ticker + '</div>' +
+    '<div class="sell-modal-row">' +
+      '<div class="sell-modal-field">' +
+        '<label>Shares to sell</label>' +
+        '<input type="number" id="sell-shares-' + ticker + '" placeholder="e.g. 5" max="' + totalShares + '" step="any">' +
+      '</div>' +
+      '<div class="sell-modal-field">' +
+        '<label>Sell price $</label>' +
+        '<input type="number" id="sell-price-' + ticker + '" placeholder="' + currentPrice.toFixed(2) + '" value="' + currentPrice.toFixed(2) + '" step="any">' +
+      '</div>' +
+    '</div>' +
+    '<div id="sell-preview-' + ticker + '" class="sell-preview"></div>' +
+    '<div class="sell-modal-actions">' +
+      '<button class="sell-confirm-btn" onclick="confirmSell(\'' + ticker + '\',' + totalShares + ')">Confirm Sale</button>' +
+      '<button class="sell-cancel-btn" onclick="document.getElementById(\'sell-modal-' + ticker + '\').remove()">Cancel</button>' +
+    '</div>';
+
+  wrapper.appendChild(modal);
+
+  // Live preview
+  function updatePreview() {
+    let sh = parseFloat(document.getElementById('sell-shares-' + ticker).value) || 0;
+    let sp = parseFloat(document.getElementById('sell-price-' + ticker).value) || 0;
+    let preview = document.getElementById('sell-preview-' + ticker);
+    if (!sh || !sp) { preview.innerHTML = ''; return; }
+    let portfolio = migratePortfolio(JSON.parse(localStorage.getItem('portfolio') || '[]'));
+    let item = portfolio.find(function(i) { return i.ticker === ticker; });
+    if (!item) return;
+    let totalCost = item.lots.reduce(function(sum, l) { return sum + l.shares * l.price; }, 0);
+    let totalSh = item.lots.reduce(function(sum, l) { return sum + l.shares; }, 0);
+    let avgCost = totalSh > 0 ? totalCost / totalSh : 0;
+    let realizedGain = (sp - avgCost) * sh;
+    let realizedPct = avgCost > 0 ? ((sp - avgCost) / avgCost * 100) : 0;
+    let color = realizedGain >= 0 ? '#16a34a' : '#dc2626';
+    let remaining = totalSh - sh;
+    preview.innerHTML = '<span style="color:' + color + ';font-weight:600;">' +
+      (realizedGain >= 0 ? '+' : '') + '$' + realizedGain.toFixed(2) + ' (' + (realizedPct >= 0 ? '+' : '') + realizedPct.toFixed(1) + '%)</span>' +
+      '<span style="color:var(--text-muted);margin-left:10px;">' + (remaining > 0 ? remaining.toFixed(remaining % 1 === 0 ? 0 : 2) + ' shares remaining' : 'Full position closed') + '</span>';
+  }
+  document.getElementById('sell-shares-' + ticker).addEventListener('input', updatePreview);
+  document.getElementById('sell-price-' + ticker).addEventListener('input', updatePreview);
+  updatePreview();
+}
+
+function confirmSell(ticker, totalShares) {
+  let sh = parseFloat(document.getElementById('sell-shares-' + ticker).value);
+  let sp = parseFloat(document.getElementById('sell-price-' + ticker).value);
+  if (!sh || sh <= 0) { showToast('Enter shares to sell'); return; }
+  if (!sp || sp <= 0) { showToast('Enter sell price'); return; }
+  if (sh > totalShares) { showToast('You only have ' + totalShares + ' shares'); return; }
+
+  let portfolio = migratePortfolio(JSON.parse(localStorage.getItem('portfolio') || '[]'));
+  let item = portfolio.find(function(i) { return i.ticker === ticker; });
+  if (!item) return;
+
+  // Compute realized gain (FIFO — sell from oldest lot first)
+  let sharesToSell = sh;
+  let realizedGain = 0;
+  let lots = item.lots.slice(); // copy
+  for (let i = 0; i < lots.length && sharesToSell > 0; i++) {
+    let lotSell = Math.min(lots[i].shares, sharesToSell);
+    realizedGain += (sp - lots[i].price) * lotSell;
+    lots[i].shares -= lotSell;
+    sharesToSell -= lotSell;
+  }
+  item.lots = lots.filter(function(l) { return l.shares > 0; });
+
+  // Save closed position record
+  let closed = JSON.parse(localStorage.getItem('closed-positions') || '[]');
+  closed.push({
+    ticker,
+    sharesSold: sh,
+    sellPrice: sp,
+    realizedGain: parseFloat(realizedGain.toFixed(2)),
+    date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  });
+  localStorage.setItem('closed-positions', JSON.stringify(closed));
+
+  if (item.lots.length === 0) {
+    portfolio = portfolio.filter(function(i) { return i.ticker !== ticker; });
+    showToast(ticker + ' fully sold — ' + (realizedGain >= 0 ? '+' : '') + '$' + realizedGain.toFixed(2) + ' realized');
+  } else {
+    showToast('Sold ' + sh + ' shares of ' + ticker + ' — ' + (realizedGain >= 0 ? '+' : '') + '$' + realizedGain.toFixed(2) + ' realized');
+  }
+
+  localStorage.setItem('portfolio', JSON.stringify(portfolio));
+  saveToFirestore({ portfolio: portfolio, closedPositions: closed });
+  renderPortfolio();
+  renderClosedPositions();
+}
+
+function renderClosedPositions() {
+  let closed = JSON.parse(localStorage.getItem('closed-positions') || '[]');
+  let el = document.getElementById('closed-positions-section');
+  if (!el) return;
+  if (closed.length === 0) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  let totalRealized = closed.reduce(function(sum, c) { return sum + c.realizedGain; }, 0);
+  let totalColor = totalRealized >= 0 ? '#16a34a' : '#dc2626';
+  let listEl = document.getElementById('closed-positions-list');
+  let totalEl = document.getElementById('closed-positions-total');
+  if (listEl) {
+    listEl.innerHTML = closed.slice().reverse().map(function(c) {
+      let gc = c.realizedGain >= 0 ? '#16a34a' : '#dc2626';
+      return '<div class="closed-row">' +
+        '<div class="closed-row-left">' +
+          '<div class="closed-row-ticker">' + escHtml(c.ticker) + '</div>' +
+          '<div class="closed-row-detail">' + c.sharesSold + ' shares @ $' + c.sellPrice.toFixed(2) + ' · ' + escHtml(c.date) + '</div>' +
+        '</div>' +
+        '<div class="closed-row-gain" style="color:' + gc + ';">' + (c.realizedGain >= 0 ? '+' : '') + '$' + c.realizedGain.toFixed(2) + '</div>' +
+      '</div>';
+    }).join('');
+  }
+  if (totalEl) {
+    totalEl.innerHTML = 'Total Realized: <span style="color:' + totalColor + ';">' + (totalRealized >= 0 ? '+' : '') + '$' + totalRealized.toFixed(2) + '</span>';
+  }
 }
 
 function togglePortLots(ticker) {
@@ -1704,7 +1865,7 @@ function renderPortfolioRows(data) {
           }).join('') +
         '</div>';
       }
-      return '<div class="port-stock-wrapper">' +
+      return '<div class="port-stock-wrapper" data-ticker="' + s.ticker + '">' +
         '<div class="port-stock-row" onclick="openStockFromPortfolio(\'' + s.ticker + '\')">' +
           '<div style="display:flex;align-items:center;gap:6px;">' +
             (hasMultiple ? '<button id="lots-btn-' + s.ticker + '" onclick="event.stopPropagation();togglePortLots(\'' + s.ticker + '\')" class="port-lots-toggle">▾</button>' : '') +
@@ -1717,6 +1878,7 @@ function renderPortfolioRows(data) {
           '<div class="hide-mobile" style="color:' + gc + ';">' + (s.gain >= 0 ? '+' : '') + '$' + s.gain.toFixed(2) + '<br><span style="font-size:11px;">' + (s.gainPct >= 0 ? '+' : '') + s.gainPct.toFixed(1) + '%</span></div>' +
           '<div class="hide-mobile" style="color:' + dc + ';">' + (s.dayChangeAmt >= 0 ? '+' : '') + '$' + s.dayChangeAmt.toFixed(2) + '</div>' +
           '<div style="display:flex;align-items:center;gap:8px;">' + portSignal(s.score) +
+            '<button onclick="event.stopPropagation();openSellModal(\'' + s.ticker + '\',' + s.currentPrice + ',' + s.shares + ')" class="sell-btn">Sell</button>' +
             '<button onclick="event.stopPropagation();removeFromPortfolio(\'' + s.ticker + '\')" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:16px;padding:0;">✕</button>' +
           '</div>' +
         '</div>' +
@@ -2344,6 +2506,11 @@ auth.onAuthStateChanged(function(user) {
     // Restore portfolio
     if (data.portfolio) {
       localStorage.setItem('portfolio', JSON.stringify(data.portfolio));
+    }
+
+    // Restore closed positions
+    if (data.closedPositions) {
+      localStorage.setItem('closed-positions', JSON.stringify(data.closedPositions));
     }
 
     // Restore watchlist
