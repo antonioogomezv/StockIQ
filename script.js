@@ -581,7 +581,13 @@ function renderCompanyAbout(profile, dividend) {
   if (website) items.push({ label: 'Website', value: "<a href='" + escHtml(website) + "' target='_blank' rel='noopener' style='color:var(--accent-blue);text-decoration:none;'>" + escHtml(website.replace(/^https?:\/\//, '').replace(/\/$/, '')) + "</a>" });
 
   if (items.length === 0) { el.style.display = 'none'; return; }
-  el.innerHTML = '<h2>ABOUT</h2><div class="about-grid">' +
+
+  let descHtml = '';
+  if (profile.description) {
+    descHtml = '<p class="company-description">' + escHtml(profile.description) + '</p>';
+  }
+
+  el.innerHTML = '<h2>ABOUT</h2>' + descHtml + '<div class="about-grid">' +
     items.map(function(i) {
       return "<div class='about-item'><div class='about-label'>" + i.label + "</div><div class='about-value'>" + i.value + "</div></div>";
     }).join('') + '</div>';
