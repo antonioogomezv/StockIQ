@@ -2574,103 +2574,110 @@ footer {
 .port-metrics {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
 
 .port-metric {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 14px 16px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  border-radius: 10px;
+  padding: 12px 14px;
 }
 
 .port-metric-label {
   font-size: 10px;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 6px;
+  letter-spacing: 0.8px;
+  margin-bottom: 4px;
   font-weight: 600;
 }
 
 .port-metric-value {
   font-family: var(--display);
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
   color: var(--text);
+  line-height: 1.2;
 }
 
 .port-metric-sub {
   font-size: 11px;
   color: var(--text-muted);
-  margin-top: 3px;
+  margin-top: 2px;
 }
 
+/* Winners bar — single compact row instead of two tall cards */
 .port-winners {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  display: flex;
+  gap: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
 }
 
 .port-winner {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 14px 16px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  flex: 1;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-.port-winner.best { border-left: 3px solid var(--accent-green); }
-.port-winner.worst { border-left: 3px solid var(--loss); }
+.port-winner.best  { border-left: 3px solid var(--accent-green); }
+.port-winner.worst { border-left: 3px solid var(--loss); border-left-width: 0; border-right: 0; border-left: 0; border-top: 0; border-bottom: 0; border-left: 1px solid var(--border); }
 
 .port-winner-label {
   font-size: 10px;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 6px;
+  letter-spacing: 0.8px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .port-winner-ticker {
   font-family: var(--display);
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 700;
 }
 
-.port-winner-gain { font-size: 12px; font-weight: 600; margin-top: 4px; }
+.port-winner-gain { font-size: 12px; font-weight: 600; }
+
+.port-winner-info { display: flex; flex-direction: column; gap: 1px; }
 
 .port-stock-row {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr 80px;
+  grid-template-columns: 2fr 90px 1fr 90px 110px;
   gap: 8px;
   align-items: center;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--border);
+  padding: 13px 16px;
+  cursor: pointer;
+  transition: background 0.12s;
   font-size: 13px;
 }
-
-.port-stock-row:last-child { border-bottom: none; }
+.port-stock-row:hover { background: var(--surface2); }
 
 .port-stock-header {
   font-size: 10px;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 1px;
-  padding: 10px 16px;
+  letter-spacing: 0.8px;
+  padding: 8px 16px;
   background: var(--surface2);
+  border-bottom: 1px solid var(--border);
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr 80px;
+  grid-template-columns: 2fr 90px 1fr 90px 110px;
   gap: 8px;
+  font-weight: 600;
 }
 
 #portfolio-list {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
 
 .port-stock-wrapper {
@@ -2925,9 +2932,8 @@ footer {
 #add-stock-form {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  border-radius: 12px;
+  padding: 16px;
 }
 
 .add-form-col {
@@ -2969,8 +2975,8 @@ footer {
 
 @media (max-width: 768px) {
   .port-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .port-stock-row { grid-template-columns: 1fr 1fr 80px; }
-  .port-stock-header { grid-template-columns: 1fr 1fr 80px; }
+  .port-stock-row { grid-template-columns: 1fr 90px 110px; }
+  .port-stock-header { grid-template-columns: 1fr 90px 110px; }
   .port-stock-row .hide-mobile { display: none; }
   .port-stock-header .hide-mobile { display: none; }
 }
