@@ -128,6 +128,48 @@ function onPortTickerInput() {
   }, 300);
 }
 
+function onPortDateChange() {
+  let ticker = document.getElementById('port-ticker').value.trim().toUpperCase();
+  let dateVal = document.getElementById('port-date').value;
+  if (!ticker || !dateVal) return;
+
+  // Don't overwrite if user already typed a price
+  let priceEl = document.getElementById('port-price');
+  let loadingEl = document.getElementById('port-price-loading');
+
+  // Check it's a past date
+  let selected = new Date(dateVal);
+  let today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (selected >= today) return; // today or future — use live price
+
+  priceEl.value = '';
+  if (loadingEl) { loadingEl.style.display = 'inline'; loadingEl.textContent = '...'; }
+
+  // Try the selected date first, then fall back up to 5 days for weekends/holidays
+  function tryDate(dateStr, triesLeft) {
+    fetch('https://api.polygon.io/v1/open-close/' + ticker + '/' + dateStr + '?adjusted=true&apiKey=' + polygonKey)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.close) {
+          priceEl.value = data.close.toFixed(2);
+          if (loadingEl) { loadingEl.style.display = 'inline'; loadingEl.textContent = dateStr !== dateVal ? 'Used ' + dateStr : ''; setTimeout(function() { if (loadingEl) loadingEl.style.display = 'none'; }, 2000); }
+        } else if (triesLeft > 0) {
+          // Move back one day (weekend/holiday)
+          let d = new Date(dateStr + 'T00:00:00');
+          d.setDate(d.getDate() - 1);
+          let prev = d.toISOString().split('T')[0];
+          tryDate(prev, triesLeft - 1);
+        } else {
+          if (loadingEl) loadingEl.style.display = 'none';
+        }
+      })
+      .catch(function() { if (loadingEl) loadingEl.style.display = 'none'; });
+  }
+
+  tryDate(dateVal, 5);
+}
+
 function hidePortDropdown() {
   setTimeout(function() { document.getElementById('port-ticker-dropdown').style.display = 'none'; }, 150);
 }
