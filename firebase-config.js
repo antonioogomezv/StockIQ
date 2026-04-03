@@ -27,9 +27,20 @@ function userRef() {
 function loadFirestoreUserData(callback) {
   let ref = userRef();
   if (!ref) { if (callback) callback({}); return; }
+  let done = false;
+  // 4 second timeout — proceed with empty data if Firestore is slow
+  let timer = setTimeout(function() {
+    if (!done) { done = true; if (callback) callback({}); }
+  }, 4000);
   ref.get().then(function(doc) {
-    if (callback) callback(doc.exists ? doc.data() : {});
-  }).catch(function() { if (callback) callback({}); });
+    if (!done) {
+      done = true;
+      clearTimeout(timer);
+      if (callback) callback(doc.exists ? doc.data() : {});
+    }
+  }).catch(function() {
+    if (!done) { done = true; clearTimeout(timer); if (callback) callback({}); }
+  });
 }
 
 // Merge-save a field to the user document
