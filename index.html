@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StockIQ</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%2316a34a'/><text y='72' x='50' text-anchor='middle' font-size='52' font-weight='700' font-family='system-ui,sans-serif' fill='white'>IQ</text></svg>">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#f4f6f9">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="StockIQ">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- RISK PROFILE QUIZ -->
+<div id="quiz-overlay">
+  <div id="quiz-modal">
+    <div id="quiz-logo">Stock<span>IQ</span></div>
+    <div id="quiz-subtitle">Let's personalize your experience</div>
+    <div class="quiz-step" id="step-1">
+      <div class="quiz-question">How long do you plan to invest?</div>
+      <div class="quiz-options">
+        <div class="quiz-option" onclick="selectOption(1, 'short', this)">Less than 1 year</div>
+        <div class="quiz-option" onclick="selectOption(1, 'medium', this)">1 to 5 years</div>
+        <div class="quiz-option" onclick="selectOption(1, 'long', this)">5+ years</div>
+      </div>
+    </div>
+    <div class="quiz-step" id="step-2" style="display:none;">
+      <div class="quiz-question">How do you feel about risk?</div>
+      <div class="quiz-options">
+        <div class="quiz-option" onclick="selectOption(2, 'low', this)">I want to play it safe</div>
+        <div class="quiz-option" onclick="selectOption(2, 'medium', this)">Some risk is okay</div>
+        <div class="quiz-option" onclick="selectOption(2, 'high', this)">I can handle big swings</div>
+      </div>
+    </div>
+    <div class="quiz-step" id="step-3" style="display:none;">
+      <div class="quiz-question">What is your main goal?</div>
+      <div class="quiz-options">
+        <div class="quiz-option" onclick="selectOption(3, 'preserve', this)">Protect my money</div>
+        <div class="quiz-option" onclick="selectOption(3, 'grow', this)">Grow my wealth</div>
+        <div class="quiz-option" onclick="selectOption(3, 'learn', this)">Learn how to invest</div>
+      </div>
+    </div>
+    <div class="quiz-step" id="step-result" style="display:none;">
+      <div class="quiz-result-icon" id="quiz-icon"></div>
+      <div class="quiz-result-title" id="quiz-result-title">Conservative Investor</div>
+      <div class="quiz-result-desc" id="quiz-result-desc"></div>
+      <button onclick="finishQuiz()" id="quiz-finish-btn">Start Analyzing Stocks</button>
+    </div>
+    <div id="quiz-progress">
+      <div class="quiz-dot active" id="dot-1"></div>
+      <div class="quiz-dot" id="dot-2"></div>
+      <div class="quiz-dot" id="dot-3"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ONBOARDING OVERLAY -->
+<div id="onboarding-overlay" style="display:none;">
+  <div id="onboarding-modal">
+    <div id="onboarding-logo">Stock<span>IQ</span></div>
+    <div id="onboarding-welcome">You're all set, <span id="onboarding-profile-name">Investor</span>!</div>
+    <div id="onboarding-subtitle">Here's how to get the most out of StockIQ</div>
+
+    <div id="onboarding-steps">
+      <div class="onboarding-step">
+        <div class="onboarding-step-icon">🔍</div>
+        <div class="onboarding-step-body">
+          <div class="onboarding-step-title">Search any stock</div>
+          <div class="onboarding-step-desc">Type a company name like "Apple" or "Tesla" and get an instant AI-powered analysis with a score out of 100.</div>
+        </div>
+      </div>
+      <div class="onboarding-step">
+        <div class="onboarding-step-icon">📖</div>
+        <div class="onboarding-step-body">
+          <div class="onboarding-step-title">Use the Cheat Sheet</div>
+          <div class="onboarding-step-desc">Tap the gold 📖 button anytime you see a term you don't understand — it will explain it in plain English, just for you.</div>
+        </div>
+      </div>
+      <div class="onboarding-step">
+        <div class="onboarding-step-icon">💼</div>
+        <div class="onboarding-step-body">
+          <div class="onboarding-step-title">Build your portfolio</div>
+          <div class="onboarding-step-desc">Add stocks you own or want to track. StockIQ will show you your total gains, allocation chart, and an AI review of your holdings.</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="onboarding-disclaimer">
+      StockIQ is for <strong>educational purposes only</strong>. Nothing here is financial advice. Always do your own research before investing real money.
+    </div>
+
+    <button onclick="finishOnboarding()" id="onboarding-btn">Let's Go →</button>
+  </div>
+</div>
+
+<!-- DICTIONARY DRAWER -->
+<div id="dict-overlay" onclick="toggleDictionary()"></div>
+<div id="dict-drawer">
+  <div id="dict-header">
+    <span>Financial Terms</span>
+    <button onclick="toggleDictionary()">✕</button>
+  </div>
+  <div id="dict-list">
+
+    <div class="dict-category">Valuation</div>
+
+    <div class="dict-item" onclick="toggleDef(this, 'P/E Ratio')">
+      <div class="dict-term">P/E Ratio <span class="dict-arrow">+</span></div>
+      <div class="dict-def">
+        <div class="cheat-what">Price-to-Earnings ratio. How much investors pay for $1 of company profit. A high P/E means people expect big growth; a low P/E could mean the stock is a bargain — or that the company is struggling.</div>
+        <div class="cheat-scale"><span class="good">Under 15 — potentially cheap</span><span class="mid">15–30 — fair value</span><span class="bad">Over 30 — priced for high growth</span></div>
+        <div class="cheat-tip">Always compare P/E to other companies in the same industry. A P/E of 30 is normal for tech but expensive for banking.</div>
+        <div class="dict-ai-box" style="display:none;"></div>
+      </div>
+    </div>
+
+    <div class="dict-item" onclick="toggleDef(this, 'Market Cap')">
+      <div class="dict-term">Market Cap <span class="dict-arrow">+</span></div>
+      <div class="dict-def">
+        <div class="cheat-what">The total dollar value of all a company's shares. It tells you the "size" of the company. Calculated as: stock price × number of shares.</div>
+        <div class="cheat-scale"><span class="good">Large cap +$10B — stable, lower risk</span><span class="mid">Mid cap $2B–$10B — balanced</span><span class="bad">Small cap under $2B — higher risk, higher reward</span></div>
+        <div class="cheat-tip">Large cap stocks like Apple or Microsoft are safer but grow slower. Small caps can explode — or collapse.</div>
+        <div class="dict-ai-box" style="display:none;"></div>
+      </div>
+    </div>
+
+    <div class="dict-item" onclick="toggleDef(this, 'EPS')">
+      <div class="dict-term">EPS — Earnings Per Share <span class="dict-arrow">+</span></div>
+      <div class="dict-def">
+        <div class="cheat-what">How much profit the company made for each share of stock. Higher EPS = more profitable per share. When a company "beats earnings" it means EPS was higher than analysts expected.</div>
+        <div class="cheat-scale"><span class="good">Growing EPS each quarter — healthy</span><span class="mid">Flat EPS — no growth</span><span class="bad">Negative or falling EPS — losing money</span></div>
+        <div class="cheat-tip">EPS growth matters more than the raw number. A company growing EPS 20% year over year is very attractive.</div>
+        <div class="dict-ai-box" style="display:none;"></div>
+      </div>
+    </div>
+
+    <div class="dict-item" onclick="toggleDef(this, 'Price to Book Ratio')">
+      <div class="dict-term">Price to Book (P/B) <span class="dict-arrow">+</span></div>
+      <div class="dict-def">
+        <div class="cheat-what">Compares a stock's price to the company's "book value" — what it would be worth if it sold everything it owns and paid all debts. A P/B under 1 means you're buying $1 of assets for less than $1.</div>
+        <div class="cheat-scale"><span class="good">Under 1 — trading below assets</span><span class="mid">1–3 — reasonable</span><span class="bad">Over 3 — priced for future growth</span></div>
+        <div class="cheat-tip">Very useful for banks and insurance companies. Less useful for tech companies where value is in ideas, not physical assets.</div>
+        <div class="dict-ai-box" style="display:none;"></div>
+      </div>
+    </div>
+
+    <div class="dict-category">Profitability</div>
+
+    <div class="dict-item" onclick="toggleDef(this, 'Profit Margin')">
+      <div class="dict-term">Profit Margin <span class="dict-arrow">+</span></div>
+      <div class="dict-def">
+        <div class="cheat-what">What percentage of revenue the company actually keeps as profit after paying all expenses. If a company makes $100M in sales and keeps $20M, its profit margin is 20%.</div>
+        <div class="cheat-scale"><span class="good">Over 20% — excellent</span><span class="mid">10–20% — healthy</span><span class="bad">Under 10% — thin or unprofitable</span></div>
+        <div class="cheat-tip">Software companies often have 30–40% margins. Grocery stores might have 2–3%. Always compare within the same industry.</div>
+        <div class="dict-ai-box" style="display:none;"></div>
+      </div>
+    </div>
+
+    <div class="dict-item" onclick="toggleDef(this, 'ROE')">
+      <div class="dict-term">ROE — Return on Equity <span class="dict-arrow">+</span></div>
+      <div class="dict-def">
+        <div class="cheat-what">How much profit the company generates from shareholders' money. If investors put in $100 and the company earns $15, ROE is 15%. It measures how efficiently management uses your money.</div>
+        <div class="cheat-scale"><span class="good">Over 15% — excellent management</span><span class="mid">8–15% — solid</span><span class="bad">Under 8% — inefficient use of capital</span></div>
+        <div class="cheat-tip">Warren Buffett looks for companies with consistently high ROE. It's a sign of a strong competitive advantage.</div>
+        <div class="dict-ai-box" style="display:none;"></div>
+      </div>
+    </div>
+
+    <div class="dict-item" onclick="toggleDef(this, 'Revenue Growth')">
+      <div class="dict-term">Revenue Growth <span class="dict-arrow">+</span></div>
+      <div class="dict-def">
+        <div class="cheat-what">How much the company's total sales increased compared to last year. It's the most basic sign that a company is expanding and people are buying more of what it sells.</div>
+        <div class="cheat-scale"><span class="good">Over 15% — fast growing</span><span class="mid">5–15% — steady growth</span><span class="bad">Negative — shrinking business</span></div>
+        <div class="cheat-tip">High growth is exciting but check if it's profitable growth. A company growing revenue but losing more money each year is a red flag.</div>
+        <div class="dict-ai-box" style="display:none;"></div>
+      </div>
+    </div>
+
+    <div class="dict-category">Risk & Volatility</div>
+
+    <div class="dict-item" onclick="toggleDef(this, 'Beta')">
+      <div class="dict-term">Beta <span class="dict-arrow">+</span></div>
+      <div class="dict-def">
+        <div class="cheat-what">Measures how much a stock moves compared to the overall market. Beta of 1.5 means if the market drops 10%, this stock typically drops 15%. Beta of 0.5 means it would only drop 5%.</div>
+        <div class="cheat-scale"><span class="good">Under 1 — calmer than market</span><span class="mid">1.0–1.5 — similar to market</span><span class="bad">Over 1.5 — wilder than market</span></div>
+        <div class="cheat-tip">If you're nervous about market crashes, stick to low-beta stocks. If you want bigger swings for bigger gains, high beta is for you.</div>
+        <div class="dict-ai-box" style="display:none;"></div>
+      </div>
+    </div>
+
+    <div class="dict-item" onclick="toggleDef(this, 'Debt to Equity')">
+      <div class="dict-term">Debt to Equity <span class="dict-arrow">+</span></div>
+      <div class="dict-def">
+        <div class="cheat-what">How much the company borrowed compared to what shareholders own. A ratio of 2 means for every $1 of equity, the company owes $2 in debt. High debt = higher risk, especially when interest rates rise.</div>
+        <div class="cheat-scale"><span class="good">Under 0.5 — low debt, safe</span><span class="mid">0.5–1.5 — manageable</span><span class="bad">Over 2 — heavy debt load</span></div>
+        <div class="cheat-tip">Some industries like utilities and real estate naturally carry more debt — that's normal. For tech or retail, high debt is a warning sign.</div>
+        <div class="dict-ai-box" style="display:none;"></div>
+      </div>
+    </div>
+
+    <div class="dict-item" onclick="toggleDef(this, 'Current Ratio')">
+      <div class="dict-term">Current Ratio <span class="dict-arrow">+</span></div>
+      <div class="dict-def">
+        <div class="cheat-what">Can the company pay its short-term bills? Divides current assets (cash, inventory) by current liabilities (bills due soon). A ratio above 1 means yes, it can cover what it owes in the next year.</div>
+        <div class="cheat-scale"><span class="good">Over 2 — very healthy</span><span class="mid">1–2 — adequate</span><span class="bad">Under 1 — may struggle to pay bills</span></div>
+        <div class="cheat-tip">Think of it like a personal budget. If you have $2,000 in the bank and owe $1,000 this month, your current ratio is 2 — you're fine.</div>
+        <div class="dict-ai-box" style="display:none;"></div>
+      </div>
+    </div>
+
+    <div class="dict-category">Technical Analysis</div>
+
+    <div class="dict-item" onclick="toggleDef(this, 'RSI')">
+      <div class="dict-term">RSI — Relative Strength Index <span class="dict-arrow">+</span></div>
+      <div class="dict-def">
+        <div class="cheat-what">A 0–100 number that shows if a stock has been bought or sold too aggressively. Think of it as a "temperature gauge" for a stock's momentum. It doesn't predict direction — it spots extremes.</div>
+        <div class="cheat-scale"><span class="good">Under 30 — oversold, possible bounce</span><span class="mid">30–70 — neutral zone</span><span class="bad">Over 70 — overbought, possible pullback</span></div>
+        <div class="cheat-tip">RSI works best combined with other signals. A stock can stay overbought for months if the trend is strong enough.</div>
+        <div class="dict-ai-box" style="display:none;"></div>
+      </div>
+    </div>
+
+    <div class="dict-item" onclick="toggleDef(this, 'Moving Average')">
+      <div class="dict-term">Moving Average (MA) <span class="dict-arrow">+</span></div>
+      <div class="dict-def">
+        <div class="cheat-what">The average price of a stock over the last 50 (or 200) days. It smooths out daily noise and shows the overall trend. Traders watch whether the price is above or below this line to decide direction.</div>
+        <div class="cheat-scale"><span class="good">Price above MA — uptrend, bullish</span><span class="bad">Price below MA — downtrend, bearish</span></div>
+        <div class="cheat-tip">When the 50-day average crosses above the 200-day average, it's called a "Golden Cross" — historically a bullish signal.</div>
+        <div class="dict-ai-box" style="display:none;"></div>
+      </div>
+    </div>
+
+    <div class="dict-item" onclick="toggleDef(this, '52-Week High and Low')">
+      <div class="dict-term">52-Week High / Low <span class="dict-arrow">+</span></div>
+      <div class="dict-def">
+        <div class="cheat-what">The highest and lowest price the stock has traded at in the past year. If a stock is near its 52-week high, it has strong momentum. Near its low, it might be a bargain — or in trouble.</div>
+        <div class="cheat-scale"><span class="good">Near 52-week high — strong momentum</span><span class="mid">Middle of range — neutral</span><span class="bad">Near 52-week low — weakness or opportunity</span></div>
+        <div class="cheat-tip">Many investors avoid buying near 52-week lows until they understand why the stock fell. Find the reason before assuming it's a bargain.</div>
+        <div class="dict-ai-box" style="display:none;"></div>
+      </div>
+    </div>
+
+    <div class="dict-category">Investing Basics</div>
+
+    <div class="dict-item" onclick="toggleDef(this, 'Dividend')">
+      <div class="dict-term">Dividend <span class="dict-arrow">+</span></div>
+      <div class="dict-def">
+        <div class="cheat-what">A cash payment companies make to shareholders, usually every quarter. If you own 100 shares and the dividend is $0.50/share, you get $50. It's like getting paid just for holding the stock.</div>
+        <div class="cheat-scale"><span class="good">Yield 2–4% — solid income</span><span class="mid">Yield 1–2% — modest</span><span class="bad">Yield over 6% — may be unsustainable</span></div>
+        <div class="cheat-tip">A very high dividend yield can be a trap — it might mean the stock price dropped sharply, or the company can't sustain the payment.</div>
+        <div class="dict-ai-box" style="display:none;"></div>
+      </div>
+    </div>
+
+    <div class="dict-item" onclick="toggleDef(this, 'Bull and Bear Market')">
+      <div class="dict-term">Bull & Bear Market <span class="dict-arrow">+</span></div>
+      <div class="dict-def">
+        <div class="cheat-what">A bull market is when prices are rising and investor confidence is high (think bull charging forward). A bear market is when prices fall 20%+ from recent highs and fear dominates (bear swiping down).</div>
+        <div class="cheat-scale"><span class="good">Bull market — rising prices, optimism</span><span class="bad">Bear market — falling 20%+, pessimism</span></div>
+        <div class="cheat-tip">Bear markets are scary but historically temporary. The S&P 500 has recovered from every single bear market in history.</div>
+        <div class="dict-ai-box" style="display:none;"></div>
+      </div>
+    </div>
+
+    <div class="dict-item" onclick="toggleDef(this, 'Diversification')">
+      <div class="dict-term">Diversification <span class="dict-arrow">+</span></div>
+      <div class="dict-def">
+        <div class="cheat-what">Spreading your money across different stocks, industries, or asset types so one bad investment doesn't ruin your whole portfolio. "Don't put all your eggs in one basket."</div>
+        <div class="cheat-scale"><span class="good">5–15 stocks across sectors — well diversified</span><span class="mid">3–5 stocks — some risk concentration</span><span class="bad">1–2 stocks — very concentrated risk</span></div>
+        <div class="cheat-tip">Owning 10 tech stocks is NOT diversification — they all tend to move together. True diversification means different industries.</div>
+        <div class="dict-ai-box" style="display:none;"></div>
+      </div>
+    </div>
+
+    <div class="dict-item" onclick="toggleDef(this, 'Portfolio')">
+      <div class="dict-term">Portfolio <span class="dict-arrow">+</span></div>
+      <div class="dict-def">
+        <div class="cheat-what">Your complete collection of investments — all the stocks, ETFs, or other assets you own. Tracking your portfolio helps you see your total gains/losses and whether you're properly diversified.</div>
+        <div class="cheat-scale"><span class="good">Balanced across sectors — lower risk</span><span class="mid">2–3 sector focus — moderate risk</span><span class="bad">One sector only — concentrated risk</span></div>
+        <div class="cheat-tip">Review your portfolio allocation regularly. If one stock grows a lot, it might become too big a percentage of your total — consider rebalancing.</div>
+        <div class="dict-ai-box" style="display:none;"></div>
+      </div>
+    </div>
+
+    <div class="dict-item" onclick="toggleDef(this, 'ETF')">
+      <div class="dict-term">ETF — Exchange Traded Fund <span class="dict-arrow">+</span></div>
+      <div class="dict-def">
+        <div class="cheat-what">A basket of stocks you can buy as a single investment. Buying SPY (S&P 500 ETF) is like buying a tiny piece of the 500 biggest US companies at once. Instant diversification, low cost.</div>
+        <div class="cheat-scale"><span class="good">Index ETFs — broadest diversification</span><span class="mid">Sector ETFs — focused on one industry</span><span class="bad">Leveraged ETFs — very risky, for experts only</span></div>
+        <div class="cheat-tip">Warren Buffett recommends most people just buy a low-cost S&P 500 ETF instead of picking individual stocks.</div>
+        <div class="dict-ai-box" style="display:none;"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- APP WRAPPER -->
+<div id="app">
+
+  <header>
+    <h1>Stock<span>IQ</span></h1>
+    <p>Invest smarter. Learn as you go.</p>
+  </header>
+
+  <!-- NAVIGATION TABS -->
+  <nav id="main-nav">
+    <div class="nav-tab active" id="nav-analyze" onclick="showTab('analyze')">Analyze</div>
+    <div class="nav-tab" id="nav-portfolio" onclick="showTab('portfolio')">Portfolio</div>
+    <div class="nav-tab" id="nav-watchlist" onclick="showTab('watchlist')">Watchlist</div>
+    <div class="nav-tab" id="nav-profile" onclick="showTab('profile')">Profile</div>
+    <div class="nav-tab nav-tab-dict" id="nav-dict" onclick="toggleDictionary()">Learn Terms</div>
+  </nav>
+
+  <!-- MARKET BAR -->
+  <div id="market-bar">
+    <div class="market-item" onclick="quickSearch('SPY')">
+      <span class="market-name">S&P 500</span>
+      <span class="market-price" id="sp500-price">—</span>
+      <span class="market-change" id="sp500-change">—</span>
+    </div>
+    <div class="market-divider"></div>
+    <div class="market-item" onclick="quickSearch('QQQ')">
+      <span class="market-name">NASDAQ</span>
+      <span class="market-price" id="nasdaq-price">—</span>
+      <span class="market-change" id="nasdaq-change">—</span>
+    </div>
+    <div class="market-divider"></div>
+    <div class="market-item" onclick="quickSearch('DIA')">
+      <span class="market-name">DOW</span>
+      <span class="market-price" id="dow-price">—</span>
+      <span class="market-change" id="dow-change">—</span>
+    </div>
+    <div class="market-divider"></div>
+    <div class="market-item" onclick="quickSearch('GLD')">
+      <span class="market-name">GOLD</span>
+      <span class="market-price" id="btc-price">—</span>
+      <span class="market-change" id="btc-change">—</span>
+    </div>
+  </div>
+
+  <!-- ── TAB: ANALYZE ── -->
+  <div class="tab-content active" id="tab-analyze">
+    <div id="analyze-layout">
+
+      <!-- LEFT: Trending sidebar -->
+      <aside id="trending-section">
+        <h2>TRENDING TICKERS</h2>
+        <div id="trending-filters">
+          <button class="trend-filter-btn active" data-filter="all" onclick="setTrendingFilter('all')">All</button>
+          <button class="trend-filter-btn" data-filter="gainers" onclick="setTrendingFilter('gainers')">Gainers</button>
+          <button class="trend-filter-btn" data-filter="losers" onclick="setTrendingFilter('losers')">Losers</button>
+        </div>
+        <div id="trending-list"></div>
+
+        <div id="sector-section">
+          <h2 style="margin-top:20px;">SECTORS TODAY</h2>
+          <div id="sector-list"><div class="trending-loading">Loading sectors…</div></div>
+        </div>
+      </aside>
+
+      <!-- RIGHT: Main content -->
+      <main>
+      <div id="search-section">
+        <div id="search-input-row">
+          <div id="search-input-wrap">
+            <input type="text" id="stock-input" placeholder="e.g. Apple, Tesla or AAPL"
+              oninput="onSearchInput()"
+              onkeypress="if(event.key==='Enter'){ hideDropdown(); searchStock(); }"
+              onblur="hideDropdown()">
+            <div id="search-dropdown"></div>
+          </div>
+          <button type="button" onclick="searchStock()">Analyze</button>
+        </div>
+        <div id="search-history" style="display:none;"></div>
+        <div id="loading" style="display:none;">
+          <div class="loading-state">
+            <div class="loading-spinner-ring"></div>
+            <div class="loading-msg">Analyzing <span id="loading-ticker"></span>…</div>
+            <div class="loading-sub">Fetching price, fundamentals &amp; AI analysis</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="results-section" style="display:none;">
+        <div id="stock-name">—</div>
+        <div id="health-score">Health Score: —</div>
+        <div id="signal">SIGNAL: —</div>
+        <div id="risk-profile-bar" style="display:none;"></div>
+        <div id="week-range-bar" style="display:none;"></div>
+        <div id="action-btns" style="display:none;">
+          <button type="button" id="watchlist-btn" onclick="addToWatchlist()">+ Watchlist</button>
+          <button type="button" id="portfolio-quick-btn" onclick="quickAddToPortfolio()">+ Portfolio</button>
+        </div>
+        <div id="explanation-simple" style="display:none;"></div>
+        <div id="company-about" style="display:none;"></div>
+        <div id="fundamentals-card" style="display:none;"></div>
+        <div id="ai-explanation" style="display:none;">
+          <div id="ai-label">STOCKIQ AI ANALYSIS</div>
+          <div id="ai-text">—</div>
+          <div id="ai-chat" style="display:none;">
+            <div id="ai-chat-messages"></div>
+            <div id="ai-chat-suggestions">
+              <button class="chat-suggest" onclick="askStockQuestion('What does this score mean?')">What does the score mean?</button>
+              <button class="chat-suggest" onclick="askStockQuestion('What are the main risks for this company?')">What are the risks?</button>
+              <button class="chat-suggest" onclick="askStockQuestion('Can you explain the P/E ratio for this stock?')">Explain P/E ratio</button>
+              <button class="chat-suggest" onclick="askStockQuestion('What does beta mean and how does it affect me?')">What is beta?</button>
+            </div>
+            <div id="ai-chat-input-row">
+              <input type="text" id="ai-chat-input" placeholder="Ask anything about this stock..." onkeypress="if(event.key==='Enter') sendStockQuestion()">
+              <button onclick="sendStockQuestion()" id="ai-chat-send">Ask</button>
+            </div>
+          </div>
+        </div>
+        <button type="button" id="show-details-btn" onclick="toggleDetails()" style="display:none;">Show Full Analysis</button>
+        <div id="explanation" style="display:none;">—</div>
+      </div>
+
+      <div id="chart-section" style="display:none;">
+        <div id="chart-header">
+          <h2>PRICE CHART</h2>
+          <div id="chart-range-btns">
+            <button class="range-btn" data-range="1W" onclick="setChartRange('1W')">1W</button>
+            <button class="range-btn active" data-range="1M" onclick="setChartRange('1M')">1M</button>
+            <button class="range-btn" data-range="3M" onclick="setChartRange('3M')">3M</button>
+          </div>
+        </div>
+        <canvas id="priceChart"></canvas>
+        <div id="chart-stats"></div>
+        <div id="chart-insight"></div>
+      </div>
+
+      <div id="news-section" style="display:none;">
+        <h2>LATEST NEWS</h2>
+        <div id="news-list"></div>
+      </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- ── TAB: PORTFOLIO ── -->
+  <div class="tab-content" id="tab-portfolio">
+    <main id="port-main">
+
+      <!-- Top metrics row — hidden until portfolio has data -->
+      <div id="portfolio-summary" style="display:none;">
+        <div class="port-metrics">
+          <div class="port-metric">
+            <div class="port-metric-label">Total Value</div>
+            <div class="port-metric-value" id="port-total-value">$0</div>
+          </div>
+          <div class="port-metric">
+            <div class="port-metric-label">Total Gain/Loss</div>
+            <div class="port-metric-value" id="port-total-gain">$0</div>
+            <div class="port-metric-sub" id="port-total-pct">0%</div>
+          </div>
+          <div class="port-metric">
+            <div class="port-metric-label">Today's Change</div>
+            <div class="port-metric-value" id="port-today-change">$0</div>
+          </div>
+          <div class="port-metric">
+            <div class="port-metric-label">Avg Score</div>
+            <div class="port-metric-value" id="port-avg-score">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Two-column layout -->
+      <div id="port-layout">
+
+        <!-- LEFT: chart + performers -->
+        <div id="port-left">
+
+          <div id="add-stock-form">
+            <h2>ADD A STOCK</h2>
+            <div class="add-form-col">
+              <div id="port-ticker-wrap" style="position:relative;">
+                <input type="text" id="port-ticker" placeholder="Ticker (e.g. AAPL)" style="width:100%;" oninput="onPortTickerInput()" onblur="hidePortDropdown()">
+                <div id="port-ticker-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,0.12);overflow:hidden;margin-top:4px;"></div>
+              </div>
+              <div class="add-form-row2">
+                <input type="number" id="port-shares" placeholder="Shares">
+                <div style="position:relative;flex:1;">
+                  <input type="number" id="port-price" placeholder="Buy price $" style="width:100%;">
+                  <span id="port-price-loading" style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--text-muted);">...</span>
+                </div>
+              </div>
+              <input type="date" id="port-date" style="width:100%;">
+              <button type="button" onclick="addToPortfolio()">Add</button>
+            </div>
+          </div>
+
+          <div id="portfolio-chart-section" style="display:none;">
+            <div id="portfolio-chart-header">
+              <h2>ALLOCATION</h2>
+              <div id="portfolio-chart-toggle">
+                <button class="port-chart-btn active" data-view="pie" onclick="switchPortfolioChart('pie')">Allocation</button>
+                <button class="port-chart-btn" data-view="line" onclick="switchPortfolioChart('line')">History</button>
+              </div>
+            </div>
+            <div id="portfolio-pie-view">
+              <div id="portfolio-chart-wrap">
+                <canvas id="portfolioChart"></canvas>
+                <div id="portfolio-chart-legend"></div>
+              </div>
+            </div>
+            <div id="portfolio-line-view" style="display:none;">
+              <canvas id="portfolioLineChart"></canvas>
+              <div id="portfolio-line-empty" style="display:none;text-align:center;padding:24px 0;font-size:13px;color:var(--text-muted);">
+                Visit the app on multiple days to see your portfolio value over time.
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- RIGHT: stock list + AI -->
+        <div id="port-right">
+
+          <div class="port-winners" id="port-winners-card" style="display:none;">
+            <div class="port-winner best">
+              <div class="port-winner-label">Best Performer</div>
+              <div class="port-winner-ticker" id="port-best-ticker">—</div>
+              <div class="port-winner-gain" id="port-best-gain">—</div>
+            </div>
+            <div class="port-winner worst">
+              <div class="port-winner-label">Worst Performer</div>
+              <div class="port-winner-ticker" id="port-worst-ticker">—</div>
+              <div class="port-winner-gain" id="port-worst-gain">—</div>
+            </div>
+          </div>
+
+          <div id="port-search-wrap" style="display:none;">
+            <input type="text" id="port-search-input" placeholder="Search your stocks…" oninput="filterPortfolioList()" autocomplete="off">
+          </div>
+
+          <div id="portfolio-empty" class="empty-state">
+            <div class="empty-state-icon">
+              <svg viewBox="0 0 24 24"><rect x="3" y="12" width="4" height="9"/><rect x="10" y="7" width="4" height="14"/><rect x="17" y="3" width="4" height="18"/></svg>
+            </div>
+            <div class="empty-state-title">Your portfolio is empty</div>
+            <div class="empty-state-desc">Add your first stock on the left to start tracking.</div>
+          </div>
+
+          <div id="portfolio-list"></div>
+
+          <button type="button" id="port-ai-btn" onclick="analyzePortfolioWithAI()" style="display:none;">Analyze My Portfolio with AI</button>
+
+          <div id="port-ai-section" style="display:none;">
+            <div id="port-ai-label">STOCKIQ AI — PORTFOLIO INSIGHTS</div>
+            <div id="port-ai-text">—</div>
+            <div id="port-chat" style="display:none;">
+              <div id="port-chat-messages"></div>
+              <div id="port-chat-suggestions">
+                <button class="chat-suggest" onclick="askPortfolioQuestion('What does diversification mean and do I have it?')">What is diversification?</button>
+                <button class="chat-suggest" onclick="askPortfolioQuestion('How do I read my gain and loss numbers?')">How to read gain/loss?</button>
+                <button class="chat-suggest" onclick="askPortfolioQuestion('What does the score tell me about my portfolio?')">What does my score mean?</button>
+                <button class="chat-suggest" onclick="askPortfolioQuestion('What is portfolio risk and how is mine?')">What is portfolio risk?</button>
+              </div>
+              <div id="port-chat-input-row">
+                <input type="text" id="port-chat-input" placeholder="Ask anything about your portfolio…" onkeypress="if(event.key==='Enter') sendPortfolioQuestion()">
+                <button type="button" id="port-chat-send" onclick="sendPortfolioQuestion()">Ask</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ── TAB: WATCHLIST ── -->
+  <div class="tab-content" id="tab-watchlist">
+    <main>
+      <div id="watchlist-section">
+        <h2>MY WATCHLIST</h2>
+        <div id="watchlist-empty" class="empty-state">
+          <div class="empty-state-icon">
+            <svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <div class="empty-state-title">Nothing saved yet</div>
+          <div class="empty-state-desc">Search for a stock and tap Add to Watchlist to track it here.</div>
+        </div>
+        <div id="watchlist-items"></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ── TAB: PROFILE ── -->
+  <div class="tab-content" id="tab-profile">
+    <main>
+      <div id="profile-section">
+
+        <!-- User identity card -->
+        <div id="user-info-card">
+          <div id="user-avatar"></div>
+          <div id="user-info-display">
+            <div id="user-name-display">Set your name</div>
+            <div id="user-username-display">@username</div>
+            <div id="user-email-display">email@example.com</div>
+          </div>
+          <button type="button" id="user-edit-btn" onclick="toggleEditProfile()">Edit</button>
+        </div>
+
+        <div id="user-edit-form" style="display:none;">
+          <div class="user-edit-field">
+            <label for="input-name">Full Name</label>
+            <input type="text" id="input-name" placeholder="Your name" maxlength="40">
+          </div>
+          <div class="user-edit-field">
+            <label for="input-username">Username</label>
+            <input type="text" id="input-username" placeholder="@username" maxlength="20">
+          </div>
+          <div class="user-edit-field">
+            <label for="input-email">Email</label>
+            <input type="email" id="input-email" placeholder="your@email.com" maxlength="60">
+          </div>
+          <div class="user-edit-actions">
+            <button type="button" id="user-save-btn" onclick="saveUserInfo()">Save</button>
+            <button type="button" id="user-cancel-btn" onclick="toggleEditProfile()">Cancel</button>
+          </div>
+        </div>
+
+        <div id="profile-card">
+          <div id="profile-card-left">
+            <div id="profile-icon-display"></div>
+          </div>
+          <div id="profile-card-right">
+            <div id="profile-type-display">No profile set</div>
+            <div id="profile-desc-display">Complete the quiz to personalize your experience.</div>
+            <button type="button" onclick="document.getElementById('quiz-overlay').style.display='flex'" id="profile-quiz-btn">Take Risk Quiz</button>
+          </div>
+        </div>
+
+        <div id="profile-stats">
+          <h2>YOUR ACTIVITY</h2>
+          <div id="profile-stats-grid">
+            <div class="profile-stat-tile">
+              <div class="profile-stat-num" id="stat-analyzed">0</div>
+              <div class="profile-stat-label">Stocks analyzed</div>
+            </div>
+            <div class="profile-stat-tile">
+              <div class="profile-stat-num" id="stat-streak">0</div>
+              <div class="profile-stat-label">Day streak 🔥</div>
+            </div>
+            <div class="profile-stat-tile">
+              <div class="profile-stat-num" id="stat-watchlist">0</div>
+              <div class="profile-stat-label">In watchlist</div>
+            </div>
+            <div class="profile-stat-tile">
+              <div class="profile-stat-num" id="stat-portfolio">0</div>
+              <div class="profile-stat-label">In portfolio</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="profile-badges">
+          <h2>ACHIEVEMENTS</h2>
+          <div id="badges-grid"></div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <footer>
+    <p>StockIQ — Market data for educational purposes only. Not financial advice.</p>
+  </footer>
+
+</div>
+
+<script src="config.js"></script>
+<script src="script.js"></script>
+<script>
+  if ('serviceWorker' in navigator && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+    navigator.serviceWorker.register('/sw.js').catch(function() {});
+  }
+</script>
+</body>
+</html>
