@@ -2778,3 +2778,122 @@ footer {
   .port-stock-row .hide-mobile { display: none; }
   .port-stock-header .hide-mobile { display: none; }
 }
+
+/* ════════════════════════════════════════
+   PHONE  (≤ 640 px)
+   ════════════════════════════════════════ */
+@media (max-width: 640px) {
+
+  /* ── Header ── */
+  header { padding: 10px 16px 6px; }
+  header h1 { font-size: 26px; letter-spacing: -1px; }
+  header p { display: none; }
+
+  /* ── Nav: scrollable row so nothing overflows ── */
+  #main-nav {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  #main-nav::-webkit-scrollbar { display: none; }
+  .nav-tab {
+    font-size: 10px;
+    padding: 13px 10px;
+    letter-spacing: 0;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  /* The four main tabs share space; "Learn Terms" stays compact */
+  #nav-dict { padding-left: 14px; padding-right: 14px; margin-left: 0; }
+
+  /* ── Market bar (already scrollable at 768px, polish here) ── */
+  .market-item { padding: 5px 12px; }
+
+  /* ── Analyze layout:
+        reorder so search is on top, trending below  ── */
+  #analyze-layout {
+    display: flex;
+    flex-direction: column;
+    padding: 16px 14px 64px;
+    gap: 20px;
+  }
+  #tab-analyze main  { order: 1; padding: 0; }
+  #trending-section  { order: 2; position: static; max-height: none; padding: 14px 12px; }
+
+  /* ── Search ── */
+  #search-section { margin-bottom: 20px; }
+  #stock-input { font-size: 16px; padding: 16px 14px; }
+  #search-input-row > button { padding: 16px 16px; font-size: 14px; }
+
+  /* ── Results card ── */
+  #results-section { padding: 16px 14px; gap: 14px; border-radius: 16px; }
+  .stock-header-price { font-size: 26px; letter-spacing: -0.5px; }
+  .price-change-pill { font-size: 12px; }
+  #earnings-badge { flex-wrap: wrap; gap: 12px; padding: 12px 14px; }
+  #action-btns button { font-size: 12px; padding: 10px 10px; }
+
+  /* ── Score badge ── */
+  .score-badge-num { font-size: 26px; }
+  .score-badge-label { font-size: 12px; }
+
+  /* ── Score tooltips: keep inside screen ── */
+  .score-tooltip { width: 240px; left: auto; right: -8px; }
+
+  /* ── Chart ── */
+  #chart-section { padding: 16px 12px; margin-top: 16px; }
+  #chart-stats { grid-template-columns: repeat(3, 1fr); gap: 4px; }
+  .chart-stat { padding: 8px 4px; }
+  .chart-stat-value { font-size: 12px; }
+  .chart-stat-label { font-size: 9px; }
+
+  /* ── News & company cards ── */
+  #news-section,
+  #company-about,
+  #fundamentals-card { padding: 16px 12px; margin-top: 16px; }
+  .news-headline { font-size: 13px; }
+
+  /* ── Company about / fundamentals: 2 cols (already at 768px, confirm) ── */
+  .about-grid,
+  .fundamentals-grid { grid-template-columns: repeat(2, 1fr); }
+
+  /* ── AI chat suggestions: horizontal scroll ── */
+  #ai-chat-suggestions,
+  #port-chat-suggestions {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+    margin-bottom: 10px;
+  }
+  #ai-chat-suggestions::-webkit-scrollbar,
+  #port-chat-suggestions::-webkit-scrollbar { display: none; }
+  .chat-suggest { flex-shrink: 0; font-size: 11px; }
+
+  /* ── Portfolio ── */
+  #port-main { padding: 16px 14px 64px; }
+  .port-metrics { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .port-metric { padding: 12px 12px; }
+  .port-metric-value { font-size: 17px; }
+  /* rows already handled at 768px — keep that 3-col grid */
+
+  /* ── Watchlist ── */
+  #watchlist-section { padding: 16px 12px; border-radius: 16px; }
+  #tab-watchlist main { padding: 16px 14px 64px; }
+
+  /* ── Profile ── */
+  #tab-profile main { padding: 16px 14px 64px; }
+  #profile-stats-grid { grid-template-columns: repeat(2, 1fr); }
+  #badges-grid { grid-template-columns: repeat(3, 1fr); }
+  #profile-card { flex-direction: column; text-align: center; }
+  #profile-quiz-btn { margin: 0 auto; }
+
+  /* ── Dictionary drawer: full width on phone ── */
+  #dict-drawer { width: 100%; right: -100%; }
+
+  /* ── Toast ── */
+  #toast { bottom: 16px; font-size: 12px; padding: 10px 16px; }
+
+  /* ── Footer ── */
+  footer { padding: 20px 16px; font-size: 11px; margin-top: 16px; }
+}
