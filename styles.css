@@ -1669,9 +1669,13 @@ footer {
 }
 
 .auth-feature-icon {
-  font-size: 22px;
+  font-family: var(--display);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent-green);
   flex-shrink: 0;
-  margin-top: 1px;
+  margin-top: 3px;
+  letter-spacing: 0.5px;
 }
 
 .auth-feature-title {
