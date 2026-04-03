@@ -1236,7 +1236,10 @@ function loadTrendingTickers(forceRefresh) {
       setTimeout(function() {
         fetch('https://finnhub.io/api/v1/quote?symbol=' + t.symbol + '&token=' + finnhubKey)
           .then(function(r) { return r.json(); })
-          .then(function(q) { resolve({ symbol: t.symbol, name: t.name, price: q.c, change: q.d || 0, changePct: q.dp || 0 }); })
+          .then(function(q) {
+            let price = q.c > 0 ? q.c : q.pc;
+            resolve({ symbol: t.symbol, name: t.name, price: price, change: q.d || 0, changePct: q.dp || 0 });
+          })
           .catch(function() { resolve(null); });
       }, d);
     });
@@ -1336,7 +1339,7 @@ function loadSectors() {
       setTimeout(function() {
         fetch('https://finnhub.io/api/v1/quote?symbol=' + s.etf + '&token=' + finnhubKey)
           .then(function(r) { return r.json(); })
-          .then(function(q) { resolve({ name: s.name, etf: s.etf, changePct: q.dp || 0 }); })
+          .then(function(q) { resolve({ name: s.name, etf: s.etf, changePct: q.dp || 0, marketOpen: q.c > 0 }); })
           .catch(function() { resolve(null); });
       }, d);
     });
@@ -1352,18 +1355,22 @@ function loadSectors() {
 function renderSectors(data) {
   let el = document.getElementById('sector-list');
   if (!el) return;
+  let allZero = data.every(function(s) { return s.changePct === 0; });
   let maxAbs = Math.max.apply(null, data.map(function(s) { return Math.abs(s.changePct); })) || 1;
-  el.innerHTML = data.map(function(s) {
+  let html = data.map(function(s) {
     let up = s.changePct >= 0;
-    let color = up ? '#16a34a' : '#dc2626';
+    let color = allZero ? 'var(--text-muted)' : (up ? '#16a34a' : '#dc2626');
     let sign = up ? '+' : '';
-    let barWidth = Math.round((Math.abs(s.changePct) / maxAbs) * 100);
+    let barWidth = allZero ? 50 : Math.round((Math.abs(s.changePct) / maxAbs) * 100);
+    let changeLabel = allZero ? '—' : sign + s.changePct.toFixed(2) + '%';
     return '<div class="sector-row">' +
       '<span class="sector-name">' + s.name + '</span>' +
       '<div class="sector-bar-wrap"><div class="sector-bar-fill" style="width:' + barWidth + '%;background:' + color + ';"></div></div>' +
-      '<span class="sector-change" style="color:' + color + ';">' + sign + s.changePct.toFixed(2) + '%</span>' +
+      '<span class="sector-change" style="color:' + color + ';">' + changeLabel + '</span>' +
     '</div>';
   }).join('');
+  if (allZero) html += '<div style="font-size:11px;color:var(--text-muted);text-align:center;margin-top:8px;">Market closed</div>';
+  el.innerHTML = html;
 }
 
 function quickSearch(ticker) {
