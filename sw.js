@@ -15,16 +15,31 @@ self.addEventListener("activate", function(e) {
   self.clients.claim();
 });
 
-// Network-first for API calls, cache-first for app shell
 self.addEventListener("fetch", function(e) {
   let url = e.request.url;
+
+  // API calls — network only, cache as fallback
   if (url.includes("finnhub.io") || url.includes("polygon.io") || url.includes("anthropic.com")) {
     e.respondWith(fetch(e.request).catch(function() { return caches.match(e.request); }));
-  } else {
+    return;
+  }
+
+  // Fonts and CDN — cache-first (they never change)
+  if (url.includes("fonts.googleapis.com") || url.includes("fonts.gstatic.com") || url.includes("cdn.jsdelivr.net") || url.includes("gstatic.com/firebasejs")) {
     e.respondWith(caches.match(e.request).then(function(cached) {
       return cached || fetch(e.request).then(function(res) {
         return caches.open(CACHE).then(function(c) { c.put(e.request, res.clone()); return res; });
       });
     }));
+    return;
   }
+
+  // App shell (HTML, CSS, JS, config) — network-first so deploys show immediately
+  e.respondWith(
+    fetch(e.request).then(function(res) {
+      return caches.open(CACHE).then(function(c) { c.put(e.request, res.clone()); return res; });
+    }).catch(function() {
+      return caches.match(e.request);
+    })
+  );
 });
