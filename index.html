@@ -16,6 +16,37 @@
 </head>
 <body>
 
+<!-- SIGN UP / LOGIN -->
+<div id="auth-overlay">
+  <div id="auth-modal">
+    <div id="auth-logo">Stock<span>IQ</span></div>
+    <div id="auth-tagline">Invest smarter. Learn as you go.</div>
+
+    <!-- Sign Up -->
+    <div id="auth-signup">
+      <div class="auth-title">Create your account</div>
+      <div class="auth-subtitle">Free forever. No credit card needed.</div>
+      <input type="text" id="auth-name" placeholder="Your name" autocomplete="name">
+      <input type="email" id="auth-email" placeholder="Email address" autocomplete="email">
+      <input type="password" id="auth-password" placeholder="Password (min 6 characters)" autocomplete="new-password">
+      <button type="button" onclick="submitSignUp()">Create Account</button>
+      <div class="auth-switch">Already have an account? <span onclick="showLogin()">Log in</span></div>
+    </div>
+
+    <!-- Log In -->
+    <div id="auth-login" style="display:none;">
+      <div class="auth-title">Welcome back</div>
+      <div class="auth-subtitle">Log in to your StockIQ account</div>
+      <input type="email" id="login-email" placeholder="Email address" autocomplete="email">
+      <input type="password" id="login-password" placeholder="Password" autocomplete="current-password">
+      <button type="button" onclick="submitLogin()">Log In</button>
+      <div class="auth-switch">Don't have an account? <span onclick="showSignUp()">Sign up</span></div>
+    </div>
+
+    <div id="auth-disclaimer">By continuing you agree this app is for <strong>educational purposes only</strong> and does not provide financial advice.</div>
+  </div>
+</div>
+
 <!-- RISK PROFILE QUIZ -->
 <div id="quiz-overlay">
   <div id="quiz-modal">

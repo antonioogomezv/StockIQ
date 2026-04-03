@@ -2035,13 +2035,78 @@ function toggleLanguage() {
   showToast("Spanish version coming soon!");
 }
 
+// ── AUTH ──
+function showLogin() {
+  document.getElementById('auth-signup').style.display = 'none';
+  document.getElementById('auth-login').style.display = 'flex';
+}
+
+function showSignUp() {
+  document.getElementById('auth-login').style.display = 'none';
+  document.getElementById('auth-signup').style.display = 'flex';
+}
+
+function submitSignUp() {
+  let name     = document.getElementById('auth-name').value.trim();
+  let email    = document.getElementById('auth-email').value.trim();
+  let password = document.getElementById('auth-password').value;
+  if (!name)     { showToast('Please enter your name.'); return; }
+  if (!email || !email.includes('@')) { showToast('Please enter a valid email.'); return; }
+  if (password.length < 6) { showToast('Password must be at least 6 characters.'); return; }
+
+  // Check if email already registered
+  let users = JSON.parse(localStorage.getItem('siq-users') || '[]');
+  if (users.find(function(u) { return u.email === email; })) {
+    showToast('An account with this email already exists. Log in instead.');
+    showLogin();
+    return;
+  }
+
+  // Save user (plain password — temporary until Firebase)
+  users.push({ name, email, password });
+  localStorage.setItem('siq-users', JSON.stringify(users));
+  localStorage.setItem('siq-session', JSON.stringify({ name, email }));
+  localStorage.setItem('user-info', JSON.stringify({ name, username: name.split(' ')[0].toLowerCase(), email }));
+
+  document.getElementById('auth-overlay').style.display = 'none';
+  // New user — show quiz
+  if (!userProfile) {
+    document.getElementById('quiz-overlay').style.display = 'flex';
+  }
+}
+
+function submitLogin() {
+  let email    = document.getElementById('login-email').value.trim();
+  let password = document.getElementById('login-password').value;
+  if (!email || !password) { showToast('Please fill in all fields.'); return; }
+
+  let users = JSON.parse(localStorage.getItem('siq-users') || '[]');
+  let user = users.find(function(u) { return u.email === email && u.password === password; });
+  if (!user) { showToast('Email or password incorrect.'); return; }
+
+  localStorage.setItem('siq-session', JSON.stringify({ name: user.name, email: user.email }));
+  localStorage.setItem('user-info', JSON.stringify({ name: user.name, username: user.name.split(' ')[0].toLowerCase(), email: user.email }));
+
+  document.getElementById('auth-overlay').style.display = 'none';
+  updateRiskBadge();
+}
+
 // ── INIT ──
 userProfile = JSON.parse(localStorage.getItem("userProfile") || "null");
+let siqSession = JSON.parse(localStorage.getItem('siq-session') || 'null');
 
-if (!userProfile) {
-  document.getElementById("quiz-overlay").style.display = "flex";
+if (!siqSession) {
+  // Not logged in — show auth screen
+  document.getElementById('auth-overlay').style.display = 'flex';
+  document.getElementById('quiz-overlay').style.display = 'none';
+} else if (!userProfile) {
+  // Logged in but no quiz yet
+  document.getElementById('auth-overlay').style.display = 'none';
+  document.getElementById('quiz-overlay').style.display = 'flex';
 } else {
-  document.getElementById("quiz-overlay").style.display = "none";
+  // Fully set up
+  document.getElementById('auth-overlay').style.display = 'none';
+  document.getElementById('quiz-overlay').style.display = 'none';
   updateRiskBadge();
 }
 
