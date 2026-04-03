@@ -492,6 +492,7 @@ function displayData(data) {
     signalEl.style.border = "1px solid rgba(220,38,38,0.2)";
   }
 
+
   // Risk profile bar (between signal and action buttons)
   let riskBar = document.getElementById("risk-profile-bar");
   if (riskBar) {
@@ -546,8 +547,7 @@ function displayData(data) {
 
 
     getScoreHistoryHtml(ticker, totalScore) +
-    getSectorContext(industry, pe, margin, growth, beta) +
-    getRiskProfileWarning(beta, totalScore);
+    getSectorContext(industry, pe, margin, growth, beta);
 
   initStockChat(ticker, companyName, totalScore, changePct, pe, margin, growth, beta, rsi, price);
   let chatEl = document.getElementById('ai-chat');
