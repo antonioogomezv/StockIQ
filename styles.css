@@ -868,11 +868,15 @@ button:active { transform: translateY(0); }
 #trending-section {
   position: sticky;
   top: 90px;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 18px 16px;
   box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }
 #trending-section h2 {
   font-size: 10px;
