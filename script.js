@@ -1476,6 +1476,16 @@ function toggleDef(item, term) {
   .catch(function() { aiBox.style.display = "none"; });
 }
 
+// Migrate old single-lot format to multi-lot format
+function migratePortfolio(portfolio) {
+  return portfolio.map(function(item) {
+    if (!item.lots) {
+      return { ticker: item.ticker, lots: [{ shares: item.shares, price: item.buyPrice, date: item.buyDate || '' }] };
+    }
+    return item;
+  });
+}
+
 function addToPortfolio() {
   let ticker = document.getElementById('port-ticker').value.trim().toUpperCase();
   let shares = parseFloat(document.getElementById('port-shares').value);
@@ -1483,9 +1493,14 @@ function addToPortfolio() {
   let dateVal = document.getElementById('port-date').value;
   let buyDate = dateVal ? new Date(dateVal + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   if (!ticker || !shares || !buyPrice) { showToast('Please fill in all fields!'); return; }
-  let portfolio = JSON.parse(localStorage.getItem('portfolio') || '[]');
-  if (portfolio.find(function(i) { return i.ticker === ticker; })) { showToast(ticker + ' is already in your portfolio!'); return; }
-  portfolio.push({ ticker, shares, buyPrice, buyDate });
+  let portfolio = migratePortfolio(JSON.parse(localStorage.getItem('portfolio') || '[]'));
+  let existing = portfolio.find(function(i) { return i.ticker === ticker; });
+  if (existing) {
+    existing.lots.push({ shares, price: buyPrice, date: buyDate });
+    showToast('Added new lot to ' + ticker);
+  } else {
+    portfolio.push({ ticker, lots: [{ shares, price: buyPrice, date: buyDate }] });
+  }
   localStorage.setItem('portfolio', JSON.stringify(portfolio));
   saveToFirestore({ portfolio: portfolio });
   document.getElementById('port-ticker').value = '';
@@ -1496,14 +1511,27 @@ function addToPortfolio() {
 }
 
 function removeFromPortfolio(ticker) {
-  let portfolio = JSON.parse(localStorage.getItem('portfolio') || '[]').filter(function(i) { return i.ticker !== ticker; });
+  let portfolio = migratePortfolio(JSON.parse(localStorage.getItem('portfolio') || '[]')).filter(function(i) { return i.ticker !== ticker; });
+  localStorage.setItem('portfolio', JSON.stringify(portfolio));
+  saveToFirestore({ portfolio: portfolio });
+  renderPortfolio();
+}
+
+function removeLotFromPortfolio(ticker, lotIndex) {
+  let portfolio = migratePortfolio(JSON.parse(localStorage.getItem('portfolio') || '[]'));
+  let item = portfolio.find(function(i) { return i.ticker === ticker; });
+  if (!item) return;
+  item.lots.splice(lotIndex, 1);
+  if (item.lots.length === 0) {
+    portfolio = portfolio.filter(function(i) { return i.ticker !== ticker; });
+  }
   localStorage.setItem('portfolio', JSON.stringify(portfolio));
   saveToFirestore({ portfolio: portfolio });
   renderPortfolio();
 }
 
 function renderPortfolio() {
-  let portfolio = JSON.parse(localStorage.getItem('portfolio') || '[]');
+  let portfolio = migratePortfolio(JSON.parse(localStorage.getItem('portfolio') || '[]'));
   let empty = document.getElementById('portfolio-empty');
   let list = document.getElementById('portfolio-list');
   let summary = document.getElementById('portfolio-summary');
@@ -1526,24 +1554,28 @@ function renderPortfolio() {
   let totalValue = 0, totalCost = 0, totalDayChange = 0;
   let scores = [], fetchPromises = [], stockData = [];
   portfolio.forEach(function(item) {
+    // Compute totals across all lots
+    let totalShares = item.lots.reduce(function(sum, l) { return sum + l.shares; }, 0);
+    let totalLotCost = item.lots.reduce(function(sum, l) { return sum + l.shares * l.price; }, 0);
+    let avgPrice = totalShares > 0 ? totalLotCost / totalShares : 0;
     let p = fetch('https://finnhub.io/api/v1/quote?symbol=' + item.ticker + '&token=' + finnhubKey)
       .then(function(r) { return r.json(); })
       .then(function(q) {
         let currentPrice = q.c || 0;
         let dayChange = q.dp || 0;
-        let value = currentPrice * item.shares;
-        let cost = item.buyPrice * item.shares;
+        let value = currentPrice * totalShares;
+        let cost = totalLotCost;
         let gain = value - cost;
         let gainPct = cost > 0 ? ((gain / cost) * 100) : 0;
-        let dayChangeAmt = (currentPrice * (dayChange / 100)) * item.shares;
+        let dayChangeAmt = (currentPrice * (dayChange / 100)) * totalShares;
         totalValue += value; totalCost += cost; totalDayChange += dayChangeAmt;
         let histScore = JSON.parse(localStorage.getItem('history_score_' + item.ticker) || '[]');
         let score = histScore.length > 0 ? histScore[histScore.length - 1].score : null;
         if (score) scores.push(score);
-        stockData.push({ ticker: item.ticker, shares: item.shares, buyPrice: item.buyPrice, buyDate: item.buyDate || null, currentPrice, value, cost, gain, gainPct, dayChangeAmt, score });
+        stockData.push({ ticker: item.ticker, lots: item.lots, shares: totalShares, buyPrice: avgPrice, currentPrice, value, cost, gain, gainPct, dayChangeAmt, score });
       })
       .catch(function() {
-        stockData.push({ ticker: item.ticker, shares: item.shares, buyPrice: item.buyPrice, buyDate: item.buyDate || null, currentPrice: 0, value: 0, cost: item.buyPrice * item.shares, gain: 0, gainPct: 0, dayChangeAmt: 0, score: null });
+        stockData.push({ ticker: item.ticker, lots: item.lots, shares: totalShares, buyPrice: avgPrice, currentPrice: 0, value: 0, cost: totalLotCost, gain: 0, gainPct: 0, dayChangeAmt: 0, score: null });
       });
     fetchPromises.push(p);
   });
@@ -1589,6 +1621,15 @@ function portSignal(score) {
   return '<span class="signal-pill ' + cls + '">' + txt + '</span>';
 }
 
+function togglePortLots(ticker) {
+  let el = document.getElementById('lots-' + ticker);
+  let btn = document.getElementById('lots-btn-' + ticker);
+  if (!el) return;
+  let isOpen = el.style.display !== 'none';
+  el.style.display = isOpen ? 'none' : 'block';
+  if (btn) btn.textContent = isOpen ? '▾' : '▴';
+}
+
 function renderPortfolioRows(data) {
   let list = document.getElementById('portfolio-list');
   if (!list) return;
@@ -1600,13 +1641,44 @@ function renderPortfolioRows(data) {
     data.map(function(s) {
       let gc = s.gain >= 0 ? '#16a34a' : '#dc2626';
       let dc = s.dayChangeAmt >= 0 ? '#16a34a' : '#dc2626';
-      return '<div class="port-stock-row" style="cursor:pointer;" onclick="openStockFromPortfolio(\'' + s.ticker + '\')">' +
-        '<div><div style="font-weight:600;font-size:14px;">' + s.ticker + '</div><div style="font-size:11px;color:#64748b;">' + s.shares + ' shares · $' + s.buyPrice.toFixed(2) + (s.buyDate ? ' · ' + s.buyDate : '') + '</div></div>' +
-        '<div>$' + s.value.toFixed(2) + '</div>' +
-        '<div class="hide-mobile" style="color:' + gc + ';">' + (s.gain >= 0 ? '+' : '') + '$' + s.gain.toFixed(2) + '<br><span style="font-size:11px;">' + (s.gainPct >= 0 ? '+' : '') + s.gainPct.toFixed(1) + '%</span></div>' +
-        '<div class="hide-mobile" style="color:' + dc + ';">' + (s.dayChangeAmt >= 0 ? '+' : '') + '$' + s.dayChangeAmt.toFixed(2) + '</div>' +
-        '<div style="display:flex;align-items:center;gap:8px;">' + portSignal(s.score) +
-        '<button onclick="event.stopPropagation();removeFromPortfolio(\'' + s.ticker + '\')" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:16px;padding:0;">✕</button></div>' +
+      let hasMultiple = s.lots && s.lots.length > 1;
+      let lotsHtml = '';
+      if (s.lots && s.lots.length > 0) {
+        lotsHtml = '<div id="lots-' + s.ticker + '" class="port-lots-drawer" style="display:none;">' +
+          s.lots.map(function(lot, i) {
+            let lotCost = lot.shares * lot.price;
+            let lotValue = s.currentPrice * lot.shares;
+            let lotGain = lotValue - lotCost;
+            let lotGainPct = lotCost > 0 ? ((lotGain / lotCost) * 100) : 0;
+            let lotGc = lotGain >= 0 ? '#16a34a' : '#dc2626';
+            return '<div class="port-lot-row">' +
+              '<div class="port-lot-info">' +
+                '<span class="port-lot-num">Lot ' + (i + 1) + '</span>' +
+                '<span>' + lot.shares + ' shares @ $' + lot.price.toFixed(2) + (lot.date ? ' · ' + lot.date : '') + '</span>' +
+              '</div>' +
+              '<div class="port-lot-gain" style="color:' + lotGc + ';">' + (lotGain >= 0 ? '+' : '') + '$' + lotGain.toFixed(2) + ' (' + (lotGainPct >= 0 ? '+' : '') + lotGainPct.toFixed(1) + '%)</div>' +
+              '<button onclick="event.stopPropagation();removeLotFromPortfolio(\'' + s.ticker + '\',' + i + ')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:13px;padding:2px 6px;flex-shrink:0;">✕</button>' +
+            '</div>';
+          }).join('') +
+        '</div>';
+      }
+      return '<div class="port-stock-wrapper">' +
+        '<div class="port-stock-row" onclick="openStockFromPortfolio(\'' + s.ticker + '\')">' +
+          '<div style="display:flex;align-items:center;gap:6px;">' +
+            (hasMultiple ? '<button id="lots-btn-' + s.ticker + '" onclick="event.stopPropagation();togglePortLots(\'' + s.ticker + '\')" class="port-lots-toggle">▾</button>' : '') +
+            '<div>' +
+              '<div style="font-weight:600;font-size:14px;">' + s.ticker + '</div>' +
+              '<div style="font-size:11px;color:#64748b;">' + s.shares.toFixed(s.shares % 1 === 0 ? 0 : 2) + ' shares · avg $' + s.buyPrice.toFixed(2) + (hasMultiple ? ' · ' + s.lots.length + ' lots' : '') + '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div>$' + s.value.toFixed(2) + '</div>' +
+          '<div class="hide-mobile" style="color:' + gc + ';">' + (s.gain >= 0 ? '+' : '') + '$' + s.gain.toFixed(2) + '<br><span style="font-size:11px;">' + (s.gainPct >= 0 ? '+' : '') + s.gainPct.toFixed(1) + '%</span></div>' +
+          '<div class="hide-mobile" style="color:' + dc + ';">' + (s.dayChangeAmt >= 0 ? '+' : '') + '$' + s.dayChangeAmt.toFixed(2) + '</div>' +
+          '<div style="display:flex;align-items:center;gap:8px;">' + portSignal(s.score) +
+            '<button onclick="event.stopPropagation();removeFromPortfolio(\'' + s.ticker + '\')" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:16px;padding:0;">✕</button>' +
+          '</div>' +
+        '</div>' +
+        lotsHtml +
       '</div>';
     }).join('');
 }
