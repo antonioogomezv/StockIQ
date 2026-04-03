@@ -227,7 +227,8 @@ function searchStock() {
         fetch("https://finnhub.io/api/v1/company-news?symbol=" + ticker + "&from=" + fromDate30Str + "&to=" + toDate + "&token=" + finnhubKey).then(function(r) { return r.json(); }),
         fetch("https://finnhub.io/api/v1/stock/metric?symbol=" + ticker + "&metric=all&token=" + finnhubKey).then(function(r) { return r.json(); }),
         fetch("https://finnhub.io/api/v1/calendar/earnings?symbol=" + ticker + "&from=" + earningsFrom + "&to=" + earningsToStr + "&token=" + finnhubKey).then(function(r) { return r.json(); }).catch(function() { return {}; }),
-        fetch("https://finnhub.io/api/v1/stock/earnings?symbol=" + ticker + "&limit=1&token=" + finnhubKey).then(function(r) { return r.json(); }).catch(function() { return []; })
+        fetch("https://finnhub.io/api/v1/stock/earnings?symbol=" + ticker + "&limit=1&token=" + finnhubKey).then(function(r) { return r.json(); }).catch(function() { return []; }),
+        fetch("https://api.polygon.io/v3/reference/tickers/" + ticker + "?apiKey=" + polygonKey).then(function(r) { return r.json(); }).catch(function() { return {}; })
       ]).then(function(results) {
         let quote      = results[0];
         let profile    = results[1];
@@ -235,6 +236,8 @@ function searchStock() {
         let metrics    = results[3].metric || {};
         let earningsData = results[4];
         let pastEarnings = results[5];
+        let tickerDetails = results[6].results || {};
+        if (tickerDetails.description) profile.description = tickerDetails.description;
 
         let data = { ticker, quote, profile, news, metrics, prices: [], dates: [], volumes: [], earningsData, pastEarnings };
         cache[query] = data;
