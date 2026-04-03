@@ -2915,6 +2915,27 @@ footer {
   .port-stock-header .hide-mobile { display: none; }
 }
 
+/* Floating Learn Terms button */
+#float-dict-btn {
+  display: none; /* hidden on desktop */
+  position: fixed;
+  bottom: 24px;
+  right: 20px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--accent-gold);
+  color: white;
+  font-size: 20px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(217,119,6,0.35);
+  z-index: 200;
+  padding: 0;
+  transition: transform 0.15s, opacity 0.15s;
+}
+#float-dict-btn:hover { transform: scale(1.08); opacity: 0.92; }
+
 /* ════════════════════════════════════════
    PHONE  (≤ 640 px)
    ════════════════════════════════════════ */
@@ -2924,6 +2945,10 @@ footer {
   header { padding: 10px 16px 6px; }
   header h1 { font-size: 26px; letter-spacing: -1px; }
   header p { display: none; }
+
+  /* ── Learn Terms: hide from nav, show floating button ── */
+  #nav-dict { display: none; }
+  #float-dict-btn { display: flex; align-items: center; justify-content: center; }
 
   /* ── Nav: scrollable row so nothing overflows ── */
   #main-nav {
