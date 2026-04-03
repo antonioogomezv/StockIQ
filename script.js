@@ -1358,7 +1358,7 @@ function renderSectors(data) {
     let color = up ? '#16a34a' : '#dc2626';
     let sign = up ? '+' : '';
     let barWidth = Math.round((Math.abs(s.changePct) / maxAbs) * 100);
-    return '<div class="sector-row" onclick="quickSearch(\'' + s.etf + '\')">' +
+    return '<div class="sector-row">' +
       '<span class="sector-name">' + s.name + '</span>' +
       '<div class="sector-bar-wrap"><div class="sector-bar-fill" style="width:' + barWidth + '%;background:' + color + ';"></div></div>' +
       '<span class="sector-change" style="color:' + color + ';">' + sign + s.changePct.toFixed(2) + '%</span>' +

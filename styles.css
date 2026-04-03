@@ -974,11 +974,8 @@ button:active { transform: translateY(0); }
   justify-content: space-between;
   padding: 7px 6px;
   border-radius: 8px;
-  cursor: pointer;
-  transition: background 0.15s;
   gap: 8px;
 }
-.sector-row:hover { background: var(--surface2); }
 .sector-name {
   font-size: 12px;
   font-weight: 600;
