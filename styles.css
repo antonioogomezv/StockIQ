@@ -3136,11 +3136,25 @@ footer {
 }
 .wl-alert-tag:hover { background: rgba(217,119,6,0.2); }
 
+.alert-input-wrap {
+  padding: 10px 0 4px;
+}
+
+.alert-range-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  padding: 7px 10px;
+  background: var(--surface2);
+  border-radius: 7px;
+  line-height: 1.5;
+}
+.alert-range-hint strong { color: var(--text); }
+
 .alert-input-row {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 0 4px;
 }
 .alert-input-row input {
   padding: 6px 10px;

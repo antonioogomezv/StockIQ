@@ -1386,13 +1386,37 @@ function openAlertInput(ticker, currentPrice) {
   if (!container) return;
   let div = document.createElement('div');
   div.id = 'alert-input-' + ticker;
-  div.className = 'alert-input-row';
+  div.className = 'alert-input-wrap';
   div.innerHTML =
-    '<input type="number" id="alert-val-' + ticker + '" placeholder="Target $" step="0.01" value="' + currentPrice.toFixed(2) + '" style="width:90px;">' +
-    '<button onclick="setAlert(\'' + ticker + '\',document.getElementById(\'alert-val-' + ticker + '\').value,' + currentPrice + ')" class="alert-set-btn">Set</button>' +
-    '<button onclick="document.getElementById(\'alert-input-' + ticker + '\').remove()" class="alert-cancel-btn">✕</button>';
+    '<div class="alert-range-hint" id="alert-range-' + ticker + '">Loading 52-week range…</div>' +
+    '<div class="alert-input-row">' +
+      '<input type="number" id="alert-val-' + ticker + '" placeholder="Target $" step="0.01" value="' + (currentPrice > 0 ? currentPrice.toFixed(2) : '') + '">' +
+      '<button onclick="setAlert(\'' + ticker + '\',document.getElementById(\'alert-val-' + ticker + '\').value,' + currentPrice + ')" class="alert-set-btn">Set Alert</button>' +
+      '<button onclick="document.getElementById(\'alert-input-' + ticker + '\').remove()" class="alert-cancel-btn">✕</button>' +
+    '</div>';
   container.appendChild(div);
   document.getElementById('alert-val-' + ticker).focus();
+  // Fetch 52-week range from Finnhub metrics
+  fetch('https://finnhub.io/api/v1/stock/metric?symbol=' + encodeURIComponent(ticker) + '&metric=all&token=' + finnhubKey)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      let m = data.metric || {};
+      let lo = m['52WeekLow'], hi = m['52WeekHigh'];
+      let hint = document.getElementById('alert-range-' + ticker);
+      if (!hint) return;
+      if (lo && hi) {
+        let pct = currentPrice > 0 ? Math.round(((currentPrice - lo) / (hi - lo)) * 100) : null;
+        hint.innerHTML =
+          '52-week range: <strong>$' + lo.toFixed(2) + '</strong> — <strong>$' + hi.toFixed(2) + '</strong>' +
+          (currentPrice > 0 ? ' · Current <strong>$' + currentPrice.toFixed(2) + '</strong> (' + pct + '% of range)' : '');
+      } else {
+        hint.textContent = 'Range data unavailable. Check the Analyze tab for more context.';
+      }
+    })
+    .catch(function() {
+      let hint = document.getElementById('alert-range-' + ticker);
+      if (hint) hint.textContent = 'Could not load range data.';
+    });
 }
 
 // ── END price alerts ─────────────────────────────────────────
