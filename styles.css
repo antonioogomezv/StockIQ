@@ -3002,6 +3002,110 @@ footer {
 }
 #float-dict-btn:hover { transform: scale(1.08); opacity: 0.92; }
 
+/* ── Portfolio tab switcher ── */
+#portfolio-tabs-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.port-tab {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.15s, border-color 0.15s;
+  box-shadow: none;
+  white-space: nowrap;
+}
+.port-tab:hover { color: var(--text); border-color: var(--text-muted); transform: none; }
+.port-tab.active {
+  background: var(--accent-green);
+  border-color: var(--accent-green);
+  color: #fff;
+}
+
+.port-tab-demo-tag {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  background: rgba(255,255,255,0.25);
+  padding: 1px 5px;
+  border-radius: 8px;
+  text-transform: uppercase;
+}
+.port-tab:not(.active) .port-tab-demo-tag {
+  background: rgba(217,119,6,0.12);
+  color: #d97706;
+}
+
+.port-tab-menu-btn {
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 2px;
+  color: rgba(255,255,255,0.8);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.12s;
+}
+.port-tab-menu-btn:hover { background: rgba(0,0,0,0.15); }
+
+.port-tab-add {
+  background: none;
+  border: 1px dashed var(--border);
+  color: var(--text-muted);
+  font-size: 18px;
+  font-weight: 400;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s, border-color 0.15s;
+  box-shadow: none;
+  flex-shrink: 0;
+}
+.port-tab-add:hover { color: var(--accent-green); border-color: var(--accent-green); transform: none; }
+
+.port-tab-menu-popup {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  z-index: 300;
+  overflow: hidden;
+  min-width: 120px;
+}
+.port-tab-menu-popup button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px 14px;
+  background: none;
+  border: none;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  box-shadow: none;
+  transition: background 0.12s;
+}
+.port-tab-menu-popup button:hover { background: var(--surface2); transform: none; }
+
 /* ── Sell button ── */
 .sell-btn {
   background: none;

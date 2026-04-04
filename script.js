@@ -1205,6 +1205,9 @@ function showQuizResult() {
 function finishQuiz() {
   localStorage.setItem("userProfile", JSON.stringify(userProfile));
   saveToFirestore({ userProfile: userProfile });
+  // Create demo portfolio matching investor profile
+  migrateToMultiPortfolio([], [], []);  // ensure structure exists first
+  createDemoPortfolio(userProfile.type);
   document.getElementById("quiz-overlay").style.display = "none";
   updateRiskBadge();
   let nameEl = document.getElementById("onboarding-profile-name");
@@ -1555,6 +1558,169 @@ function toggleDef(item, term) {
   .catch(function() { aiBox.style.display = "none"; });
 }
 
+// ── Multi-portfolio accessors ──────────────────────────────
+
+function getAllPortfolios() {
+  return JSON.parse(localStorage.getItem('portfolios') || '{}');
+}
+
+function getActiveId() {
+  return localStorage.getItem('activePortfolioId') || '';
+}
+
+function getActivePortfolio() {
+  let all = getAllPortfolios();
+  let id = getActiveId();
+  return (id && all[id]) ? all[id] : null;
+}
+
+function savePortfolios(all) {
+  localStorage.setItem('portfolios', JSON.stringify(all));
+  saveToFirestore({ portfolios: all, activePortfolioId: getActiveId() });
+}
+
+function migrateToMultiPortfolio(legacyStocks, legacyClosed, legacyHistory) {
+  // Already migrated
+  if (localStorage.getItem('portfolios')) return;
+  let stocks = legacyStocks ? migratePortfolio(legacyStocks) : [];
+  let closed = legacyClosed || [];
+  let history = legacyHistory || [];
+  let id = 'port_' + Date.now();
+  let all = {};
+  all[id] = { name: 'My Portfolio', isDemo: false, stocks: stocks, closedPositions: closed, valueHistory: history };
+  localStorage.setItem('portfolios', JSON.stringify(all));
+  localStorage.setItem('activePortfolioId', id);
+  // Clean up old keys
+  localStorage.removeItem('portfolio');
+  localStorage.removeItem('closed-positions');
+  localStorage.removeItem('portfolio-value-history');
+}
+
+function createPortfolio(name, isDemo, stocks) {
+  let all = getAllPortfolios();
+  let id = 'port_' + Date.now();
+  all[id] = { name: name, isDemo: isDemo || false, stocks: stocks || [], closedPositions: [], valueHistory: [] };
+  localStorage.setItem('portfolios', JSON.stringify(all));
+  localStorage.setItem('activePortfolioId', id);
+  saveToFirestore({ portfolios: all, activePortfolioId: id });
+  return id;
+}
+
+function deletePortfolio(id) {
+  let all = getAllPortfolios();
+  if (Object.keys(all).length <= 1) { showToast("Can't delete your only portfolio"); return; }
+  delete all[id];
+  let newActive = Object.keys(all)[0];
+  localStorage.setItem('portfolios', JSON.stringify(all));
+  localStorage.setItem('activePortfolioId', newActive);
+  saveToFirestore({ portfolios: all, activePortfolioId: newActive });
+  renderPortfolioTabs();
+  renderPortfolio();
+}
+
+function renamePortfolio(id, name) {
+  if (!name || !name.trim()) return;
+  let all = getAllPortfolios();
+  if (!all[id]) return;
+  all[id].name = name.trim();
+  savePortfolios(all);
+  renderPortfolioTabs();
+}
+
+function setActivePortfolio(id) {
+  localStorage.setItem('activePortfolioId', id);
+  saveToFirestore({ activePortfolioId: id });
+  // Reset AI section — it belongs to the previous portfolio
+  let aiSection = document.getElementById('port-ai-section');
+  if (aiSection) aiSection.style.display = 'none';
+  let portAiBtn = document.getElementById('port-ai-btn');
+  if (portAiBtn) { portAiBtn.style.display = 'none'; portAiBtn.disabled = false; portAiBtn.textContent = 'Analyze My Portfolio with AI'; }
+  renderPortfolioTabs();
+  renderPortfolio();
+}
+
+function promptNewPortfolio() {
+  let name = prompt('Portfolio name:');
+  if (!name || !name.trim()) return;
+  createPortfolio(name.trim(), false, []);
+  renderPortfolioTabs();
+  renderPortfolio();
+}
+
+function openPortfolioMenu(id) {
+  // Remove any existing menu
+  let existing = document.getElementById('port-tab-menu-popup');
+  if (existing) { existing.remove(); return; }
+  let all = getAllPortfolios();
+  let port = all[id];
+  if (!port) return;
+  let menu = document.createElement('div');
+  menu.id = 'port-tab-menu-popup';
+  menu.className = 'port-tab-menu-popup';
+  menu.innerHTML =
+    '<button onclick="document.getElementById(\'port-tab-menu-popup\').remove();let n=prompt(\'Rename:\',\'' + escHtml(port.name) + '\');if(n)renamePortfolio(\'' + id + '\',n);">Rename</button>' +
+    '<button onclick="document.getElementById(\'port-tab-menu-popup\').remove();if(confirm(\'Delete \\\'' + escHtml(port.name) + '\\\'?\'))deletePortfolio(\'' + id + '\');" style="color:#ef4444;">Delete</button>';
+  let btn = document.getElementById('port-menu-btn-' + id);
+  if (btn) { btn.parentNode.appendChild(menu); }
+  else { document.getElementById('portfolio-tabs-bar').appendChild(menu); }
+  // Close on outside click
+  setTimeout(function() {
+    document.addEventListener('click', function handler(e) {
+      if (!menu.contains(e.target)) { menu.remove(); document.removeEventListener('click', handler); }
+    });
+  }, 0);
+}
+
+function renderPortfolioTabs() {
+  let bar = document.getElementById('portfolio-tabs-bar');
+  if (!bar) return;
+  let all = getAllPortfolios();
+  let activeId = getActiveId();
+  let tabs = Object.keys(all).map(function(id) {
+    let p = all[id];
+    let isActive = id === activeId;
+    let demoTag = p.isDemo ? '<span class="port-tab-demo-tag">Demo</span>' : '';
+    return '<button class="port-tab' + (isActive ? ' active' : '') + '" onclick="setActivePortfolio(\'' + id + '\')">' +
+      demoTag + escHtml(p.name) +
+      (isActive ? '<span class="port-tab-menu-btn" id="port-menu-btn-' + id + '" onclick="event.stopPropagation();openPortfolioMenu(\'' + id + '\')">···</span>' : '') +
+    '</button>';
+  }).join('');
+  bar.innerHTML = tabs + '<button class="port-tab-add" onclick="promptNewPortfolio()" title="New portfolio">+</button>';
+}
+
+let DEMO_STOCKS = {
+  Aggressive: [
+    { ticker: 'NVDA', lots: [{ shares: 5,  price: 121.40, date: 'Oct 1, 2024' }] },
+    { ticker: 'TSLA', lots: [{ shares: 8,  price: 249.85, date: 'Oct 1, 2024' }] },
+    { ticker: 'AMZN', lots: [{ shares: 6,  price: 192.45, date: 'Oct 1, 2024' }] },
+    { ticker: 'META', lots: [{ shares: 3,  price: 561.20, date: 'Oct 1, 2024' }] },
+    { ticker: 'PLTR', lots: [{ shares: 30, price: 37.65,  date: 'Oct 1, 2024' }] }
+  ],
+  Balanced: [
+    { ticker: 'AAPL', lots: [{ shares: 10, price: 226.80, date: 'Oct 1, 2024' }] },
+    { ticker: 'JPM',  lots: [{ shares: 5,  price: 218.90, date: 'Oct 1, 2024' }] },
+    { ticker: 'V',    lots: [{ shares: 6,  price: 272.10, date: 'Oct 1, 2024' }] },
+    { ticker: 'JNJ',  lots: [{ shares: 7,  price: 161.25, date: 'Oct 1, 2024' }] },
+    { ticker: 'MSFT', lots: [{ shares: 4,  price: 418.80, date: 'Oct 1, 2024' }] }
+  ],
+  Conservative: [
+    { ticker: 'KO',   lots: [{ shares: 20, price: 71.20,  date: 'Oct 1, 2024' }] },
+    { ticker: 'PG',   lots: [{ shares: 10, price: 163.40, date: 'Oct 1, 2024' }] },
+    { ticker: 'VZ',   lots: [{ shares: 25, price: 41.85,  date: 'Oct 1, 2024' }] },
+    { ticker: 'JNJ',  lots: [{ shares: 8,  price: 161.25, date: 'Oct 1, 2024' }] },
+    { ticker: 'T',    lots: [{ shares: 40, price: 21.50,  date: 'Oct 1, 2024' }] }
+  ]
+};
+
+function createDemoPortfolio(profileType) {
+  let alreadyHasDemo = Object.values(getAllPortfolios()).some(function(p) { return p.isDemo; });
+  if (alreadyHasDemo) return;
+  let stocks = DEMO_STOCKS[profileType] || DEMO_STOCKS['Balanced'];
+  createPortfolio('Demo Portfolio', true, stocks);
+}
+
+// ── END multi-portfolio accessors ──────────────────────────
+
 // Migrate old single-lot format to multi-lot format
 function migratePortfolio(portfolio) {
   return portfolio.map(function(item) {
@@ -1572,7 +1738,10 @@ function addToPortfolio() {
   let dateVal = document.getElementById('port-date').value;
   let buyDate = dateVal ? new Date(dateVal + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   if (!ticker || !shares || !buyPrice) { showToast('Please fill in all fields!'); return; }
-  let portfolio = migratePortfolio(JSON.parse(localStorage.getItem('portfolio') || '[]'));
+  let all = getAllPortfolios();
+  let id = getActiveId();
+  if (!all[id]) return;
+  let portfolio = migratePortfolio(all[id].stocks || []);
   let existing = portfolio.find(function(i) { return i.ticker === ticker; });
   if (existing) {
     existing.lots.push({ shares, price: buyPrice, date: buyDate });
@@ -1580,8 +1749,8 @@ function addToPortfolio() {
   } else {
     portfolio.push({ ticker, lots: [{ shares, price: buyPrice, date: buyDate }] });
   }
-  localStorage.setItem('portfolio', JSON.stringify(portfolio));
-  saveToFirestore({ portfolio: portfolio });
+  all[id].stocks = portfolio;
+  savePortfolios(all);
   document.getElementById('port-ticker').value = '';
   document.getElementById('port-shares').value = '';
   document.getElementById('port-price').value = '';
@@ -1590,27 +1759,32 @@ function addToPortfolio() {
 }
 
 function removeFromPortfolio(ticker) {
-  let portfolio = migratePortfolio(JSON.parse(localStorage.getItem('portfolio') || '[]')).filter(function(i) { return i.ticker !== ticker; });
-  localStorage.setItem('portfolio', JSON.stringify(portfolio));
-  saveToFirestore({ portfolio: portfolio });
+  let all = getAllPortfolios();
+  let id = getActiveId();
+  if (!all[id]) return;
+  all[id].stocks = migratePortfolio(all[id].stocks || []).filter(function(i) { return i.ticker !== ticker; });
+  savePortfolios(all);
   renderPortfolio();
 }
 
 function removeLotFromPortfolio(ticker, lotIndex) {
-  let portfolio = migratePortfolio(JSON.parse(localStorage.getItem('portfolio') || '[]'));
+  let all = getAllPortfolios();
+  let id = getActiveId();
+  if (!all[id]) return;
+  let portfolio = migratePortfolio(all[id].stocks || []);
   let item = portfolio.find(function(i) { return i.ticker === ticker; });
   if (!item) return;
   item.lots.splice(lotIndex, 1);
-  if (item.lots.length === 0) {
-    portfolio = portfolio.filter(function(i) { return i.ticker !== ticker; });
-  }
-  localStorage.setItem('portfolio', JSON.stringify(portfolio));
-  saveToFirestore({ portfolio: portfolio });
+  if (item.lots.length === 0) portfolio = portfolio.filter(function(i) { return i.ticker !== ticker; });
+  all[id].stocks = portfolio;
+  savePortfolios(all);
   renderPortfolio();
 }
 
 function renderPortfolio() {
-  let portfolio = migratePortfolio(JSON.parse(localStorage.getItem('portfolio') || '[]'));
+  renderPortfolioTabs();
+  let active = getActivePortfolio();
+  let portfolio = active ? migratePortfolio(active.stocks || []) : [];
   let empty = document.getElementById('portfolio-empty');
   let list = document.getElementById('portfolio-list');
   let summary = document.getElementById('portfolio-summary');
@@ -1738,7 +1912,8 @@ function openSellModal(ticker, currentPrice, totalShares) {
     let sp = parseFloat(document.getElementById('sell-price-' + ticker).value) || 0;
     let preview = document.getElementById('sell-preview-' + ticker);
     if (!sh || !sp) { preview.innerHTML = ''; return; }
-    let portfolio = migratePortfolio(JSON.parse(localStorage.getItem('portfolio') || '[]'));
+    let active = getActivePortfolio();
+    let portfolio = active ? migratePortfolio(active.stocks || []) : [];
     let item = portfolio.find(function(i) { return i.ticker === ticker; });
     if (!item) return;
     let totalCost = item.lots.reduce(function(sum, l) { return sum + l.shares * l.price; }, 0);
@@ -1764,14 +1939,17 @@ function confirmSell(ticker, totalShares) {
   if (!sp || sp <= 0) { showToast('Enter sell price'); return; }
   if (sh > totalShares) { showToast('You only have ' + totalShares + ' shares'); return; }
 
-  let portfolio = migratePortfolio(JSON.parse(localStorage.getItem('portfolio') || '[]'));
+  let all = getAllPortfolios();
+  let id = getActiveId();
+  if (!all[id]) return;
+  let portfolio = migratePortfolio(all[id].stocks || []);
   let item = portfolio.find(function(i) { return i.ticker === ticker; });
   if (!item) return;
 
   // Compute realized gain (FIFO — sell from oldest lot first)
   let sharesToSell = sh;
   let realizedGain = 0;
-  let lots = item.lots.slice(); // copy
+  let lots = item.lots.slice();
   for (let i = 0; i < lots.length && sharesToSell > 0; i++) {
     let lotSell = Math.min(lots[i].shares, sharesToSell);
     realizedGain += (sp - lots[i].price) * lotSell;
@@ -1780,8 +1958,7 @@ function confirmSell(ticker, totalShares) {
   }
   item.lots = lots.filter(function(l) { return l.shares > 0; });
 
-  // Save closed position record
-  let closed = JSON.parse(localStorage.getItem('closed-positions') || '[]');
+  let closed = all[id].closedPositions || [];
   closed.push({
     ticker,
     sharesSold: sh,
@@ -1789,7 +1966,7 @@ function confirmSell(ticker, totalShares) {
     realizedGain: parseFloat(realizedGain.toFixed(2)),
     date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
   });
-  localStorage.setItem('closed-positions', JSON.stringify(closed));
+  all[id].closedPositions = closed;
 
   if (item.lots.length === 0) {
     portfolio = portfolio.filter(function(i) { return i.ticker !== ticker; });
@@ -1798,14 +1975,15 @@ function confirmSell(ticker, totalShares) {
     showToast('Sold ' + sh + ' shares of ' + ticker + ' — ' + (realizedGain >= 0 ? '+' : '') + '$' + realizedGain.toFixed(2) + ' realized');
   }
 
-  localStorage.setItem('portfolio', JSON.stringify(portfolio));
-  saveToFirestore({ portfolio: portfolio, closedPositions: closed });
+  all[id].stocks = portfolio;
+  savePortfolios(all);
   renderPortfolio();
   renderClosedPositions();
 }
 
 function renderClosedPositions() {
-  let closed = JSON.parse(localStorage.getItem('closed-positions') || '[]');
+  let active = getActivePortfolio();
+  let closed = active ? (active.closedPositions || []) : [];
   let el = document.getElementById('closed-positions-section');
   if (!el) return;
   if (closed.length === 0) { el.style.display = 'none'; return; }
@@ -1907,7 +2085,10 @@ function openStockFromPortfolio(ticker) {
 }
 
 function savePortfolioValueHistory(value) {
-  let history = JSON.parse(localStorage.getItem('portfolio-value-history') || '[]');
+  let all = getAllPortfolios();
+  let id = getActiveId();
+  if (!all[id]) return;
+  let history = all[id].valueHistory || [];
   let today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   if (history.length > 0 && history[history.length - 1].date === today) {
     history[history.length - 1].value = parseFloat(value.toFixed(2));
@@ -1915,8 +2096,8 @@ function savePortfolioValueHistory(value) {
     history.push({ date: today, value: parseFloat(value.toFixed(2)) });
   }
   if (history.length > 60) history = history.slice(-60);
-  localStorage.setItem('portfolio-value-history', JSON.stringify(history));
-  saveToFirestore({ portfolioValueHistory: history });
+  all[id].valueHistory = history;
+  savePortfolios(all);
 }
 
 function switchPortfolioChart(view) {
@@ -1928,7 +2109,8 @@ function switchPortfolioChart(view) {
 }
 
 function renderPortfolioLineChart() {
-  let history = JSON.parse(localStorage.getItem('portfolio-value-history') || '[]');
+  let active = getActivePortfolio();
+  let history = active ? (active.valueHistory || []) : [];
   let emptyEl = document.getElementById('portfolio-line-empty');
   let canvas  = document.getElementById('portfolioLineChart');
 
@@ -2052,7 +2234,8 @@ function renderPortfolioChart(stockData, totalValue) {
 }
 
 function analyzePortfolioWithAI() {
-  let portfolio = JSON.parse(localStorage.getItem('portfolio') || '[]');
+  let active = getActivePortfolio();
+  let portfolio = active ? migratePortfolio(active.stocks || []) : [];
   if (portfolio.length === 0) { showToast('Add stocks to your portfolio first!'); return; }
 
   let section = document.getElementById('port-ai-section');
@@ -2064,9 +2247,12 @@ function analyzePortfolioWithAI() {
   btn.disabled = true;
 
   let holdingsSummary = portfolio.map(function(p) {
+    let totalShares = p.lots.reduce(function(s, l) { return s + l.shares; }, 0);
+    let totalCost   = p.lots.reduce(function(s, l) { return s + l.shares * l.price; }, 0);
+    let avgPrice    = totalShares > 0 ? (totalCost / totalShares).toFixed(2) : 0;
     let histScore = JSON.parse(localStorage.getItem('history_score_' + p.ticker) || '[]');
     let score = histScore.length > 0 ? histScore[histScore.length - 1].score : null;
-    return p.ticker + ' (' + p.shares + ' shares @ $' + p.buyPrice + (score ? ', score ' + score + '/100' : '') + ')';
+    return p.ticker + ' (' + totalShares + ' shares @ $' + avgPrice + (score ? ', score ' + score + '/100' : '') + ')';
   }).join('; ');
 
   let profileCtx = userProfile ? 'The reader is a ' + userProfile.type + ' investor with a ' + userProfile.horizon + ' time horizon and goal to ' + userProfile.goal + '. ' : '';
@@ -2510,14 +2696,14 @@ auth.onAuthStateChanged(function(user) {
       userProfile = JSON.parse(localStorage.getItem('userProfile') || 'null');
     }
 
-    // Restore portfolio
-    if (data.portfolio) {
-      localStorage.setItem('portfolio', JSON.stringify(data.portfolio));
-    }
-
-    // Restore closed positions
-    if (data.closedPositions) {
-      localStorage.setItem('closed-positions', JSON.stringify(data.closedPositions));
+    // Restore portfolios (new format) or migrate legacy data
+    if (data.portfolios) {
+      localStorage.setItem('portfolios', JSON.stringify(data.portfolios));
+      localStorage.setItem('activePortfolioId', data.activePortfolioId || Object.keys(data.portfolios)[0]);
+    } else {
+      // Legacy Firestore data — migrate to multi-portfolio format
+      let legacyHistory = data.portfolioValueHistory || [];
+      migrateToMultiPortfolio(data.portfolio || [], data.closedPositions || [], legacyHistory);
     }
 
     // Restore watchlist
@@ -2529,11 +2715,6 @@ auth.onAuthStateChanged(function(user) {
     if (data.stats) {
       if (data.stats.analyzed) localStorage.setItem('total-analyzed', data.stats.analyzed);
       if (data.stats.streak) localStorage.setItem('streak', JSON.stringify(data.stats.streak));
-    }
-
-    // Restore portfolio value history
-    if (data.portfolioValueHistory) {
-      localStorage.setItem('portfolio-value-history', JSON.stringify(data.portfolioValueHistory));
     }
 
     document.getElementById('auth-overlay').style.display = 'none';
