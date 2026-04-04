@@ -3106,6 +3106,130 @@ footer {
 }
 .port-tab-menu-popup button:hover { background: var(--surface2); transform: none; }
 
+/* ── Price alert button/tag ── */
+.wl-alert-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s;
+  box-shadow: none;
+}
+.wl-alert-btn:hover { color: #d97706; border-color: #d97706; transform: none; }
+
+.wl-alert-tag {
+  font-size: 11px;
+  font-weight: 600;
+  color: #d97706;
+  background: rgba(217,119,6,0.1);
+  border: 1px solid rgba(217,119,6,0.25);
+  padding: 3px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.wl-alert-tag:hover { background: rgba(217,119,6,0.2); }
+
+.alert-input-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 0 4px;
+}
+.alert-input-row input {
+  padding: 6px 10px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  font-family: var(--mono);
+}
+.alert-set-btn {
+  background: #d97706;
+  border: none;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 7px;
+  cursor: pointer;
+  box-shadow: none;
+  transition: background 0.15s;
+}
+.alert-set-btn:hover { background: #b45309; transform: none; }
+.alert-cancel-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px 6px;
+  box-shadow: none;
+}
+
+/* ── Notes per stock ── */
+.port-note-row {
+  padding: 8px 0 4px;
+}
+.port-note-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 12px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 54px;
+  line-height: 1.5;
+  transition: border-color 0.15s;
+}
+.port-note-input:focus { outline: none; border-color: var(--accent-green); }
+.port-note-input::placeholder { color: var(--text-muted); }
+
+/* ── Export CSV button ── */
+#port-export-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  width: 100%;
+  transition: color 0.15s, border-color 0.15s;
+  box-shadow: none;
+  margin-top: 4px;
+}
+#port-export-btn:hover { color: var(--text); border-color: var(--text-muted); transform: none; }
+
+/* ── Delete account button ── */
+#remove-account-btn {
+  background: none;
+  border: 1px solid rgba(220,38,38,0.2);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: 10px;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 8px;
+  transition: color 0.15s, border-color 0.15s;
+  box-shadow: none;
+}
+#remove-account-btn:hover { color: var(--loss); border-color: var(--loss); transform: none; }
+
 /* ── Sell button ── */
 .sell-btn {
   background: none;

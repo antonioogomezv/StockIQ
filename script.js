@@ -1287,8 +1287,13 @@ function renderWatchlist() {
         "</div>"
       : "";
     let histToggle = hist.bars
-      ? "<button class='wl-hist-toggle' onclick='event.stopPropagation();toggleWlHistory(\"" + item.ticker + "\")'  id='wl-hist-btn-" + item.ticker + "'>History ▾</button>"
+      ? "<button class='wl-hist-toggle' onclick='event.stopPropagation();toggleWlHistory(\"" + item.ticker + "\")' id='wl-hist-btn-" + item.ticker + "'>History ▾</button>"
       : "";
+    let alerts = JSON.parse(localStorage.getItem('price-alerts') || '{}');
+    let alertTarget = alerts[item.ticker];
+    let alertHtml = alertTarget
+      ? "<span class='wl-alert-tag' onclick='event.stopPropagation();removeAlert(\"" + item.ticker + "\")' title='Remove alert'>🔔 $" + alertTarget.toFixed(2) + " ✕</span>"
+      : "<button class='wl-alert-btn' onclick='event.stopPropagation();openAlertInput(\"" + item.ticker + "\"," + (price || 0) + ")'>🔔 Alert</button>";
     return "<div class='watchlist-item'>" +
       "<div class='wl-main-row'>" +
         "<div onclick='loadFromWatchlist(\"" + item.ticker + "\")' style='flex:1;cursor:pointer;'>" +
@@ -1299,10 +1304,12 @@ function renderWatchlist() {
         "<div style='display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;'>" +
           "<div class='watchlist-score' style='color:" + scoreColor + ";'>" + signal + " · " + item.score + "/100</div>" +
           histToggle +
+          alertHtml +
           "<button class='wl-add-port-btn' onclick='event.stopPropagation();addWatchlistToPortfolio(\"" + escHtml(item.ticker) + "\"," + (price || 0) + ")' title='Add to Portfolio'>+ Portfolio</button>" +
           "<button class='watchlist-remove' onclick='event.stopPropagation();removeFromWatchlist(\"" + item.ticker + "\")'>✕</button>" +
         "</div>" +
       "</div>" +
+      "<div id='alert-container-" + item.ticker + "'></div>" +
       histDrawer +
     "</div>";
   }
@@ -1314,17 +1321,81 @@ function renderWatchlist() {
   Promise.all(watchlist.map(function(item) {
     return fetch('https://finnhub.io/api/v1/quote?symbol=' + encodeURIComponent(item.ticker) + '&token=' + finnhubKey)
       .then(function(r) { return r.json(); })
-      .then(function(q) { return { ticker: item.ticker, price: q.c || null, changePct: q.dp || 0 }; })
-      .catch(function() { return { ticker: item.ticker, price: null, changePct: 0 }; });
+      .then(function(q) { return { ticker: item.ticker, price: q.c || null, changePct: q.dp || 0, prevClose: q.pc || 0 }; })
+      .catch(function() { return { ticker: item.ticker, price: null, changePct: 0, prevClose: 0 }; });
   })).then(function(quotes) {
     let quoteMap = {};
     quotes.forEach(function(q) { quoteMap[q.ticker] = q; });
+    checkPriceAlerts(quoteMap);
     items.innerHTML = watchlist.map(function(item) {
       let q = quoteMap[item.ticker] || { price: null, changePct: 0 };
       return buildRow(item, q.price, q.changePct);
     }).join("");
   });
 }
+
+// ── Price alerts ────────────────────────────────────────────
+
+function setAlert(ticker, price, currentPrice) {
+  let alerts = JSON.parse(localStorage.getItem('price-alerts') || '{}');
+  alerts[ticker] = parseFloat(price);
+  localStorage.setItem('price-alerts', JSON.stringify(alerts));
+  saveToFirestore({ priceAlerts: alerts });
+  let dir = price >= currentPrice ? '↑ above' : '↓ below';
+  showToast('Alert set: notify when ' + ticker + ' goes ' + dir + ' $' + parseFloat(price).toFixed(2));
+  renderWatchlist();
+}
+
+function removeAlert(ticker) {
+  let alerts = JSON.parse(localStorage.getItem('price-alerts') || '{}');
+  delete alerts[ticker];
+  localStorage.setItem('price-alerts', JSON.stringify(alerts));
+  saveToFirestore({ priceAlerts: alerts });
+  renderWatchlist();
+}
+
+function checkPriceAlerts(quoteMap) {
+  let alerts = JSON.parse(localStorage.getItem('price-alerts') || '{}');
+  let fired = JSON.parse(localStorage.getItem('alerts-fired') || '{}');
+  let today = new Date().toDateString();
+  Object.keys(alerts).forEach(function(ticker) {
+    let target = alerts[ticker];
+    let q = quoteMap[ticker];
+    if (!q || !q.price) return;
+    let fireKey = ticker + '_' + target + '_' + today;
+    if (fired[fireKey]) return; // already notified today
+    let hit = false;
+    if (target >= q.prevClose && q.price >= target) hit = true;   // crossed up
+    if (target <= q.prevClose && q.price <= target) hit = true;   // crossed down
+    if (hit) {
+      fired[fireKey] = true;
+      localStorage.setItem('alerts-fired', JSON.stringify(fired));
+      showToast('🔔 ' + ticker + ' hit your $' + target.toFixed(2) + ' alert — now $' + q.price.toFixed(2));
+      // Try browser notification if permitted
+      if (window.Notification && Notification.permission === 'granted') {
+        new Notification('StockIQ Alert', { body: ticker + ' hit $' + target.toFixed(2) + ' — now $' + q.price.toFixed(2) });
+      }
+    }
+  });
+}
+
+function openAlertInput(ticker, currentPrice) {
+  let existing = document.getElementById('alert-input-' + ticker);
+  if (existing) { existing.remove(); return; }
+  let container = document.getElementById('alert-container-' + ticker);
+  if (!container) return;
+  let div = document.createElement('div');
+  div.id = 'alert-input-' + ticker;
+  div.className = 'alert-input-row';
+  div.innerHTML =
+    '<input type="number" id="alert-val-' + ticker + '" placeholder="Target $" step="0.01" value="' + currentPrice.toFixed(2) + '" style="width:90px;">' +
+    '<button onclick="setAlert(\'' + ticker + '\',document.getElementById(\'alert-val-' + ticker + '\').value,' + currentPrice + ')" class="alert-set-btn">Set</button>' +
+    '<button onclick="document.getElementById(\'alert-input-' + ticker + '\').remove()" class="alert-cancel-btn">✕</button>';
+  container.appendChild(div);
+  document.getElementById('alert-val-' + ticker).focus();
+}
+
+// ── END price alerts ─────────────────────────────────────────
 
 function toggleWlHistory(ticker) {
   let drawer = document.getElementById('wl-hist-' + ticker);
@@ -1809,6 +1880,8 @@ function renderPortfolio() {
     if (chartSection) chartSection.style.display = 'none';
     let portAiBtn = document.getElementById('port-ai-btn');
     if (portAiBtn) portAiBtn.style.display = 'none';
+    let exportBtn = document.getElementById('port-export-btn');
+    if (exportBtn) exportBtn.style.display = 'none';
     let winnersCard = document.getElementById('port-winners-card');
     if (winnersCard) winnersCard.style.display = 'none';
     let searchWrap = document.getElementById('port-search-wrap');
@@ -1879,6 +1952,8 @@ function renderPortfolio() {
     renderPortfolioChart(stockData, totalValue);
     let portAiBtn = document.getElementById('port-ai-btn');
     if (portAiBtn) portAiBtn.style.display = 'block';
+    let exportBtn = document.getElementById('port-export-btn');
+    if (exportBtn) exportBtn.style.display = 'block';
   });
 }
 
@@ -2046,6 +2121,7 @@ function renderPortfolioRows(data) {
       let hasMultiple = s.lots && s.lots.length > 1;
       let lotsHtml = '';
       if (s.lots && s.lots.length > 0) {
+        let note = getStockNote(s.ticker);
         lotsHtml = '<div id="lots-' + s.ticker + '" class="port-lots-drawer" style="display:none;">' +
           s.lots.map(function(lot, i) {
             let lotCost = lot.shares * lot.price;
@@ -2062,6 +2138,9 @@ function renderPortfolioRows(data) {
               '<button onclick="event.stopPropagation();removeLotFromPortfolio(\'' + s.ticker + '\',' + i + ')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:13px;padding:2px 6px;flex-shrink:0;">✕</button>' +
             '</div>';
           }).join('') +
+          '<div class="port-note-row">' +
+            '<textarea id="note-input-' + s.ticker + '" class="port-note-input" placeholder="Why did you buy this? Notes…" oninput="saveStockNote(\'' + s.ticker + '\',this.value)">' + escHtml(note) + '</textarea>' +
+          '</div>' +
         '</div>';
       }
       return '<div class="port-stock-wrapper" data-ticker="' + s.ticker + '">' +
@@ -2251,6 +2330,7 @@ function analyzePortfolioWithAI() {
   let active = getActivePortfolio();
   let portfolio = active ? migratePortfolio(active.stocks || []) : [];
   if (portfolio.length === 0) { showToast('Add stocks to your portfolio first!'); return; }
+  if (!checkAnthropicRateLimit()) return;
 
   let section = document.getElementById('port-ai-section');
   let textEl  = document.getElementById('port-ai-text');
@@ -2345,6 +2425,7 @@ function sendPortfolioQuestion() {
   msgsEl.scrollTop = msgsEl.scrollHeight;
 
   portfolioChatHistory.push({ role: 'user', content: question });
+  if (!checkAnthropicRateLimit()) return;
 
   fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -2486,12 +2567,13 @@ function renderProfile() {
     document.getElementById('profile-quiz-btn').textContent = 'Take Risk Quiz';
   }
   let watchlist = JSON.parse(localStorage.getItem('watchlist') || '[]');
-  let portfolio = JSON.parse(localStorage.getItem('portfolio') || '[]');
+  let active = getActivePortfolio();
+  let portCount = active ? (active.stocks || []).length : 0;
   let analyzed  = parseInt(localStorage.getItem('total-analyzed') || '0');
   let streak    = getStreak();
   document.getElementById('stat-analyzed').textContent  = analyzed;
   document.getElementById('stat-watchlist').textContent = watchlist.length;
-  document.getElementById('stat-portfolio').textContent = portfolio.length;
+  document.getElementById('stat-portfolio').textContent = portCount;
   document.getElementById('stat-streak').textContent    = streak;
   renderBadges(analyzed, watchlist.length, portfolio.length, streak);
 }
@@ -2545,6 +2627,7 @@ function sendStockQuestion() {
 
   stockChatHistory.push({ role: 'user', content: question });
 
+  if (!checkAnthropicRateLimit()) return;
   let messagesPayload = [{ role: 'user', content: stockChatContext }].concat(
     stockChatHistory.length === 1
       ? stockChatHistory
@@ -2660,6 +2743,88 @@ function submitLogin() {
     });
 }
 
+// ── Notes per stock ──────────────────────────────────────────
+
+function saveStockNote(ticker, note) {
+  let notes = JSON.parse(localStorage.getItem('stock-notes') || '{}');
+  if (note.trim()) { notes[ticker] = note.trim(); } else { delete notes[ticker]; }
+  localStorage.setItem('stock-notes', JSON.stringify(notes));
+  saveToFirestore({ stockNotes: notes });
+}
+
+function getStockNote(ticker) {
+  let notes = JSON.parse(localStorage.getItem('stock-notes') || '{}');
+  return notes[ticker] || '';
+}
+
+function toggleNoteEditor(ticker) {
+  let el = document.getElementById('note-editor-' + ticker);
+  if (!el) return;
+  let open = el.style.display !== 'none';
+  el.style.display = open ? 'none' : 'block';
+  if (!open) document.getElementById('note-input-' + ticker).focus();
+}
+
+// ── Export portfolio CSV ─────────────────────────────────────
+
+function exportPortfolioCSV() {
+  let active = getActivePortfolio();
+  if (!active || !active.stocks || active.stocks.length === 0) { showToast('Nothing to export'); return; }
+  let rows = ['Ticker,Shares,Avg Cost,Lot #,Lot Shares,Lot Price,Lot Date'];
+  migratePortfolio(active.stocks).forEach(function(item) {
+    let totalShares = item.lots.reduce(function(s, l) { return s + l.shares; }, 0);
+    let totalCost   = item.lots.reduce(function(s, l) { return s + l.shares * l.price; }, 0);
+    let avg = totalShares > 0 ? (totalCost / totalShares).toFixed(2) : 0;
+    item.lots.forEach(function(lot, i) {
+      rows.push([item.ticker, totalShares, avg, i + 1, lot.shares, lot.price.toFixed(2), lot.date || ''].join(','));
+    });
+  });
+  let blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+  let a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (active.name || 'portfolio').replace(/\s+/g, '_') + '.csv';
+  a.click();
+}
+
+// ── Remove account ───────────────────────────────────────────
+
+function removeAccount() {
+  if (!confirm('Delete your account and all data permanently? This cannot be undone.')) return;
+  let user = auth.currentUser;
+  if (!user) return;
+  // Delete Firestore document first, then delete auth account
+  userRef().delete().then(function() {
+    return user.delete();
+  }).then(function() {
+    localStorage.clear();
+    location.reload();
+  }).catch(function(err) {
+    if (err.code === 'auth/requires-recent-login') {
+      showToast('Please log out and log back in, then try again.');
+    } else {
+      showToast('Could not delete account: ' + err.message);
+    }
+  });
+}
+
+// ── Spend limits (Anthropic API rate limiting) ───────────────
+
+function checkAnthropicRateLimit() {
+  let key = 'anthropic-calls';
+  let data = JSON.parse(localStorage.getItem(key) || '{"count":0,"date":""}');
+  let today = new Date().toDateString();
+  if (data.date !== today) data = { count: 0, date: today };
+  if (data.count >= 20) {
+    showToast("Daily AI limit reached (20 calls). Resets tomorrow.");
+    return false;
+  }
+  data.count++;
+  localStorage.setItem(key, JSON.stringify(data));
+  return true;
+}
+
+// ── END spend limits ─────────────────────────────────────────
+
 function logout() {
   auth.signOut().then(function() {
     userProfile = null;
@@ -2724,6 +2889,10 @@ auth.onAuthStateChanged(function(user) {
     if (data.watchlist) {
       localStorage.setItem('watchlist', JSON.stringify(data.watchlist));
     }
+
+    // Restore price alerts and stock notes
+    if (data.priceAlerts) localStorage.setItem('price-alerts', JSON.stringify(data.priceAlerts));
+    if (data.stockNotes) localStorage.setItem('stock-notes', JSON.stringify(data.stockNotes));
 
     // Restore stats
     if (data.stats) {
