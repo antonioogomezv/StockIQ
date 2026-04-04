@@ -281,6 +281,13 @@ function searchStock() {
         let tickerDetails = results[6].results || {};
         if (tickerDetails.description) profile.description = tickerDetails.description;
 
+        // Unsupported ticker — no price and no company name means Finnhub doesn't cover it
+        if (!quote.c && !profile.name) {
+          document.getElementById("loading").style.display = "none";
+          showToast("\"" + ticker + "\" isn't supported. StockIQ only covers US-listed stocks.");
+          return;
+        }
+
         let data = { ticker, quote, profile, news, metrics, prices: [], dates: [], volumes: [], earningsData, pastEarnings };
         cache[query] = data;
         displayData(data);
