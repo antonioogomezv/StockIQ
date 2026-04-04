@@ -1174,8 +1174,12 @@ function selectOption(step, value, el) {
       document.getElementById("step-2").style.display = "none";
       document.getElementById("step-3").style.display = "block";
       document.getElementById("dot-3").classList.add("active");
-    } else {
+    } else if (step === 3) {
       document.getElementById("step-3").style.display = "none";
+      document.getElementById("step-4").style.display = "block";
+      document.getElementById("dot-4").classList.add("active");
+    } else {
+      document.getElementById("step-4").style.display = "none";
       showQuizResult();
     }
   }, 400);
@@ -1185,6 +1189,7 @@ function showQuizResult() {
   let risk = quizAnswers.step2;
   let horizon = quizAnswers.step1;
   let goal = quizAnswers.step3;
+  let budget = quizAnswers.step4 || 2500;
   let profile = {};
   if (risk === "low" || goal === "preserve") {
     profile = { type: "Conservative", icon: "🛡️", desc: "You prefer stable, lower risk investments. StockIQ will warn you about high volatility stocks.", maxBeta: 1.0, minScore: 55 };
@@ -1195,6 +1200,7 @@ function showQuizResult() {
   }
   profile.horizon = horizon;
   profile.goal = goal;
+  profile.budget = budget;
   document.getElementById("quiz-icon").textContent = profile.icon;
   document.getElementById("quiz-result-title").textContent = profile.type + " Investor";
   document.getElementById("quiz-result-desc").textContent = profile.desc;
@@ -1207,7 +1213,7 @@ function finishQuiz() {
   saveToFirestore({ userProfile: userProfile });
   // Create demo portfolio matching investor profile
   migrateToMultiPortfolio([], [], []);  // ensure structure exists first
-  createDemoPortfolio(userProfile.type);
+  createDemoPortfolio(userProfile.type, userProfile.budget);
   document.getElementById("quiz-overlay").style.display = "none";
   updateRiskBadge();
   let nameEl = document.getElementById("onboarding-profile-name");
@@ -1712,10 +1718,18 @@ let DEMO_STOCKS = {
   ]
 };
 
-function createDemoPortfolio(profileType) {
+function createDemoPortfolio(profileType, budget) {
   let alreadyHasDemo = Object.values(getAllPortfolios()).some(function(p) { return p.isDemo; });
   if (alreadyHasDemo) return;
-  let stocks = DEMO_STOCKS[profileType] || DEMO_STOCKS['Balanced'];
+  let template = DEMO_STOCKS[profileType] || DEMO_STOCKS['Balanced'];
+  // Scale shares so total cost ≈ budget (default $2500)
+  let b = budget || 2500;
+  let templateCost = template.reduce(function(sum, s) { return sum + s.lots[0].shares * s.lots[0].price; }, 0);
+  let scale = b / templateCost;
+  let stocks = template.map(function(s) {
+    let scaledShares = Math.max(1, parseFloat((s.lots[0].shares * scale).toFixed(2)));
+    return { ticker: s.ticker, lots: [{ shares: scaledShares, price: s.lots[0].price, date: s.lots[0].date }] };
+  });
   createPortfolio('Demo Portfolio', true, stocks);
 }
 

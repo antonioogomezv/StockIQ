@@ -112,6 +112,15 @@
         <div class="quiz-option" onclick="selectOption(3, 'learn', this)">Learn how to invest</div>
       </div>
     </div>
+    <div class="quiz-step" id="step-4" style="display:none;">
+      <div class="quiz-question">How much are you looking to invest?</div>
+      <div class="quiz-options">
+        <div class="quiz-option" onclick="selectOption(4, 500, this)">Under $1,000</div>
+        <div class="quiz-option" onclick="selectOption(4, 2500, this)">$1,000 – $5,000</div>
+        <div class="quiz-option" onclick="selectOption(4, 10000, this)">$5,000 – $20,000</div>
+        <div class="quiz-option" onclick="selectOption(4, 50000, this)">$20,000+</div>
+      </div>
+    </div>
     <div class="quiz-step" id="step-result" style="display:none;">
       <div class="quiz-result-icon" id="quiz-icon"></div>
       <div class="quiz-result-title" id="quiz-result-title">Conservative Investor</div>
@@ -122,6 +131,7 @@
       <div class="quiz-dot active" id="dot-1"></div>
       <div class="quiz-dot" id="dot-2"></div>
       <div class="quiz-dot" id="dot-3"></div>
+      <div class="quiz-dot" id="dot-4"></div>
     </div>
   </div>
 </div>
