@@ -1828,7 +1828,7 @@ function renderPortfolioTabs() {
   let tabs = Object.keys(all).map(function(id) {
     let p = all[id];
     let isActive = id === activeId;
-    let demoTag = p.isDemo ? '<span class="port-tab-demo-tag">Demo</span>' : '';
+    let demoTag = p.isDemo ? '<span class="port-tab-demo-tag">✦</span>' : '';
     return '<button class="port-tab' + (isActive ? ' active' : '') + '" onclick="setActivePortfolio(\'' + id + '\')">' +
       demoTag + escHtml(p.name) +
       (isActive ? '<span class="port-tab-menu-btn" id="port-menu-btn-' + id + '" onclick="event.stopPropagation();openPortfolioMenu(\'' + id + '\')">···</span>' : '') +
@@ -1891,7 +1891,7 @@ function createDemoPortfolio(profileType, budget) {
       let scaledShares = Math.max(0.01, parseFloat((s.lots[0].shares * scale).toFixed(2)));
       return { ticker: s.ticker, lots: [{ shares: scaledShares, price: parseFloat(livePrice.toFixed(2)), date: today }] };
     });
-    createPortfolio('Demo Portfolio', true, stocks);
+    createPortfolio('Recommended Portfolio', true, stocks);
   });
 }
 
@@ -1984,15 +1984,17 @@ function renderPortfolio() {
   summary.style.display = 'block';
   let totalValue = 0, totalCost = 0, totalDayChange = 0;
   let scores = [], fetchPromises = [], stockData = [];
-  portfolio.forEach(function(item) {
+  portfolio.forEach(function(item, idx) {
     // Compute totals across all lots
     let totalShares = item.lots.reduce(function(sum, l) { return sum + l.shares; }, 0);
     let totalLotCost = item.lots.reduce(function(sum, l) { return sum + l.shares * l.price; }, 0);
     let avgPrice = totalShares > 0 ? totalLotCost / totalShares : 0;
-    let p = fetch('https://finnhub.io/api/v1/quote?symbol=' + item.ticker + '&token=' + finnhubKey)
+    // Stagger requests 120ms apart to avoid Finnhub rate limiting
+    let p = new Promise(function(resolve) { setTimeout(resolve, idx * 120); })
+      .then(function() { return fetch('https://finnhub.io/api/v1/quote?symbol=' + item.ticker + '&token=' + finnhubKey); })
       .then(function(r) { return r.json(); })
       .then(function(q) {
-        let currentPrice = q.c || 0;
+        let currentPrice = q.c || avgPrice; // fall back to buy price if rate-limited
         let dayChange = q.dp || 0;
         let value = currentPrice * totalShares;
         let cost = totalLotCost;
@@ -2006,7 +2008,7 @@ function renderPortfolio() {
         stockData.push({ ticker: item.ticker, lots: item.lots, shares: totalShares, buyPrice: avgPrice, currentPrice, value, cost, gain, gainPct, dayChangeAmt, score });
       })
       .catch(function() {
-        stockData.push({ ticker: item.ticker, lots: item.lots, shares: totalShares, buyPrice: avgPrice, currentPrice: 0, value: 0, cost: totalLotCost, gain: 0, gainPct: 0, dayChangeAmt: 0, score: null });
+        stockData.push({ ticker: item.ticker, lots: item.lots, shares: totalShares, buyPrice: avgPrice, currentPrice: avgPrice, value: totalLotCost, cost: totalLotCost, gain: 0, gainPct: 0, dayChangeAmt: 0, score: null });
       });
     fetchPromises.push(p);
   });
