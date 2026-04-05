@@ -1261,11 +1261,29 @@ function showQuizResult() {
 }
 
 function finishQuiz() {
+  let isRetake = !!localStorage.getItem('userProfile');
   localStorage.setItem("userProfile", JSON.stringify(userProfile));
   saveToFirestore({ userProfile: userProfile });
-  // Create demo portfolio matching investor profile
-  migrateToMultiPortfolio([], [], []);  // ensure structure exists first
-  createDemoPortfolio(userProfile.type, userProfile.budget);
+  // On retake, offer to regenerate the Recommended Portfolio
+  if (isRetake) {
+    let hasDemo = Object.values(getAllPortfolios()).some(function(p) { return p.isDemo; });
+    if (hasDemo && confirm('Regenerate your Recommended Portfolio for your new ' + userProfile.type + ' profile?')) {
+      // Delete existing demo portfolio then create new one
+      let all = getAllPortfolios();
+      Object.keys(all).forEach(function(id) { if (all[id].isDemo) delete all[id]; });
+      savePortfolios(all);
+      // Reset activeId if it was the deleted demo
+      let activeId = getActiveId();
+      if (!all[activeId]) {
+        let remaining = Object.keys(all);
+        if (remaining.length > 0) localStorage.setItem('activePortfolioId', remaining[0]);
+      }
+      createDemoPortfolio(userProfile.type, userProfile.budget);
+    }
+  } else {
+    migrateToMultiPortfolio([], [], []);  // ensure structure exists first
+    createDemoPortfolio(userProfile.type, userProfile.budget);
+  }
   document.getElementById("quiz-overlay").style.display = "none";
   updateRiskBadge();
   let nameEl = document.getElementById("onboarding-profile-name");
@@ -2280,7 +2298,7 @@ function openSellModal(ticker, currentPrice, totalShares) {
     '</div>' +
     '<div id="sell-preview-' + ticker + '" class="sell-preview"></div>' +
     '<div class="sell-modal-actions">' +
-      '<button class="sell-confirm-btn" onclick="confirmSell(\'' + ticker + '\',' + totalShares + ')">Confirm Sale</button>' +
+      '<button class="sell-confirm-btn" onclick="confirmSell(' + escHtml(JSON.stringify(ticker)) + ',' + totalShares + ')">Confirm Sale</button>' +
       '<button class="sell-cancel-btn" onclick="document.getElementById(\'sell-modal-' + ticker + '\').remove()">Cancel</button>' +
     '</div>';
 
@@ -2441,6 +2459,7 @@ function renderPortfolioRows(data) {
             '<div>' +
               '<div style="font-weight:600;font-size:14px;">' + s.ticker + '</div>' +
               '<div style="font-size:11px;color:#64748b;">' + s.shares.toFixed(s.shares % 1 === 0 ? 0 : 2) + ' shares · avg $' + s.buyPrice.toFixed(2) + (hasMultiple ? ' · ' + s.lots.length + ' lots' : '') + '</div>' +
+              '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">now $' + s.currentPrice.toFixed(2) + '</div>' +
             '</div>' +
           '</div>' +
           '<div>$' + s.value.toFixed(2) + '</div>' +
