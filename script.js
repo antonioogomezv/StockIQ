@@ -2968,14 +2968,20 @@ auth.onAuthStateChanged(function(user) {
       userProfile = JSON.parse(localStorage.getItem('userProfile') || 'null');
     }
 
-    // Restore portfolios (new format) or migrate legacy data
-    if (data.portfolios) {
-      localStorage.setItem('portfolios', JSON.stringify(data.portfolios));
-      localStorage.setItem('activePortfolioId', data.activePortfolioId || Object.keys(data.portfolios)[0]);
-    } else {
-      // Legacy Firestore data — migrate to multi-portfolio format
-      let legacyHistory = data.portfolioValueHistory || [];
-      migrateToMultiPortfolio(data.portfolio || [], data.closedPositions || [], legacyHistory);
+    // Restore portfolios — only use Firestore if localStorage has nothing
+    // (localStorage is source of truth; Firestore is backup for new devices)
+    let localPortfolios = localStorage.getItem('portfolios');
+    if (!localPortfolios) {
+      if (data.portfolios) {
+        localStorage.setItem('portfolios', JSON.stringify(data.portfolios));
+        localStorage.setItem('activePortfolioId', data.activePortfolioId || Object.keys(data.portfolios)[0]);
+      } else {
+        // Legacy Firestore data — migrate to multi-portfolio format
+        let legacyHistory = data.portfolioValueHistory || [];
+        migrateToMultiPortfolio(data.portfolio || [], data.closedPositions || [], legacyHistory);
+      }
+    } else if (!localStorage.getItem('activePortfolioId') && data.activePortfolioId) {
+      localStorage.setItem('activePortfolioId', data.activePortfolioId);
     }
 
     // Restore watchlist
