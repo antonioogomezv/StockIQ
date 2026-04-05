@@ -1837,61 +1837,78 @@ function renderPortfolioTabs() {
   bar.innerHTML = tabs + '<button class="port-tab-add" onclick="promptNewPortfolio()" title="New portfolio">+</button>';
 }
 
-let DEMO_STOCKS = {
-  Aggressive: [
-    { ticker: 'NVDA', lots: [{ shares: 5,  price: 121.40, date: 'Oct 1, 2024' }] },
-    { ticker: 'TSLA', lots: [{ shares: 8,  price: 249.85, date: 'Oct 1, 2024' }] },
-    { ticker: 'AMZN', lots: [{ shares: 6,  price: 192.45, date: 'Oct 1, 2024' }] },
-    { ticker: 'META', lots: [{ shares: 3,  price: 561.20, date: 'Oct 1, 2024' }] },
-    { ticker: 'PLTR', lots: [{ shares: 30, price: 37.65,  date: 'Oct 1, 2024' }] }
-  ],
-  Balanced: [
-    { ticker: 'AAPL', lots: [{ shares: 10, price: 226.80, date: 'Oct 1, 2024' }] },
-    { ticker: 'JPM',  lots: [{ shares: 5,  price: 218.90, date: 'Oct 1, 2024' }] },
-    { ticker: 'V',    lots: [{ shares: 6,  price: 272.10, date: 'Oct 1, 2024' }] },
-    { ticker: 'JNJ',  lots: [{ shares: 7,  price: 161.25, date: 'Oct 1, 2024' }] },
-    { ticker: 'MSFT', lots: [{ shares: 4,  price: 418.80, date: 'Oct 1, 2024' }] }
-  ],
-  Conservative: [
-    { ticker: 'KO',   lots: [{ shares: 20, price: 71.20,  date: 'Oct 1, 2024' }] },
-    { ticker: 'PG',   lots: [{ shares: 10, price: 163.40, date: 'Oct 1, 2024' }] },
-    { ticker: 'VZ',   lots: [{ shares: 25, price: 41.85,  date: 'Oct 1, 2024' }] },
-    { ticker: 'JNJ',  lots: [{ shares: 8,  price: 161.25, date: 'Oct 1, 2024' }] },
-    { ticker: 'T',    lots: [{ shares: 40, price: 21.50,  date: 'Oct 1, 2024' }] }
-  ]
+// Pool of candidates per profile — scored live, top 5 selected
+let CANDIDATE_POOL = {
+  Aggressive: ['NVDA','TSLA','META','AMZN','PLTR','CRWD','AMD','SHOP','COIN','MSTR',
+               'RBLX','HOOD','SOFI','RIVN','LCID','APP','DKNG','ROKU','NET','SNOW'],
+  Balanced:   ['AAPL','MSFT','GOOGL','JPM','V','MA','UNH','HD','BRK.B','LLY',
+               'ABBV','MCD','COST','TXN','ACN','PEP','TMO','AMGN','IBM','INTC'],
+  Conservative:['KO','PG','JNJ','VZ','T','MO','PM','CL','GIS','K',
+                'SO','DUK','ED','D','NEE','WEC','XEL','O','SCHD','VYM']
 };
 
 function createDemoPortfolio(profileType, budget) {
   let alreadyHasDemo = Object.values(getAllPortfolios()).some(function(p) { return p.isDemo; });
   if (alreadyHasDemo) return;
-  let template = DEMO_STOCKS[profileType] || DEMO_STOCKS['Balanced'];
-  let tickers = template.map(function(s) { return s.ticker; });
+  let pool = CANDIDATE_POOL[profileType] || CANDIDATE_POOL['Balanced'];
   let b = budget || 2500;
   let today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
-  // Fetch current prices so demo starts at ~0% gain
-  Promise.all(tickers.map(function(ticker) {
-    return fetch('https://finnhub.io/api/v1/quote?symbol=' + ticker + '&token=' + finnhubKey)
-      .then(function(r) { return r.json(); })
-      .then(function(q) { return { ticker: ticker, price: q.c || 0 }; })
-      .catch(function() { return { ticker: ticker, price: 0 }; });
-  })).then(function(quotes) {
-    let priceMap = {};
-    quotes.forEach(function(q) { priceMap[q.ticker] = q.price; });
+  // Score criteria per profile
+  let criteria = {
+    Aggressive:   { minBeta: 1.0, maxBeta: 99,  minScore: 50 },
+    Balanced:     { minBeta: 0.5, maxBeta: 1.6,  minScore: 52 },
+    Conservative: { minBeta: 0.0, maxBeta: 1.1,  minScore: 48 }
+  };
+  let c = criteria[profileType] || criteria['Balanced'];
 
-    // Scale shares so total cost ≈ budget using live prices
-    let liveCost = template.reduce(function(sum, s) {
-      let p = priceMap[s.ticker] || s.lots[0].price;
-      return sum + s.lots[0].shares * p;
-    }, 0);
-    let scale = liveCost > 0 ? b / liveCost : 1;
+  showToast('Building your Recommended Portfolio…');
 
-    let stocks = template.map(function(s) {
-      let livePrice = priceMap[s.ticker] || s.lots[0].price;
-      let scaledShares = Math.max(0.01, parseFloat((s.lots[0].shares * scale).toFixed(2)));
-      return { ticker: s.ticker, lots: [{ shares: scaledShares, price: parseFloat(livePrice.toFixed(2)), date: today }] };
+  // Fetch quote + metrics for all candidates in parallel (staggered)
+  Promise.all(pool.map(function(ticker, idx) {
+    return new Promise(function(resolve) { setTimeout(resolve, idx * 80); })
+      .then(function() {
+        return Promise.all([
+          fetch('https://finnhub.io/api/v1/quote?symbol=' + ticker + '&token=' + finnhubKey).then(function(r) { return r.json(); }).catch(function() { return {}; }),
+          fetch('https://finnhub.io/api/v1/stock/metric?symbol=' + ticker + '&metric=all&token=' + finnhubKey).then(function(r) { return r.json(); }).catch(function() { return {}; })
+        ]);
+      })
+      .then(function(results) {
+        let q = results[0], m = results[1].metric || {};
+        let price = q.c || 0;
+        if (!price) return null;
+        let beta = m['beta'] || 1;
+        if (beta < c.minBeta || beta > c.maxBeta) return null;
+        // Quick score using available data (no RSI/MA50 needed for selection)
+        let scored = calculateScore(q.dp || 0, m['52WeekHigh'] || 0, price, m['peBasicExclExtraTTM'] || 0, m, 5, null, null);
+        if (scored.total < c.minScore) return null;
+        return { ticker: ticker, price: price, score: scored.total, beta: beta };
+      })
+      .catch(function() { return null; });
+  })).then(function(results) {
+    let valid = results.filter(function(r) { return r !== null; });
+    // Sort by score descending, pick top 5
+    valid.sort(function(a, b) { return b.score - a.score; });
+    let top5 = valid.slice(0, 5);
+
+    if (top5.length === 0) {
+      // Fallback if everything got filtered out
+      top5 = [
+        { ticker: 'AAPL', price: 0 }, { ticker: 'MSFT', price: 0 },
+        { ticker: 'JPM',  price: 0 }, { ticker: 'V',    price: 0 },
+        { ticker: 'KO',   price: 0 }
+      ];
+    }
+
+    let perStock = b / top5.length;
+
+    let stocks = top5.map(function(s) {
+      let shares = s.price > 0 ? Math.max(0.01, parseFloat((perStock / s.price).toFixed(2))) : 1;
+      return { ticker: s.ticker, lots: [{ shares: shares, price: parseFloat((s.price || 1).toFixed(2)), date: today }] };
     });
+
     createPortfolio('Recommended Portfolio', true, stocks);
+    showToast('Recommended Portfolio ready — ' + top5.map(function(s) { return s.ticker; }).join(', '));
   });
 }
 
