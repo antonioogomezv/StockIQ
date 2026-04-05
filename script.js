@@ -2347,20 +2347,24 @@ function confirmSell(ticker, totalShares) {
   // Compute realized gain (FIFO — sell from oldest lot first)
   let sharesToSell = sh;
   let realizedGain = 0;
+  let weightedCost = 0;
   let lots = item.lots.slice();
   for (let i = 0; i < lots.length && sharesToSell > 0; i++) {
     let lotSell = Math.min(lots[i].shares, sharesToSell);
     realizedGain += (sp - lots[i].price) * lotSell;
+    weightedCost += lots[i].price * lotSell;
     lots[i].shares -= lotSell;
     sharesToSell -= lotSell;
   }
   item.lots = lots.filter(function(l) { return l.shares > 0; });
+  let avgCostSold = sh > 0 ? weightedCost / sh : 0;
 
   let closed = all[id].closedPositions || [];
   closed.push({
     ticker,
     sharesSold: sh,
     sellPrice: sp,
+    avgCost: parseFloat(avgCostSold.toFixed(2)),
     realizedGain: parseFloat(realizedGain.toFixed(2)),
     date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
   });
@@ -2396,7 +2400,7 @@ function renderClosedPositions() {
       return '<div class="closed-row">' +
         '<div class="closed-row-left">' +
           '<div class="closed-row-ticker">' + escHtml(c.ticker) + '</div>' +
-          '<div class="closed-row-detail">' + c.sharesSold + ' shares @ $' + c.sellPrice.toFixed(2) + ' · ' + escHtml(c.date) + '</div>' +
+          '<div class="closed-row-detail">' + c.sharesSold + ' shares · bought $' + (c.avgCost ? c.avgCost.toFixed(2) : '—') + ' → sold $' + c.sellPrice.toFixed(2) + ' · ' + escHtml(c.date) + '</div>' +
         '</div>' +
         '<div class="closed-row-gain" style="color:' + gc + ';">' + (c.realizedGain >= 0 ? '+' : '') + '$' + c.realizedGain.toFixed(2) + '</div>' +
       '</div>';
