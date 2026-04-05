@@ -105,10 +105,9 @@ header p {
 .ticker-content {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 0;
   padding: 8px 24px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   animation: ticker-scroll 25s linear infinite;
   white-space: nowrap;
 }
