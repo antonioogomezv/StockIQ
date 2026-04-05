@@ -1179,6 +1179,7 @@ function getRiskProfileWarning(beta, totalScore) {
 function toggleDetails() {
   let details = document.getElementById("explanation");
   let btn = document.getElementById("show-details-btn");
+  if (!details || !btn) return;
   if (details.style.display === "none") {
     details.style.display = "block";
     btn.textContent = "Hide Full Analysis";
@@ -1427,6 +1428,9 @@ function setAlert(ticker, price, currentPrice) {
   saveToFirestore({ priceAlerts: alerts });
   let dir = price >= currentPrice ? '↑ above' : '↓ below';
   showToast('Alert set: notify when ' + ticker + ' goes ' + dir + ' $' + parseFloat(price).toFixed(2));
+  if (window.Notification && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
   renderWatchlist();
 }
 
@@ -2327,18 +2331,18 @@ function renderPortfolioRows(data) {
                 '<span>' + lot.shares + ' shares @ $' + lot.price.toFixed(2) + (lot.date ? ' · ' + lot.date : '') + '</span>' +
               '</div>' +
               '<div class="port-lot-gain" style="color:' + lotGc + ';">' + (lotGain >= 0 ? '+' : '') + '$' + lotGain.toFixed(2) + ' (' + (lotGainPct >= 0 ? '+' : '') + lotGainPct.toFixed(1) + '%)</div>' +
-              '<button onclick="event.stopPropagation();removeLotFromPortfolio(\'' + s.ticker + '\',' + i + ')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:13px;padding:2px 6px;flex-shrink:0;">✕</button>' +
+              '<button onclick="event.stopPropagation();removeLotFromPortfolio(' + escHtml(JSON.stringify(s.ticker)) + ',' + i + ')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:13px;padding:2px 6px;flex-shrink:0;">✕</button>' +
             '</div>';
           }).join('') +
           '<div class="port-note-row">' +
-            '<textarea id="note-input-' + s.ticker + '" class="port-note-input" placeholder="Why did you buy this? Notes…" oninput="saveStockNote(\'' + s.ticker + '\',this.value)">' + escHtml(note) + '</textarea>' +
+            '<textarea id="note-input-' + s.ticker + '" class="port-note-input" placeholder="Why did you buy this? Notes…" oninput="saveStockNote(' + escHtml(JSON.stringify(s.ticker)) + ',this.value)">' + escHtml(note) + '</textarea>' +
           '</div>' +
         '</div>';
       }
       return '<div class="port-stock-wrapper" data-ticker="' + s.ticker + '">' +
-        '<div class="port-stock-row" onclick="openStockFromPortfolio(\'' + s.ticker + '\')">' +
+        '<div class="port-stock-row" onclick="openStockFromPortfolio(' + escHtml(JSON.stringify(s.ticker)) + ')">' +
           '<div style="display:flex;align-items:center;gap:6px;">' +
-            (hasMultiple ? '<button id="lots-btn-' + s.ticker + '" onclick="event.stopPropagation();togglePortLots(\'' + s.ticker + '\')" class="port-lots-toggle">▾</button>' : '') +
+            (hasMultiple ? '<button id="lots-btn-' + s.ticker + '" onclick="event.stopPropagation();togglePortLots(' + escHtml(JSON.stringify(s.ticker)) + ')" class="port-lots-toggle">▾</button>' : '') +
             '<div>' +
               '<div style="font-weight:600;font-size:14px;">' + s.ticker + '</div>' +
               '<div style="font-size:11px;color:#64748b;">' + s.shares.toFixed(s.shares % 1 === 0 ? 0 : 2) + ' shares · avg $' + s.buyPrice.toFixed(2) + (hasMultiple ? ' · ' + s.lots.length + ' lots' : '') + '</div>' +
@@ -2348,8 +2352,8 @@ function renderPortfolioRows(data) {
           '<div class="hide-mobile" style="color:' + gc + ';">' + (s.gain >= 0 ? '+' : '') + '$' + s.gain.toFixed(2) + '<br><span style="font-size:11px;">' + (s.gainPct >= 0 ? '+' : '') + s.gainPct.toFixed(1) + '%</span></div>' +
           '<div class="hide-mobile" style="color:' + dc + ';">' + (s.dayChangeAmt >= 0 ? '+' : '') + '$' + s.dayChangeAmt.toFixed(2) + '</div>' +
           '<div style="display:flex;align-items:center;gap:8px;">' + portSignal(s.score) +
-            '<button onclick="event.stopPropagation();openSellModal(\'' + s.ticker + '\',' + s.currentPrice + ',' + s.shares + ')" class="sell-btn">Sell</button>' +
-            '<button onclick="event.stopPropagation();removeFromPortfolio(\'' + s.ticker + '\')" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:16px;padding:0;">✕</button>' +
+            '<button onclick="event.stopPropagation();openSellModal(' + escHtml(JSON.stringify(s.ticker)) + ',' + s.currentPrice + ',' + s.shares + ')" class="sell-btn">Sell</button>' +
+            '<button onclick="event.stopPropagation();removeFromPortfolio(' + escHtml(JSON.stringify(s.ticker)) + ')" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:16px;padding:0;">✕</button>' +
           '</div>' +
         '</div>' +
         lotsHtml +
@@ -2619,7 +2623,7 @@ function sendPortfolioQuestion() {
 
   let typingId = 'port-typing-' + Date.now();
   msgsEl.innerHTML += "<div class='chat-msg' id='" + typingId + "'><div class='chat-avatar'>AI</div><div class='chat-typing'><span></span><span></span><span></span></div></div>";
-  msgsEl.scrollTop = msgsEl.scrollHeight;
+  requestAnimationFrame(function() { msgsEl.scrollTop = msgsEl.scrollHeight; });
 
   portfolioChatHistory.push({ role: 'user', content: question });
   if (!checkAnthropicRateLimit()) return;
@@ -2646,7 +2650,7 @@ function sendPortfolioQuestion() {
     let reply = (data.content && data.content[0] && data.content[0].text) ? data.content[0].text : 'Sorry, I could not answer that right now.';
     portfolioChatHistory.push({ role: 'assistant', content: reply });
     msgsEl.innerHTML += "<div class='chat-msg'><div class='chat-avatar'>AI</div><div class='chat-bubble chat-bubble-ai'>" + parseMarkdown(reply) + "</div></div>";
-    msgsEl.scrollTop = msgsEl.scrollHeight;
+    requestAnimationFrame(function() { msgsEl.scrollTop = msgsEl.scrollHeight; });
   })
   .catch(function() {
     let typing = document.getElementById(typingId);
@@ -2772,7 +2776,7 @@ function renderProfile() {
   document.getElementById('stat-watchlist').textContent = watchlist.length;
   document.getElementById('stat-portfolio').textContent = portCount;
   document.getElementById('stat-streak').textContent    = streak;
-  renderBadges(analyzed, watchlist.length, portfolio.length, streak);
+  renderBadges(analyzed, watchlist.length, portCount, streak);
 }
 
 let stockChatHistory = [];
@@ -2820,7 +2824,7 @@ function sendStockQuestion() {
     "<div class='chat-avatar' style='font-size:10px;font-weight:700;color:var(--accent-green);'>AI</div>" +
     "<div class='chat-typing'><span></span><span></span><span></span></div>" +
     "</div>";
-  messages.scrollTop = messages.scrollHeight;
+  requestAnimationFrame(function() { messages.scrollTop = messages.scrollHeight; });
 
   stockChatHistory.push({ role: 'user', content: question });
 
@@ -2853,7 +2857,7 @@ function sendStockQuestion() {
       "<div class='chat-avatar' style='font-size:10px;font-weight:700;color:var(--accent-green);'>AI</div>" +
       "<div class='chat-bubble chat-bubble-ai'>" + parseMarkdown(reply) + "</div>" +
       "</div>";
-    messages.scrollTop = messages.scrollHeight;
+    requestAnimationFrame(function() { messages.scrollTop = messages.scrollHeight; });
   })
   .catch(function() {
     let typing = document.getElementById(typingId);
