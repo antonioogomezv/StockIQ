@@ -2078,7 +2078,7 @@ function renderPortfolio() {
   empty.style.display = 'none';
   summary.style.display = 'block';
   let totalValue = 0, totalCost = 0, totalDayChange = 0;
-  let scores = [], fetchPromises = [], stockData = [];
+  let scores = [], fetchPromises = [], stockData = [], failedTickers = [];
   portfolio.forEach(function(item, idx) {
     // Compute totals across all lots
     let totalShares = item.lots.reduce(function(sum, l) { return sum + l.shares; }, 0);
@@ -2103,6 +2103,7 @@ function renderPortfolio() {
         stockData.push({ ticker: item.ticker, lots: item.lots, shares: totalShares, buyPrice: avgPrice, currentPrice, value, cost, gain, gainPct, dayChangeAmt, score });
       })
       .catch(function() {
+        failedTickers.push(item.ticker);
         stockData.push({ ticker: item.ticker, lots: item.lots, shares: totalShares, buyPrice: avgPrice, currentPrice: avgPrice, value: totalLotCost, cost: totalLotCost, gain: 0, gainPct: 0, dayChangeAmt: 0, score: null });
       });
     fetchPromises.push(p);
@@ -2114,12 +2115,13 @@ function renderPortfolio() {
     let gainColor = totalGain >= 0 ? '#16a34a' : '#dc2626';
     let dayColor = totalDayChange >= 0 ? '#16a34a' : '#dc2626';
     document.getElementById('port-total-value').textContent = '$' + totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    document.getElementById('port-total-gain').textContent = (totalGain >= 0 ? '+' : '') + '$' + totalGain.toFixed(2);
+    let fmt = function(n) { return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+    document.getElementById('port-total-gain').textContent = (totalGain >= 0 ? '+$' : '-$') + fmt(Math.abs(totalGain));
     document.getElementById('port-total-gain').style.color = gainColor;
     document.getElementById('port-total-pct').textContent = (totalGainPct >= 0 ? '+' : '') + totalGainPct.toFixed(2) + '% since purchase';
     let prevValue = totalValue - totalDayChange;
     let totalDayChangePct = prevValue > 0 ? (totalDayChange / prevValue) * 100 : 0;
-    document.getElementById('port-today-change').textContent = (totalDayChange >= 0 ? '+' : '') + '$' + totalDayChange.toFixed(2);
+    document.getElementById('port-today-change').textContent = (totalDayChange >= 0 ? '+$' : '-$') + fmt(Math.abs(totalDayChange));
     document.getElementById('port-today-change').style.color = dayColor;
     let todayPctEl = document.getElementById('port-today-pct');
     if (todayPctEl) { todayPctEl.textContent = (totalDayChangePct >= 0 ? '+' : '') + totalDayChangePct.toFixed(2) + '% today'; todayPctEl.style.color = dayColor; }
@@ -2138,6 +2140,9 @@ function renderPortfolio() {
     document.getElementById('port-worst-ticker').textContent = worst.ticker;
     document.getElementById('port-worst-gain').textContent = (worst.gain >= 0 ? '+' : '') + '$' + worst.gain.toFixed(2) + ' · ' + (worst.gainPct >= 0 ? '+' : '') + worst.gainPct.toFixed(1) + '%';
     document.getElementById('port-worst-gain').style.color = worst.gain >= 0 ? '#16a34a' : '#dc2626';
+    if (failedTickers.length > 0) {
+      showToast('Prices unavailable for ' + failedTickers.join(', ') + ' — showing cost basis instead.');
+    }
     portfolioStockData = stockData;
     let searchWrap = document.getElementById('port-search-wrap');
     if (searchWrap) searchWrap.style.display = 'block';
@@ -2958,28 +2963,29 @@ function getStockNote(ticker) {
   return notes[ticker] || '';
 }
 
-function toggleNoteEditor(ticker) {
-  let el = document.getElementById('note-editor-' + ticker);
-  if (!el) return;
-  let open = el.style.display !== 'none';
-  el.style.display = open ? 'none' : 'block';
-  if (!open) document.getElementById('note-input-' + ticker).focus();
-}
 
 // ── Export portfolio CSV ─────────────────────────────────────
 
 function exportPortfolioCSV() {
   let active = getActivePortfolio();
-  if (!active || !active.stocks || active.stocks.length === 0) { showToast('Nothing to export'); return; }
-  let rows = ['Ticker,Shares,Avg Cost,Lot #,Lot Shares,Lot Price,Lot Date'];
-  migratePortfolio(active.stocks).forEach(function(item) {
+  if (!active) { showToast('Nothing to export'); return; }
+  let rows = ['Section,Ticker,Shares,Avg Cost,Lot #,Lot Shares,Lot Price,Lot Date,Sell Price,Realized Gain'];
+  // Open positions
+  let stocks = migratePortfolio(active.stocks || []);
+  stocks.forEach(function(item) {
     let totalShares = item.lots.reduce(function(s, l) { return s + l.shares; }, 0);
     let totalCost   = item.lots.reduce(function(s, l) { return s + l.shares * l.price; }, 0);
     let avg = totalShares > 0 ? (totalCost / totalShares).toFixed(2) : 0;
     item.lots.forEach(function(lot, i) {
-      rows.push([item.ticker, totalShares, avg, i + 1, lot.shares, lot.price.toFixed(2), lot.date || ''].join(','));
+      rows.push(['Open', item.ticker, totalShares, avg, i + 1, lot.shares, lot.price.toFixed(2), lot.date || '', '', ''].join(','));
     });
   });
+  // Closed positions
+  let closed = active.closedPositions || [];
+  closed.forEach(function(c) {
+    rows.push(['Closed', c.ticker, c.sharesSold, '', '', c.sharesSold, c.avgCost ? c.avgCost.toFixed(2) : '', c.date || '', c.sellPrice.toFixed(2), c.realizedGain.toFixed(2)].join(','));
+  });
+  if (rows.length === 1) { showToast('Nothing to export'); return; }
   let blob = new Blob([rows.join('\n')], { type: 'text/csv' });
   let a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
