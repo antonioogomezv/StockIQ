@@ -1356,6 +1356,7 @@ function addToWatchlist() {
   btn.textContent = "✓ Added";
   btn.classList.add("added");
   renderWatchlist();
+  loadMarketOverview();
 }
 
 function removeFromWatchlist(ticker) {
@@ -1363,6 +1364,7 @@ function removeFromWatchlist(ticker) {
   localStorage.setItem("watchlist", JSON.stringify(watchlist));
   saveToFirestore({ watchlist: watchlist });
   renderWatchlist();
+  loadMarketOverview();
 }
 
 function setWlSort(sort) {
@@ -1685,6 +1687,50 @@ function loadMarketOverview() {
         changeEl.style.color = changePct >= 0 ? "#16a34a" : "#dc2626";
       })
       .catch(function() {});
+  });
+
+  // Inject watchlist tickers into the market bar
+  let watchlist = JSON.parse(localStorage.getItem("watchlist") || "[]");
+  let tickerContent = document.getElementById("ticker-content");
+  if (!tickerContent || watchlist.length === 0) return;
+
+  // Remove any previously injected watchlist items (avoid duplicates on re-call)
+  tickerContent.querySelectorAll(".wl-bar-item, .wl-bar-divider").forEach(function(el) { el.remove(); });
+
+  watchlist.forEach(function(item, i) {
+    let safeT = escHtml(JSON.stringify(item.ticker));
+    let divider = document.createElement("div");
+    divider.className = "market-divider wl-bar-divider";
+    tickerContent.appendChild(divider);
+
+    let node = document.createElement("div");
+    node.className = "market-item wl-bar-item";
+    node.setAttribute("onclick", "quickSearch(" + safeT + ")");
+    node.innerHTML =
+      "<span class='market-name'>" + escHtml(item.ticker) + "</span>" +
+      "<span class='market-price' id='wlbar-price-" + escHtml(item.ticker) + "'>—</span>" +
+      "<span class='market-change' id='wlbar-change-" + escHtml(item.ticker) + "'>—</span>";
+    tickerContent.appendChild(node);
+
+    // Fetch price with a small stagger to avoid rate limiting
+    setTimeout(function() {
+      fetch("https://finnhub.io/api/v1/quote?symbol=" + encodeURIComponent(item.ticker) + "&token=" + finnhubKey)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          let price = data.c;
+          let changePct = data.dp;
+          if (!price) return;
+          let priceEl = document.getElementById("wlbar-price-" + item.ticker);
+          let changeEl = document.getElementById("wlbar-change-" + item.ticker);
+          if (!priceEl || !changeEl) return;
+          priceEl.textContent = "$" + price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          let arrow = changePct >= 0 ? "▲" : "▼";
+          let sign = changePct >= 0 ? "+" : "";
+          changeEl.textContent = arrow + " " + sign + changePct.toFixed(2) + "%";
+          changeEl.style.color = changePct >= 0 ? "#16a34a" : "#dc2626";
+        })
+        .catch(function() {});
+    }, 200 * (i + 1));
   });
 }
 
