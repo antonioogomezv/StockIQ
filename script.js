@@ -1891,24 +1891,29 @@ function createDemoPortfolio(profileType, budget) {
     valid.sort(function(a, b) { return b.score - a.score; });
     let top5 = valid.slice(0, 5);
 
+    let buildPortfolio = function(finalTop5) {
+      let perStock = b / finalTop5.length;
+      let stocks = finalTop5.map(function(s) {
+        let shares = s.price > 0 ? Math.max(0.01, parseFloat((perStock / s.price).toFixed(2))) : 1;
+        return { ticker: s.ticker, lots: [{ shares: shares, price: parseFloat(s.price.toFixed(2)), date: today }] };
+      });
+      createPortfolio('Recommended Portfolio', true, stocks);
+      showToast('Recommended Portfolio ready — ' + finalTop5.map(function(s) { return s.ticker; }).join(', '));
+    };
+
     if (top5.length === 0) {
-      // Fallback if everything got filtered out
-      top5 = [
-        { ticker: 'AAPL', price: 0 }, { ticker: 'MSFT', price: 0 },
-        { ticker: 'JPM',  price: 0 }, { ticker: 'V',    price: 0 },
-        { ticker: 'KO',   price: 0 }
-      ];
+      // Fallback: fetch live prices for default balanced stocks
+      let fallbackTickers = ['AAPL', 'MSFT', 'JPM', 'V', 'KO'];
+      Promise.all(fallbackTickers.map(function(ticker, idx) {
+        return new Promise(function(resolve) { setTimeout(resolve, idx * 120); })
+          .then(function() {
+            return fetch('https://finnhub.io/api/v1/quote?symbol=' + ticker + '&token=' + finnhubKey).then(function(r) { return r.json(); }).catch(function() { return {}; });
+          })
+          .then(function(q) { return { ticker: ticker, price: q.c || 0, score: 0, beta: 1 }; });
+      })).then(buildPortfolio);
+    } else {
+      buildPortfolio(top5);
     }
-
-    let perStock = b / top5.length;
-
-    let stocks = top5.map(function(s) {
-      let shares = s.price > 0 ? Math.max(0.01, parseFloat((perStock / s.price).toFixed(2))) : 1;
-      return { ticker: s.ticker, lots: [{ shares: shares, price: parseFloat((s.price || 1).toFixed(2)), date: today }] };
-    });
-
-    createPortfolio('Recommended Portfolio', true, stocks);
-    showToast('Recommended Portfolio ready — ' + top5.map(function(s) { return s.ticker; }).join(', '));
   });
 }
 
