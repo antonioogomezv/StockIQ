@@ -429,31 +429,35 @@
   </nav>
 
   <!-- MARKET BAR -->
-  <div id="market-bar">
-    <div class="market-item" onclick="quickSearch('SPY')">
-      <span class="market-name">S&P 500</span>
-      <span class="market-price" id="sp500-price">—</span>
-      <span class="market-change" id="sp500-change">—</span>
-    </div>
-    <div class="market-divider"></div>
-    <div class="market-item" onclick="quickSearch('QQQ')">
-      <span class="market-name">NASDAQ</span>
-      <span class="market-price" id="nasdaq-price">—</span>
-      <span class="market-change" id="nasdaq-change">—</span>
-    </div>
-    <div class="market-divider"></div>
-    <div class="market-item" onclick="quickSearch('DIA')">
-      <span class="market-name">DOW</span>
-      <span class="market-price" id="dow-price">—</span>
-      <span class="market-change" id="dow-change">—</span>
-    </div>
-    <div class="market-divider"></div>
-    <div class="market-item" onclick="quickSearch('GLD')">
-      <span class="market-name">GOLD</span>
-      <span class="market-price" id="btc-price">—</span>
-      <span class="market-change" id="btc-change">—</span>
+<div id="market-bar">
+  <div class="ticker-track">
+    <div class="ticker-content" id="ticker-content">
+      <div class="market-item" onclick="quickSearch('SPY')">
+        <span class="market-name">S&P 500</span>
+        <span class="market-price" id="sp500-price">—</span>
+        <span class="market-change" id="sp500-change">—</span>
+      </div>
+      <div class="market-divider"></div>
+      <div class="market-item" onclick="quickSearch('QQQ')">
+        <span class="market-name">NASDAQ</span>
+        <span class="market-price" id="nasdaq-price">—</span>
+        <span class="market-change" id="nasdaq-change">—</span>
+      </div>
+      <div class="market-divider"></div>
+      <div class="market-item" onclick="quickSearch('DIA')">
+        <span class="market-name">DOW</span>
+        <span class="market-price" id="dow-price">—</span>
+        <span class="market-change" id="dow-change">—</span>
+      </div>
+      <div class="market-divider"></div>
+      <div class="market-item" onclick="quickSearch('GLD')">
+        <span class="market-name">GOLD</span>
+        <span class="market-price" id="btc-price">—</span>
+        <span class="market-change" id="btc-change">—</span>
+      </div>
     </div>
   </div>
+</div>
 
   <!-- ── TAB: ANALYZE ── -->
   <div class="tab-content active" id="tab-analyze">
