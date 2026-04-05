@@ -568,14 +568,15 @@
             <div class="port-metric-label">Total Value</div>
             <div class="port-metric-value" id="port-total-value">$0</div>
           </div>
-          <div class="port-metric">
+          <div class="port-metric" id="port-gain-card">
             <div class="port-metric-label">Total Gain/Loss</div>
             <div class="port-metric-value" id="port-total-gain">$0</div>
             <div class="port-metric-sub" id="port-total-pct">0%</div>
           </div>
-          <div class="port-metric">
+          <div class="port-metric" id="port-today-card">
             <div class="port-metric-label">Today's Change</div>
             <div class="port-metric-value" id="port-today-change">$0</div>
+            <div class="port-metric-sub" id="port-today-pct">0%</div>
           </div>
           <div class="port-metric">
             <div class="port-metric-label">Avg Score</div>
@@ -661,8 +662,12 @@
             <div class="empty-state-icon">
               <svg viewBox="0 0 24 24"><rect x="3" y="12" width="4" height="9"/><rect x="10" y="7" width="4" height="14"/><rect x="17" y="3" width="4" height="18"/></svg>
             </div>
-            <div class="empty-state-title">Your portfolio is empty</div>
-            <div class="empty-state-desc">Add your first stock on the left to start tracking.</div>
+            <div class="empty-state-title">Start tracking your stocks</div>
+            <div class="empty-steps">
+              <div class="empty-step"><span class="empty-step-num">1</span><span>Enter a ticker like <strong>AAPL</strong> in the form above</span></div>
+              <div class="empty-step"><span class="empty-step-num">2</span><span>Add your shares and the price you paid</span></div>
+              <div class="empty-step"><span class="empty-step-num">3</span><span>Tap <strong>Add</strong> to see your live gains and AI insights</span></div>
+            </div>
           </div>
 
           <div id="portfolio-list"></div>
@@ -710,8 +715,12 @@
           <div class="empty-state-icon">
             <svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
           </div>
-          <div class="empty-state-title">Nothing saved yet</div>
-          <div class="empty-state-desc">Search for a stock and tap Add to Watchlist to track it here.</div>
+          <div class="empty-state-title">No stocks saved yet</div>
+          <div class="empty-steps">
+            <div class="empty-step"><span class="empty-step-num">1</span><span>Go to the <strong>Analyze</strong> tab</span></div>
+            <div class="empty-step"><span class="empty-step-num">2</span><span>Search for a stock you want to follow</span></div>
+            <div class="empty-step"><span class="empty-step-num">3</span><span>Tap <strong>+ Watchlist</strong> to save it here with score &amp; alerts</span></div>
+          </div>
         </div>
         <div id="watchlist-items"></div>
       </div>

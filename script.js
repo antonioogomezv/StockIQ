@@ -59,6 +59,7 @@ let chartPrevClose = 0;
 let chartDayHigh = 0;
 let chartDayLow = 0;
 let chartWeek52High = 0;
+let wlSort = 'score'; // 'score' | 'change' | 'ticker'
 
 let sectorAverages = {
   "Technology": { pe: 25, margin: 18, growth: 12, beta: 1.2, debt: 0.8 },
@@ -226,7 +227,13 @@ function renderSearchHistory() {
   el.innerHTML = '<span class="search-history-label">Recent:</span>' +
     history.map(function(h) {
       return "<button class='search-history-chip' onclick='quickSearch(\"" + escHtml(h.ticker) + "\")'>" + escHtml(h.ticker) + "</button>";
-    }).join('');
+    }).join('') +
+    "<button class='search-history-clear' onclick='clearSearchHistory()'>Clear</button>";
+}
+
+function clearSearchHistory() {
+  localStorage.removeItem('search-history');
+  renderSearchHistory();
 }
 
 function searchStock() {
@@ -1313,12 +1320,31 @@ function removeFromWatchlist(ticker) {
   renderWatchlist();
 }
 
+function setWlSort(sort) {
+  wlSort = sort;
+  renderWatchlist();
+}
+
 function renderWatchlist() {
   let watchlist = JSON.parse(localStorage.getItem("watchlist") || "[]");
   let empty = document.getElementById("watchlist-empty");
   let items = document.getElementById("watchlist-items");
   if (watchlist.length === 0) { empty.style.display = "flex"; items.innerHTML = ""; return; }
   empty.style.display = "none";
+
+  // Sort bar
+  let sortBar = document.getElementById('wl-sort-bar');
+  if (!sortBar) {
+    let section = document.getElementById('watchlist-section');
+    sortBar = document.createElement('div');
+    sortBar.id = 'wl-sort-bar';
+    section.insertBefore(sortBar, items);
+  }
+  sortBar.innerHTML = '<span class="wl-sort-label">Sort:</span>' +
+    ['score','change','ticker'].map(function(s) {
+      let label = s === 'score' ? 'Score' : s === 'change' ? 'Change %' : 'Ticker A–Z';
+      return "<button class='wl-sort-btn" + (wlSort === s ? ' active' : '') + "' onclick='setWlSort(\"" + s + "\")'>" + label + "</button>";
+    }).join('');
 
   // Render immediately with loading placeholders for prices
   function buildRow(item, price, changePct) {
@@ -1362,8 +1388,11 @@ function renderWatchlist() {
     "</div>";
   }
 
-  // Show skeletons first
-  items.innerHTML = watchlist.map(function(item) { return buildRow(item, null, 0); }).join("");
+  // Show skeletons first (sorted by score as default)
+  let initSorted = watchlist.slice();
+  if (wlSort === 'score') initSorted.sort(function(a, b) { return (b.score || 0) - (a.score || 0); });
+  else if (wlSort === 'ticker') initSorted.sort(function(a, b) { return a.ticker.localeCompare(b.ticker); });
+  items.innerHTML = initSorted.map(function(item) { return buildRow(item, null, 0); }).join("");
 
   // Fetch live quotes in parallel
   Promise.all(watchlist.map(function(item) {
@@ -1375,7 +1404,11 @@ function renderWatchlist() {
     let quoteMap = {};
     quotes.forEach(function(q) { quoteMap[q.ticker] = q; });
     checkPriceAlerts(quoteMap);
-    items.innerHTML = watchlist.map(function(item) {
+    let sorted = watchlist.slice();
+    if (wlSort === 'score') sorted.sort(function(a, b) { return (b.score || 0) - (a.score || 0); });
+    else if (wlSort === 'change') sorted.sort(function(a, b) { let qa = quoteMap[a.ticker] || {}; let qb = quoteMap[b.ticker] || {}; return (qb.changePct || 0) - (qa.changePct || 0); });
+    else if (wlSort === 'ticker') sorted.sort(function(a, b) { return a.ticker.localeCompare(b.ticker); });
+    items.innerHTML = sorted.map(function(item) {
       let q = quoteMap[item.ticker] || { price: null, changePct: 0 };
       return buildRow(item, q.price, q.changePct);
     }).join("");
@@ -2044,8 +2077,16 @@ function renderPortfolio() {
     document.getElementById('port-total-gain').textContent = (totalGain >= 0 ? '+' : '') + '$' + totalGain.toFixed(2);
     document.getElementById('port-total-gain').style.color = gainColor;
     document.getElementById('port-total-pct').textContent = (totalGainPct >= 0 ? '+' : '') + totalGainPct.toFixed(2) + '% since purchase';
+    let prevValue = totalValue - totalDayChange;
+    let totalDayChangePct = prevValue > 0 ? (totalDayChange / prevValue) * 100 : 0;
     document.getElementById('port-today-change').textContent = (totalDayChange >= 0 ? '+' : '') + '$' + totalDayChange.toFixed(2);
     document.getElementById('port-today-change').style.color = dayColor;
+    let todayPctEl = document.getElementById('port-today-pct');
+    if (todayPctEl) { todayPctEl.textContent = (totalDayChangePct >= 0 ? '+' : '') + totalDayChangePct.toFixed(2) + '% today'; todayPctEl.style.color = dayColor; }
+    let gainCard = document.getElementById('port-gain-card');
+    let todayCard = document.getElementById('port-today-card');
+    if (gainCard) { gainCard.classList.remove('metric-up','metric-down'); gainCard.classList.add(totalGain >= 0 ? 'metric-up' : 'metric-down'); }
+    if (todayCard) { todayCard.classList.remove('metric-up','metric-down'); todayCard.classList.add(totalDayChange >= 0 ? 'metric-up' : 'metric-down'); }
     document.getElementById('port-avg-score').textContent = avgScore ? avgScore + '/100' : '—';
     let sorted = stockData.slice().sort(function(a, b) { return b.gainPct - a.gainPct; });
     let best = sorted[0], worst = sorted[sorted.length - 1];
