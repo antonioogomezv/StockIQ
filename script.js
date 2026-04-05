@@ -13,6 +13,15 @@ function initTheme() {
   document.documentElement.setAttribute('data-theme', saved);
   let btn = document.getElementById('dark-mode-toggle');
   if (btn) btn.textContent = saved === 'dark' ? '☀️' : '🌙';
+
+  // Follow system changes live, but only if the user hasn't manually picked a theme
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+    if (localStorage.getItem('theme')) return; // user has a manual preference — don't override
+    let theme = e.matches ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', theme);
+    let b = document.getElementById('dark-mode-toggle');
+    if (b) b.textContent = theme === 'dark' ? '☀️' : '🌙';
+  });
 }
 // ── END dark mode ────────────────────────────────────────────
 
