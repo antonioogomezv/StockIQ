@@ -1,3 +1,21 @@
+// ── Dark mode ────────────────────────────────────────────────
+function toggleDarkMode() {
+  let isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  let next = isDark ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  let btn = document.getElementById('dark-mode-toggle');
+  if (btn) btn.textContent = next === 'dark' ? '☀️' : '🌙';
+}
+
+function initTheme() {
+  let saved = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  document.documentElement.setAttribute('data-theme', saved);
+  let btn = document.getElementById('dark-mode-toggle');
+  if (btn) btn.textContent = saved === 'dark' ? '☀️' : '🌙';
+}
+// ── END dark mode ────────────────────────────────────────────
+
 let _toastTimer = null;
 function showToast(msg) {
   let el = document.getElementById("toast");
@@ -1219,9 +1237,39 @@ function finishQuiz() {
   let nameEl = document.getElementById("onboarding-profile-name");
   if (nameEl) nameEl.textContent = userProfile.icon + " " + userProfile.type;
   document.getElementById("onboarding-overlay").style.display = "flex";
+  // Reset card state
+  _obStep = 0;
+  document.querySelectorAll('.onboarding-card').forEach(function(c, i) { c.classList.toggle('active', i === 0); });
+  document.querySelectorAll('.ob-dot').forEach(function(d, i) { d.classList.toggle('active', i === 0); });
+  let prevBtn = document.getElementById('onboarding-prev');
+  if (prevBtn) prevBtn.style.visibility = 'hidden';
+  let nextBtn = document.getElementById('onboarding-next');
+  if (nextBtn) { nextBtn.textContent = 'Next →'; nextBtn.onclick = function() { onboardingStep(1); }; }
+}
+
+let _obStep = 0;
+const _obTotal = 5;
+
+function onboardingStep(dir) {
+  let cards = document.querySelectorAll('.onboarding-card');
+  let dots  = document.querySelectorAll('.ob-dot');
+  cards[_obStep].classList.remove('active');
+  dots[_obStep].classList.remove('active');
+  _obStep = Math.max(0, Math.min(_obTotal - 1, _obStep + dir));
+  cards[_obStep].classList.add('active');
+  dots[_obStep].classList.add('active');
+  let prevBtn = document.getElementById('onboarding-prev');
+  let nextBtn = document.getElementById('onboarding-next');
+  if (prevBtn) prevBtn.style.visibility = _obStep === 0 ? 'hidden' : 'visible';
+  if (nextBtn) nextBtn.textContent = _obStep === _obTotal - 1 ? "Let's Go →" : 'Next →';
+  if (_obStep === _obTotal - 1 && dir > 0) {
+    // Auto-advance to finish on second tap of last step's Next
+    nextBtn.onclick = function() { finishOnboarding(); nextBtn.onclick = function() { onboardingStep(1); }; };
+  }
 }
 
 function finishOnboarding() {
+  _obStep = 0;
   document.getElementById("onboarding-overlay").style.display = "none";
   showTab('analyze');
 }
@@ -2942,5 +2990,6 @@ auth.onAuthStateChanged(function(user) {
     renderWatchlist();
     renderSearchHistory();
     showTab('analyze');
+    initTheme();
   });
 });

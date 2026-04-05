@@ -141,37 +141,56 @@
   <div id="onboarding-modal">
     <div id="onboarding-logo">Stock<span>IQ</span></div>
     <div id="onboarding-welcome">You're all set, <span id="onboarding-profile-name">Investor</span>!</div>
-    <div id="onboarding-subtitle">Here's how to get the most out of StockIQ</div>
 
-    <div id="onboarding-steps">
-      <div class="onboarding-step">
-        <div class="onboarding-step-icon">🔍</div>
-        <div class="onboarding-step-body">
-          <div class="onboarding-step-title">Search any stock</div>
-          <div class="onboarding-step-desc">Type a company name like "Apple" or "Tesla" and get an instant AI-powered analysis with a score out of 100.</div>
-        </div>
+    <div id="onboarding-cards">
+
+      <div class="onboarding-card active" data-step="0">
+        <div class="onboarding-card-icon">🔍</div>
+        <div class="onboarding-card-title">Analyze Tab</div>
+        <div class="onboarding-card-desc">Search any US stock by name or ticker. You'll get a health score out of 100, a plain-English breakdown, price chart, and an AI you can ask anything.</div>
       </div>
-      <div class="onboarding-step">
-        <div class="onboarding-step-icon">📖</div>
-        <div class="onboarding-step-body">
-          <div class="onboarding-step-title">Use the Cheat Sheet</div>
-          <div class="onboarding-step-desc">Tap the gold 📖 button anytime you see a term you don't understand — it will explain it in plain English, just for you.</div>
-        </div>
+
+      <div class="onboarding-card" data-step="1">
+        <div class="onboarding-card-icon">💼</div>
+        <div class="onboarding-card-title">Portfolio Tab</div>
+        <div class="onboarding-card-desc">Add stocks you own. StockIQ tracks your gains, shows your allocation, and analyzes your entire portfolio with AI. We already loaded a Demo Portfolio based on your profile.</div>
       </div>
-      <div class="onboarding-step">
-        <div class="onboarding-step-icon">💼</div>
-        <div class="onboarding-step-body">
-          <div class="onboarding-step-title">Build your portfolio</div>
-          <div class="onboarding-step-desc">Add stocks you own or want to track. StockIQ will show you your total gains, allocation chart, and an AI review of your holdings.</div>
-        </div>
+
+      <div class="onboarding-card" data-step="2">
+        <div class="onboarding-card-icon">👁️</div>
+        <div class="onboarding-card-title">Watchlist Tab</div>
+        <div class="onboarding-card-desc">Save stocks you're watching. Set price alerts so you're notified when a stock hits your target. Track score history over time.</div>
       </div>
+
+      <div class="onboarding-card" data-step="3">
+        <div class="onboarding-card-icon">👤</div>
+        <div class="onboarding-card-title">Profile Tab</div>
+        <div class="onboarding-card-desc">See your investor type, activity stats, and achievements. Retake the quiz anytime if your goals change.</div>
+      </div>
+
+      <div class="onboarding-card" data-step="4">
+        <div class="onboarding-card-icon">📖</div>
+        <div class="onboarding-card-title">Learn Terms</div>
+        <div class="onboarding-card-desc">Tap the gold Learn Terms button anytime to look up P/E ratio, Beta, RSI, and more — explained in plain English with real-world tips.</div>
+      </div>
+
+    </div>
+
+    <div id="onboarding-nav">
+      <button id="onboarding-prev" onclick="onboardingStep(-1)">←</button>
+      <div id="onboarding-dots">
+        <div class="ob-dot active"></div>
+        <div class="ob-dot"></div>
+        <div class="ob-dot"></div>
+        <div class="ob-dot"></div>
+        <div class="ob-dot"></div>
+      </div>
+      <button id="onboarding-next" onclick="onboardingStep(1)">Next →</button>
     </div>
 
     <div id="onboarding-disclaimer">
-      StockIQ is for <strong>educational purposes only</strong>. Nothing here is financial advice. Always do your own research before investing real money.
+      StockIQ is for <strong>educational purposes only</strong>. Nothing here is financial advice.
     </div>
-
-    <button onclick="finishOnboarding()" id="onboarding-btn">Let's Go →</button>
   </div>
 </div>
 
@@ -393,8 +412,11 @@
 <div id="app">
 
   <header>
-    <h1>Stock<span>IQ</span></h1>
-    <p>Invest smarter. Learn as you go.</p>
+    <div id="header-left">
+      <h1>Stock<span>IQ</span></h1>
+      <p>Invest smarter. Learn as you go.</p>
+    </div>
+    <button id="dark-mode-toggle" onclick="toggleDarkMode()" title="Toggle dark mode">🌙</button>
   </header>
 
   <!-- NAVIGATION TABS -->
