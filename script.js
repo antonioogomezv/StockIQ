@@ -60,6 +60,7 @@ let chartDayHigh = 0;
 let chartDayLow = 0;
 let chartWeek52High = 0;
 let wlSort = 'score'; // 'score' | 'change' | 'ticker'
+let _spyBenchmark = null; // null=unfetched, false=unavailable, object=cached result
 
 let sectorAverages = {
   "Technology": { pe: 25, margin: 18, growth: 12, beta: 1.2, debt: 0.8 },
@@ -254,6 +255,8 @@ function searchStock() {
   if (aiBox) aiBox.style.display = "none";
   let actionBtns = document.getElementById("action-btns");
   if (actionBtns) actionBtns.style.display = "none";
+  let brokerHintEl = document.getElementById('broker-hint');
+  if (brokerHintEl) brokerHintEl.style.display = 'none';
   let aboutCard = document.getElementById('company-about');
   if (aboutCard) aboutCard.style.display = 'none';
   let fundCard = document.getElementById('fundamentals-card');
@@ -503,7 +506,12 @@ function buildScoreHistoryBars(ticker, currentScore) {
   }).join("");
   return {
     trend: "<span style='color:" + color + ";font-weight:600;font-size:12px;'>" + arrow + " " + Math.abs(diff) + " pts since " + prev.date + " — " + label + "</span>",
-    bars: "<div style='display:flex;align-items:flex-end;gap:8px;margin-top:8px;padding:10px;background:var(--surface2);border-radius:10px;'>" + bars + "</div>"
+    bars: "<div style='display:flex;align-items:flex-end;gap:8px;margin-top:8px;padding:10px;background:var(--surface2);border-radius:10px;'>" + bars + "</div>" +
+          "<div style='display:flex;gap:12px;margin-top:6px;font-size:10px;color:var(--text-muted);'>" +
+          "<span><span style='color:#16a34a;font-weight:700;'>■</span> Strong 65+</span>" +
+          "<span><span style='color:#d97706;font-weight:700;'>■</span> Watch 50–64</span>" +
+          "<span><span style='color:#dc2626;font-weight:700;'>■</span> Risky &lt;50</span>" +
+          "</div>"
   };
 }
 
@@ -572,6 +580,8 @@ function displayData(data) {
   saveSearchHistory(ticker, companyName);
 
   document.getElementById("action-btns").style.display = "flex";
+  let brokerHint = document.getElementById('broker-hint');
+  if (brokerHint && !localStorage.getItem('broker-hint-dismissed')) brokerHint.style.display = 'flex';
   let btn = document.getElementById("watchlist-btn");
   btn.textContent = "+ Watchlist";
   btn.classList.remove("added");
@@ -748,6 +758,16 @@ function renderFundamentals(f) {
       (beat ? " <span style='color:" + beatColor + ";font-weight:700;font-size:11px;'>" + beat + "</span>" : "");
   }
 
+  let fundTips = {
+    'Market Cap':     'Total value of all shares. Larger = more established & stable.',
+    'P/E Ratio':      'Price ÷ earnings. High = growth expected, low = cheap or struggling.',
+    'Dividend Yield': 'Annual cash paid to shareholders as % of price. 0% = no dividend.',
+    'Beta':           'Volatility vs the market. >1 = bigger swings, <1 = steadier.',
+    'Profit Margin':  '% of revenue kept as profit after all costs. Higher = more efficient.',
+    'Rev. Growth':    'How fast sales grew vs the same period last year.',
+    'Next Earnings':  'Date the company reports quarterly results — often causes big price moves.',
+    'Last EPS':       'Earnings per share last quarter. "Beat" = did better than analysts expected.'
+  };
   let items = [
     { label: 'Market Cap',     value: mktCap },
     { label: 'P/E Ratio',      value: f.pe > 0 ? f.pe.toFixed(1) : '—' },
@@ -758,9 +778,12 @@ function renderFundamentals(f) {
     { label: 'Next Earnings',  value: nextEarningsVal },
     { label: 'Last EPS',       value: lastEarningsVal },
   ];
+  let tipId = 0;
   el.innerHTML = '<h2>KEY STATS</h2><div class="fundamentals-grid">' +
     items.map(function(i) {
-      return "<div class='fund-item'><div class='fund-label'>" + i.label + "</div><div class='fund-value'>" + i.value + "</div></div>";
+      let tid = 'fund-tip-' + (tipId++);
+      let tip = fundTips[i.label] ? "<button class='fund-tip-btn' onclick=\"var e=document.getElementById('" + tid + "');e.style.display=e.style.display==='none'?'block':'none';\">?</button><div class='fund-tip' id='" + tid + "' style='display:none;'>" + fundTips[i.label] + "</div>" : '';
+      return "<div class='fund-item'><div class='fund-label'>" + i.label + tip + "</div><div class='fund-value'>" + i.value + "</div></div>";
     }).join('') + '</div>';
   el.style.display = 'block';
 }
@@ -1852,6 +1875,7 @@ function renamePortfolio(id, name) {
 function setActivePortfolio(id) {
   localStorage.setItem('activePortfolioId', id);
   saveToFirestore({ activePortfolioId: id });
+  _spyBenchmark = null;
   // Reset AI section — it belongs to the previous portfolio
   let aiSection = document.getElementById('port-ai-section');
   if (aiSection) aiSection.style.display = 'none';
@@ -2155,7 +2179,73 @@ function renderPortfolio() {
     if (portAiBtn) portAiBtn.style.display = 'block';
     let exportBtn = document.getElementById('port-export-btn');
     if (exportBtn) exportBtn.style.display = 'block';
+
+    // Fractional shares note for Recommended Portfolio
+    let demoNote = document.getElementById('port-demo-note');
+    if (active && active.isDemo) {
+      if (!demoNote) {
+        demoNote = document.createElement('div');
+        demoNote.id = 'port-demo-note';
+        demoNote.className = 'port-demo-note';
+        demoNote.innerHTML = '✦ This is a simulated portfolio using fractional shares. Most modern brokers (Robinhood, Fidelity, Schwab) support fractional investing.';
+        let listEl = document.getElementById('portfolio-list');
+        if (listEl) listEl.parentNode.insertBefore(demoNote, listEl);
+      }
+      demoNote.style.display = 'block';
+    } else if (demoNote) {
+      demoNote.style.display = 'none';
+    }
+
+    // S&P 500 benchmark
+    fetchSpyBenchmark(portfolio, function(bench) {
+      let benchEl = document.getElementById('port-benchmark');
+      if (!benchEl) return;
+      if (!bench) { benchEl.style.display = 'none'; return; }
+      let youVsSpy = totalGainPct - bench.spyReturn;
+      let vsColor = youVsSpy >= 0 ? '#16a34a' : '#dc2626';
+      let vsText = youVsSpy >= 0 ? '↑ Beating the market' : '↓ Behind the market';
+      let youColor = totalGainPct >= 0 ? '#16a34a' : '#dc2626';
+      let spyColor = bench.spyReturn >= 0 ? '#16a34a' : '#dc2626';
+      benchEl.innerHTML =
+        '<span class="port-bench-label">vs S&P 500 since ' + bench.since + '</span>' +
+        '<span class="port-bench-stat" style="color:' + youColor + ';">You ' + (totalGainPct >= 0 ? '+' : '') + totalGainPct.toFixed(1) + '%</span>' +
+        '<span class="port-bench-sep">·</span>' +
+        '<span class="port-bench-stat" style="color:' + spyColor + ';">SPY ' + (bench.spyReturn >= 0 ? '+' : '') + bench.spyReturn.toFixed(1) + '%</span>' +
+        '<span class="port-bench-vs" style="color:' + vsColor + ';">' + vsText + '</span>';
+      benchEl.style.display = 'flex';
+    });
   });
+}
+
+function fetchSpyBenchmark(portfolio, callback) {
+  if (_spyBenchmark !== null) { callback(_spyBenchmark || null); return; }
+  // Find earliest lot date across all stocks
+  let earliest = null;
+  portfolio.forEach(function(item) {
+    (item.lots || []).forEach(function(lot) {
+      if (lot.date) {
+        let d = new Date(lot.date);
+        if (!isNaN(d) && (!earliest || d < earliest)) earliest = d;
+      }
+    });
+  });
+  if (!earliest) { _spyBenchmark = false; callback(null); return; }
+  let fromDate = earliest.toISOString().split('T')[0];
+  // Use a 7-day window to handle weekends/holidays
+  let toDate = new Date(earliest.getTime() + 7 * 86400000).toISOString().split('T')[0];
+  Promise.all([
+    fetch('https://finnhub.io/api/v1/quote?symbol=SPY&token=' + finnhubKey).then(function(r) { return r.json(); }).catch(function() { return {}; }),
+    fetch('https://api.polygon.io/v2/aggs/ticker/SPY/range/1/day/' + fromDate + '/' + toDate + '?apiKey=' + polygonKey).then(function(r) { return r.json(); }).catch(function() { return {}; })
+  ]).then(function(results) {
+    let currentSPY = results[0].c || 0;
+    let hist = results[1];
+    let startSPY = (hist.results && hist.results.length > 0) ? hist.results[0].c : 0;
+    if (!currentSPY || !startSPY) { _spyBenchmark = false; callback(null); return; }
+    let spyReturn = ((currentSPY - startSPY) / startSPY) * 100;
+    let since = earliest.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    _spyBenchmark = { spyReturn: spyReturn, since: since };
+    callback(_spyBenchmark);
+  }).catch(function() { _spyBenchmark = false; callback(null); });
 }
 
 function portSignal(score) {

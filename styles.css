@@ -1414,6 +1414,40 @@ details[open] .sector-summary { color: var(--text); }
   margin-bottom: 4px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.fund-tip-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: 50%;
+  width: 14px;
+  height: 14px;
+  font-size: 9px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  flex-shrink: 0;
+  box-shadow: none;
+  transition: border-color 0.15s, color 0.15s;
+}
+.fund-tip-btn:hover { border-color: var(--accent-blue); color: var(--accent-blue); transform: none; }
+.fund-tip {
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-top: 6px;
+  line-height: 1.5;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+  grid-column: 1 / -1;
 }
 .fund-value {
   font-family: var(--mono);
@@ -2791,6 +2825,68 @@ footer {
   color: var(--text-muted);
   margin-top: 2px;
 }
+
+/* Portfolio benchmark row */
+#port-benchmark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  background: var(--surface2);
+  border-radius: 10px;
+  margin-top: 8px;
+  font-size: 12px;
+}
+.port-bench-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.port-bench-stat { font-weight: 700; font-family: var(--display); }
+.port-bench-sep { color: var(--text-muted); }
+.port-bench-vs { font-size: 11px; font-weight: 700; }
+
+/* Demo portfolio fractional note */
+.port-demo-note {
+  font-size: 12px;
+  color: var(--text-muted);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+/* Broker hint below action buttons */
+#broker-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-top: 4px;
+  line-height: 1.5;
+}
+#broker-hint button {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 0;
+  flex-shrink: 0;
+  box-shadow: none;
+  margin-left: auto;
+}
+#broker-hint button:hover { color: var(--text); transform: none; }
 
 /* Winners bar — single compact row instead of two tall cards */
 .port-winners {

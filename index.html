@@ -509,6 +509,10 @@
           <button type="button" id="portfolio-quick-btn" onclick="quickAddToPortfolio()">+ Portfolio</button>
           <button type="button" id="share-btn" onclick="shareStockAnalysis()">Share ↗</button>
         </div>
+        <div id="broker-hint" style="display:none;">
+          StockIQ is for education only — not financial advice. To actually buy stocks, you'll need a brokerage account (e.g. Robinhood, Fidelity, or Schwab).
+          <button onclick="localStorage.setItem('broker-hint-dismissed','1');document.getElementById('broker-hint').style.display='none';">✕</button>
+        </div>
         <div id="explanation-simple" style="display:none;"></div>
         <div id="company-about" style="display:none;"></div>
         <div id="fundamentals-card" style="display:none;"></div>
@@ -584,6 +588,7 @@
             <div class="port-metric-value" id="port-avg-score">—</div>
           </div>
         </div>
+        <div id="port-benchmark" style="display:none;"></div>
       </div>
 
       <!-- Two-column layout -->
