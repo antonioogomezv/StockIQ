@@ -530,6 +530,38 @@ button:active { transform: translateY(0); }
   color: var(--accent-green);
 }
 
+#share-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: 10px;
+  font-size: 13px;
+  font-family: var(--sans);
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+  box-shadow: none;
+  flex: 0 0 auto;
+}
+#share-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(22,163,74,0.05);
+  transform: none;
+}
+
+.stock-currency-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-left: 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  padding: 2px 6px;
+  border-radius: 4px;
+  vertical-align: middle;
+}
+
 #explanation-simple {
   font-size: 14px;
   color: var(--text-muted);

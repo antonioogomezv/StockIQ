@@ -309,7 +309,8 @@ function searchStock() {
         // Unsupported ticker — no price and no company name means Finnhub doesn't cover it
         if (!quote.c && !profile.name) {
           document.getElementById("loading").style.display = "none";
-          showToast("\"" + ticker + "\" isn't supported. StockIQ only covers US-listed stocks.");
+          let isMXq = ticker.endsWith('.MX');
+          showToast("\"" + ticker + "\" isn't supported." + (isMXq ? " Try the full ticker, e.g. AMXL.MX" : " StockIQ covers US-listed stocks and major Mexican tickers (.MX)."));
           return;
         }
 
@@ -519,6 +520,8 @@ function displayData(data) {
   let { ticker, quote, profile, news, metrics, prices, dates, volumes, earningsData, pastEarnings } = data;
   let price = quote.c, changePct = quote.dp, prevClose = quote.pc, dayHigh = quote.h, dayLow = quote.l;
   let companyName = profile.name || ticker;
+  let isMX = ticker.endsWith('.MX');
+  let currSym = isMX ? 'MX$' : '$';
   let industry = profile.finnhubIndustry || "";
   let week52High = metrics["52WeekHigh"] || 0;
   let week52Low  = metrics["52WeekLow"]  || 0;
@@ -580,7 +583,7 @@ function displayData(data) {
   let changeArrow = changeAmt >= 0 ? "▲" : "▼";
   let changePill = prevClose > 0
     ? "<span class='price-change-pill' style='background:" + (changeAmt >= 0 ? "rgba(22,163,74,0.12)" : "rgba(220,38,38,0.12)") + ";color:" + changeColor + ";'>" +
-      changeArrow + " " + changeSign + "$" + Math.abs(changeAmt).toFixed(2) + " (" + changeSign + changePct.toFixed(2) + "%)" +
+      changeArrow + " " + changeSign + currSym + Math.abs(changeAmt).toFixed(2) + " (" + changeSign + changePct.toFixed(2) + "%)" +
       "</span>"
     : "";
   document.getElementById("stock-name").innerHTML =
@@ -591,7 +594,7 @@ function displayData(data) {
       "</div>" +
     "</div>" +
     "<div class='stock-header-price'>" +
-      "$" + price.toFixed(2) +
+      currSym + price.toFixed(2) + (isMX ? "<span class='stock-currency-label'>MXN</span>" : "") +
       changePill +
     "</div>";
 
@@ -1702,6 +1705,39 @@ function quickSearch(ticker) {
   searchStock();
 }
 
+function shareStockAnalysis() {
+  if (!currentTicker) return;
+  let url = window.location.origin + window.location.pathname + '?ticker=' + encodeURIComponent(currentTicker);
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(url).then(function() {
+      showToast('Link copied! Share ' + currentTicker + ' analysis with anyone.');
+    }).catch(function() { fallbackCopy(url); });
+  } else {
+    fallbackCopy(url);
+  }
+}
+
+function fallbackCopy(text) {
+  let ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand('copy');
+  document.body.removeChild(ta);
+  showToast('Link copied!');
+}
+
+function handleUrlParams() {
+  let params = new URLSearchParams(window.location.search);
+  let ticker = params.get('ticker');
+  if (ticker) {
+    document.getElementById('stock-input').value = ticker.toUpperCase();
+    searchStock();
+  }
+}
+
 function toggleDictionary() {
   document.getElementById("dict-drawer").classList.toggle("open");
   document.getElementById("dict-overlay").classList.toggle("open");
@@ -2365,7 +2401,12 @@ function renderPortfolioLineChart() {
 
   if (history.length < 2) {
     canvas.style.display = 'none';
-    if (emptyEl) emptyEl.style.display = 'block';
+    if (emptyEl) {
+      emptyEl.style.display = 'block';
+      emptyEl.innerHTML = history.length === 0
+        ? '<strong>Chart coming soon</strong><br>StockIQ will record your first snapshot when you open the Portfolio tab. Come back each day — your chart builds one point at a time.'
+        : '<strong>First snapshot saved!</strong> (' + history[0].date + ')<br>Come back tomorrow and your portfolio chart will start building. Each visit adds a new data point.';
+    }
     return;
   }
   canvas.style.display = 'block';
@@ -3081,5 +3122,6 @@ auth.onAuthStateChanged(function(user) {
     renderSearchHistory();
     showTab('analyze');
     initTheme();
+    handleUrlParams();
   });
 });
