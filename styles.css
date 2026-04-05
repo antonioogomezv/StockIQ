@@ -98,25 +98,25 @@ header p {
 }
 
 .ticker-track {
-  width: 100%;
-  overflow: hidden;
+  display: flex;
+  animation: ticker-scroll 30s linear infinite;
 }
+
+.ticker-track:hover { animation-play-state: paused; }
 
 .ticker-content {
   display: flex;
   align-items: center;
   gap: 0;
-  padding: 8px 24px;
-  flex-wrap: nowrap;
-  animation: ticker-scroll 25s linear infinite;
+  padding: 8px 0;
+  flex-shrink: 0;
+  min-width: 100vw;
   white-space: nowrap;
 }
 
-.ticker-content:hover { animation-play-state: paused; }
-
 @keyframes ticker-scroll {
-  0%   { transform: translateX(30%); }
-  100% { transform: translateX(-110%); }
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
 }
 
 .market-item {

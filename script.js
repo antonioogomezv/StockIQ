@@ -1674,13 +1674,58 @@ function renderTrending(data) {
   }).join('');
 }
 
+function _updateTickerEl(selector, text, color) {
+  document.querySelectorAll(selector).forEach(function(el) {
+    el.textContent = text;
+    if (color) el.style.color = color;
+  });
+}
+
+function _rebuildTickerClone() {
+  let tickerContent = document.getElementById("ticker-content");
+  let track = tickerContent && tickerContent.parentNode;
+  if (!track) return;
+  let old = document.getElementById("ticker-clone");
+  if (old) old.remove();
+  let clone = tickerContent.cloneNode(true);
+  clone.id = "ticker-clone";
+  clone.setAttribute("aria-hidden", "true");
+  track.appendChild(clone);
+}
+
 function loadMarketOverview() {
   let indices = [
-    { ticker: "SPY", priceId: "sp500-price", changeId: "sp500-change" },
-    { ticker: "QQQ", priceId: "nasdaq-price", changeId: "nasdaq-change" },
-    { ticker: "DIA", priceId: "dow-price", changeId: "dow-change" },
-    { ticker: "GLD", priceId: "btc-price", changeId: "btc-change" }
+    { ticker: "SPY", priceKey: "sp500-price", changeKey: "sp500-change" },
+    { ticker: "QQQ", priceKey: "nasdaq-price", changeKey: "nasdaq-change" },
+    { ticker: "DIA", priceKey: "dow-price", changeKey: "dow-change" },
+    { ticker: "GLD", priceKey: "btc-price", changeKey: "btc-change" }
   ];
+
+  // Inject watchlist items into the original content div first
+  let watchlist = JSON.parse(localStorage.getItem("watchlist") || "[]");
+  let tickerContent = document.getElementById("ticker-content");
+  if (tickerContent) {
+    tickerContent.querySelectorAll(".wl-bar-item, .wl-bar-divider").forEach(function(el) { el.remove(); });
+    watchlist.forEach(function(item) {
+      let safeT = escHtml(JSON.stringify(item.ticker));
+      let divider = document.createElement("div");
+      divider.className = "market-divider wl-bar-divider";
+      tickerContent.appendChild(divider);
+      let node = document.createElement("div");
+      node.className = "market-item wl-bar-item";
+      node.setAttribute("onclick", "quickSearch(" + safeT + ")");
+      node.innerHTML =
+        "<span class='market-name'>" + escHtml(item.ticker) + "</span>" +
+        "<span class='market-price' data-wlprice='" + escHtml(item.ticker) + "'>—</span>" +
+        "<span class='market-change' data-wlchange='" + escHtml(item.ticker) + "'>—</span>";
+      tickerContent.appendChild(node);
+    });
+  }
+
+  // Clone content now (both copies get "—" placeholders; prices update both via querySelectorAll)
+  _rebuildTickerClone();
+
+  // Fetch index prices — update ALL matching elements (original + clone)
   indices.forEach(function(index) {
     fetch("https://finnhub.io/api/v1/quote?symbol=" + index.ticker + "&token=" + finnhubKey)
       .then(function(r) { return r.json(); })
@@ -1688,40 +1733,19 @@ function loadMarketOverview() {
         let price = data.c;
         let changePct = data.dp;
         if (!price) return;
-        document.getElementById(index.priceId).textContent = "$" + price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        let priceStr = "$" + price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         let arrow = changePct >= 0 ? "▲" : "▼";
         let sign = changePct >= 0 ? "+" : "";
-        let changeEl = document.getElementById(index.changeId);
-        changeEl.textContent = arrow + " " + sign + changePct.toFixed(2) + "%";
-        changeEl.style.color = changePct >= 0 ? "#16a34a" : "#dc2626";
+        let changeStr = arrow + " " + sign + changePct.toFixed(2) + "%";
+        let changeColor = changePct >= 0 ? "#16a34a" : "#dc2626";
+        _updateTickerEl('[data-mid="' + index.priceKey + '"]', priceStr, null);
+        _updateTickerEl('[data-mid="' + index.changeKey + '"]', changeStr, changeColor);
       })
       .catch(function() {});
   });
 
-  // Inject watchlist tickers into the market bar
-  let watchlist = JSON.parse(localStorage.getItem("watchlist") || "[]");
-  let tickerContent = document.getElementById("ticker-content");
-  if (!tickerContent || watchlist.length === 0) return;
-
-  // Remove any previously injected watchlist items (avoid duplicates on re-call)
-  tickerContent.querySelectorAll(".wl-bar-item, .wl-bar-divider").forEach(function(el) { el.remove(); });
-
+  // Fetch watchlist prices — staggered, update ALL matching elements (original + clone)
   watchlist.forEach(function(item, i) {
-    let safeT = escHtml(JSON.stringify(item.ticker));
-    let divider = document.createElement("div");
-    divider.className = "market-divider wl-bar-divider";
-    tickerContent.appendChild(divider);
-
-    let node = document.createElement("div");
-    node.className = "market-item wl-bar-item";
-    node.setAttribute("onclick", "quickSearch(" + safeT + ")");
-    node.innerHTML =
-      "<span class='market-name'>" + escHtml(item.ticker) + "</span>" +
-      "<span class='market-price' id='wlbar-price-" + escHtml(item.ticker) + "'>—</span>" +
-      "<span class='market-change' id='wlbar-change-" + escHtml(item.ticker) + "'>—</span>";
-    tickerContent.appendChild(node);
-
-    // Fetch price with a small stagger to avoid rate limiting
     setTimeout(function() {
       fetch("https://finnhub.io/api/v1/quote?symbol=" + encodeURIComponent(item.ticker) + "&token=" + finnhubKey)
         .then(function(r) { return r.json(); })
@@ -1729,14 +1753,13 @@ function loadMarketOverview() {
           let price = data.c;
           let changePct = data.dp;
           if (!price) return;
-          let priceEl = document.getElementById("wlbar-price-" + item.ticker);
-          let changeEl = document.getElementById("wlbar-change-" + item.ticker);
-          if (!priceEl || !changeEl) return;
-          priceEl.textContent = "$" + price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          let priceStr = "$" + price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
           let arrow = changePct >= 0 ? "▲" : "▼";
           let sign = changePct >= 0 ? "+" : "";
-          changeEl.textContent = arrow + " " + sign + changePct.toFixed(2) + "%";
-          changeEl.style.color = changePct >= 0 ? "#16a34a" : "#dc2626";
+          let changeStr = arrow + " " + sign + changePct.toFixed(2) + "%";
+          let changeColor = changePct >= 0 ? "#16a34a" : "#dc2626";
+          _updateTickerEl('[data-wlprice="' + item.ticker + '"]', priceStr, null);
+          _updateTickerEl('[data-wlchange="' + item.ticker + '"]', changeStr, changeColor);
         })
         .catch(function() {});
     }, 200 * (i + 1));
