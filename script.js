@@ -1865,15 +1865,34 @@ function createDemoPortfolio(profileType, budget) {
   let alreadyHasDemo = Object.values(getAllPortfolios()).some(function(p) { return p.isDemo; });
   if (alreadyHasDemo) return;
   let template = DEMO_STOCKS[profileType] || DEMO_STOCKS['Balanced'];
-  // Scale shares so total cost ≈ budget (default $2500)
+  let tickers = template.map(function(s) { return s.ticker; });
   let b = budget || 2500;
-  let templateCost = template.reduce(function(sum, s) { return sum + s.lots[0].shares * s.lots[0].price; }, 0);
-  let scale = b / templateCost;
-  let stocks = template.map(function(s) {
-    let scaledShares = Math.max(1, parseFloat((s.lots[0].shares * scale).toFixed(2)));
-    return { ticker: s.ticker, lots: [{ shares: scaledShares, price: s.lots[0].price, date: s.lots[0].date }] };
+  let today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+  // Fetch current prices so demo starts at ~0% gain
+  Promise.all(tickers.map(function(ticker) {
+    return fetch('https://finnhub.io/api/v1/quote?symbol=' + ticker + '&token=' + finnhubKey)
+      .then(function(r) { return r.json(); })
+      .then(function(q) { return { ticker: ticker, price: q.c || 0 }; })
+      .catch(function() { return { ticker: ticker, price: 0 }; });
+  })).then(function(quotes) {
+    let priceMap = {};
+    quotes.forEach(function(q) { priceMap[q.ticker] = q.price; });
+
+    // Scale shares so total cost ≈ budget using live prices
+    let liveCost = template.reduce(function(sum, s) {
+      let p = priceMap[s.ticker] || s.lots[0].price;
+      return sum + s.lots[0].shares * p;
+    }, 0);
+    let scale = liveCost > 0 ? b / liveCost : 1;
+
+    let stocks = template.map(function(s) {
+      let livePrice = priceMap[s.ticker] || s.lots[0].price;
+      let scaledShares = Math.max(0.01, parseFloat((s.lots[0].shares * scale).toFixed(2)));
+      return { ticker: s.ticker, lots: [{ shares: scaledShares, price: parseFloat(livePrice.toFixed(2)), date: today }] };
+    });
+    createPortfolio('Demo Portfolio', true, stocks);
   });
-  createPortfolio('Demo Portfolio', true, stocks);
 }
 
 // ── END multi-portfolio accessors ──────────────────────────
