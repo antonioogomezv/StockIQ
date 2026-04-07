@@ -2908,6 +2908,20 @@ footer {
   border-radius: 10px;
 }
 #onboarding-disclaimer strong { color: var(--loss); }
+#onboarding-skip-tour {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 8px 0 0;
+  box-shadow: none;
+  width: auto;
+  display: block;
+  margin: 0 auto;
+  transition: color 0.12s;
+}
+#onboarding-skip-tour:hover { color: var(--text); transform: none; }
 
 @media (max-width: 640px) {
   #onboarding-modal { padding: 28px 20px 22px; }

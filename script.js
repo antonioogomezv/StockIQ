@@ -1763,6 +1763,7 @@ function finishQuiz() {
   }
   document.getElementById("quiz-overlay").style.display = "none";
   updateRiskBadge();
+  if (localStorage.getItem('tour-done')) return;
   let nameEl = document.getElementById("onboarding-profile-name");
   if (nameEl) nameEl.textContent = userProfile.icon + " " + userProfile.type;
   document.getElementById("onboarding-overlay").style.display = "flex";
@@ -1799,6 +1800,7 @@ function onboardingStep(dir) {
 
 function finishOnboarding() {
   _obStep = 0;
+  localStorage.setItem('tour-done', '1');
   document.getElementById("onboarding-overlay").style.display = "none";
   showTab('analyze');
 }
