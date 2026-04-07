@@ -175,54 +175,6 @@ h2 {
   margin-top: 8px;
 }
 
-/* ── Market switcher ── */
-#market-switcher {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.market-switch-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 16px;
-  border-radius: 20px;
-  border: 1.5px solid var(--border);
-  background: var(--surface);
-  color: var(--text-muted);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.18s ease;
-  font-family: inherit;
-}
-
-.market-switch-btn:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.market-switch-btn.active {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-  font-weight: 600;
-}
-
-/* Portfolio market label in tabs bar */
-.port-market-label {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-muted);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  padding: 0 8px 0 2px;
-  align-self: center;
-  white-space: nowrap;
-}
-/* ── END market switcher ── */
-
 #search-input-row {
   display: flex;
   gap: 12px;

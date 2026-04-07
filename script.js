@@ -49,11 +49,9 @@ function parseMarkdown(text) {
     .replace(/\n/g, "<br>");
 }
 
-let finnhubKey      = window.FINNHUB_KEY;
-let polygonKey      = window.POLYGON_KEY;
-let anthropicKey    = window.ANTHROPIC_KEY;
-let databursatilKey = window.DATABURSATIL_KEY;
-let activeMarket    = localStorage.getItem('activeMarket') || 'MX';
+let finnhubKey   = window.FINNHUB_KEY;
+let polygonKey   = window.POLYGON_KEY;
+let anthropicKey = window.ANTHROPIC_KEY;
 let cache = {};
 let chartInstance = null;
 let currentTicker = null;
@@ -71,7 +69,6 @@ let chartDayHigh = 0;
 let chartDayLow = 0;
 let chartWeek52High = 0;
 let wlSort = 'score'; // 'score' | 'change' | 'ticker'
-let _portCurrSym = '$'; // updated by renderPortfolio() based on active portfolio market
 let _spyBenchmark = null; // null=unfetched, false=unavailable, object=cached result
 
 let sectorAverages = {
@@ -88,256 +85,6 @@ let sectorAverages = {
   "Basic Materials": { pe: 15, margin: 10, growth: 6, beta: 1.0, debt: 0.7 }
 };
 
-// MX (BMV/BIVA) sector benchmarks
-let mxSectorAverages = {
-  "Consumo": { pe: 18, margin: 7, growth: 6, beta: 0.8, debt: 0.9 },
-  "Financiero": { pe: 12, margin: 22, growth: 7, beta: 0.9, debt: 2.0 },
-  "Industrial": { pe: 16, margin: 8, growth: 5, beta: 0.9, debt: 0.8 },
-  "Materiales": { pe: 13, margin: 10, growth: 4, beta: 1.0, debt: 0.7 },
-  "Telecomunicaciones": { pe: 14, margin: 18, growth: 3, beta: 0.7, debt: 1.2 },
-  "Energía": { pe: 10, margin: 9, growth: 2, beta: 0.8, debt: 1.0 },
-  "Salud": { pe: 20, margin: 10, growth: 8, beta: 0.7, debt: 0.6 },
-  "Inmobiliario": { pe: 22, margin: 30, growth: 5, beta: 0.7, debt: 1.8 }
-};
-
-// ── DataBursatil MX Market API ────────────────────────────────
-const DB_BASE = 'https://api.databursatil.com/v2';
-
-function dbFetch(endpoint, params) {
-  // DataBursatil expects literal commas in parameters (e.g. bolsa=BMV,BIVA)
-  // so we encode values but restore %2C → ,
-  let qs = Object.keys(params).map(function(k) {
-    return k + '=' + encodeURIComponent(params[k]).replace(/%2C/gi, ',');
-  }).join('&');
-  let url = DB_BASE + '/' + endpoint + '?token=' + databursatilKey + (qs ? '&' + qs : '');
-  return fetch(url).then(function(r) { return r.json(); });
-}
-
-function mxQuote(emisoraSerie) {
-  return dbFetch('cotizaciones', { emisora_serie: emisoraSerie, bolsa: 'BMV,BIVA', concepto: 'U,P,A,X,N,C,M,V,O,J' });
-}
-
-function mxHistorical(emisoraSerie, inicio, final) {
-  return dbFetch('historicos', { emisora_serie: emisoraSerie, inicio: inicio, final: final });
-}
-
-function _mxCurrentPeriod() {
-  var now = new Date();
-  var y = now.getFullYear();
-  var m = now.getMonth() + 1;
-  var q, qy;
-  if (m <= 3)      { q = 4; qy = y - 1; }
-  else if (m <= 6) { q = 1; qy = y; }
-  else if (m <= 9) { q = 2; qy = y; }
-  else             { q = 3; qy = y; }
-  return q + 'T_' + qy;
-}
-
-function mxFinancials(emisora) {
-  return dbFetch('financieros', { emisora: emisora, financieros: 'resultado_acumulado', periodo: _mxCurrentPeriod() });
-}
-
-function mxFinancialsPrev(emisora) {
-  // Prior year same quarter (e.g. 4T_2024 when current is 4T_2025)
-  var now = new Date();
-  var y = now.getFullYear();
-  var m = now.getMonth() + 1;
-  var q, qy;
-  if (m <= 3)      { q = 4; qy = y - 2; }
-  else if (m <= 6) { q = 1; qy = y - 1; }
-  else if (m <= 9) { q = 2; qy = y - 1; }
-  else             { q = 3; qy = y - 1; }
-  return dbFetch('financieros', { emisora: emisora, financieros: 'resultado_acumulado', periodo: q + 'T_' + qy });
-}
-
-function mxPosition(emisora) {
-  return dbFetch('financieros', { emisora: emisora, financieros: 'posicion', periodo: _mxCurrentPeriod() });
-}
-
-function mxEmisoras() {
-  // Dashboard example shows no extra params beyond token
-  return dbFetch('emisoras', {});
-}
-
-function mxTop() {
-  // Dashboard example: cantidad=5, mercado=local
-  return dbFetch('top', { variables: 'suben,bajan', bolsa: 'BMV', cantidad: '5', mercado: 'local' });
-}
-
-function mxIndices() {
-  return dbFetch('indices', {});
-}
-
-function mxNoticias() {
-  return dbFetch('noticias', {});
-}
-
-function mxDivisas() {
-  return dbFetch('divisas', {});
-}
-
-// ── DataBursatil response adapters ───────────────────────────
-// These map DataBursatil field names to the internal format used by displayData().
-// Field names marked with comments may need adjustment once tested against live API responses.
-
-function adaptMXQuote(raw) {
-  // real format: { "WALMEX*": { "bmv": { u, p, a, x, n, c, m, v }, "biva": {...} } }
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
-  let keys = Object.keys(raw).filter(function(k) { return k !== 'Error'; });
-  if (!keys.length) return {};
-  let entry = raw[keys[0]];
-  let bmv = (entry && entry.bmv) || (entry && entry.biva) || {};
-  return {
-    c:  bmv.u || 0,   // último (current price)
-    d:  bmv.c || 0,   // cambio absoluto ($)
-    dp: bmv.m || 0,   // cambio porcentual (%)
-    h:  bmv.x || 0,   // máximo
-    l:  bmv.n || 0,   // mínimo
-    o:  bmv.a || 0,   // apertura
-    pc: bmv.p || 0    // precio anterior (prev close)
-  };
-}
-
-function adaptMXProfile(raw, ticker) {
-  // raw is a flat item from getMXEmisoras: { emisoraSerie, emisora, serie, razon_social, bolsa, acciones_en_circulacion }
-  if (!raw) return { name: ticker, ticker: ticker, exchange: 'BMV', finnhubIndustry: '', country: 'Mexico', sharesOutstanding: 0 };
-  return {
-    name:              raw.razon_social || ticker,
-    ticker:            ticker,
-    exchange:          raw.bolsa || 'BMV',
-    finnhubIndustry:   '',
-    country:           'Mexico',
-    weburl:            '',
-    logo:              '',
-    description:       '',
-    sharesOutstanding: raw.acciones_en_circulacion || 0
-  };
-}
-
-function adaptMXMetrics(rawCurrent, rawPrev, rawPosition) {
-  // rawCurrent / rawPrev: { resultado_acumulado: { "period": { field: ["label", val] } } }
-  // rawPosition:          { posicion:            { "period": { field: ["label", val] } } }
-  let metrics = {
-    peBasicExclExtraTTM:           0,
-    netProfitMarginTTM:            0,
-    revenueGrowthTTMYoy:           0,
-    beta:                          0,
-    roeAnnual:                     0,
-    'totalDebt/totalEquityAnnual': 0,
-    currentRatioAnnual:            0,
-    netInterestCoverageAnnual:     0,
-    '52WeekHigh':                  0,
-    '52WeekLow':                   0,
-    epsBasic:                      0,
-    revenueTotal:                  0,
-    netIncome:                     0
-  };
-
-  // — resultado_acumulado (current year) —
-  if (rawCurrent && rawCurrent.resultado_acumulado) {
-    let pk = Object.keys(rawCurrent.resultado_acumulado)[0];
-    let d  = rawCurrent.resultado_acumulado[pk] || {};
-    function v(f) { return Array.isArray(d[f]) ? (d[f][1] || 0) : 0; }
-    let revenue        = v('revenue');
-    let netProfit      = v('profitloss');
-    let opProfit       = v('profitlossfromoperatingactivities');
-    let financeCosts   = v('financecosts');
-    let eps            = v('basicearningslosspershare') || v('basicearningslosspersharefromcontinuingoperations');
-    metrics.netProfitMarginTTM        = revenue > 0 ? (netProfit / revenue) * 100 : 0;
-    metrics.netInterestCoverageAnnual = financeCosts > 0 ? opProfit / financeCosts : 0;
-    metrics.epsBasic    = eps;
-    metrics.revenueTotal = revenue;
-    metrics.netIncome   = netProfit;
-  }
-
-  // — resultado_acumulado (prior year → revenue growth) —
-  if (rawPrev && rawPrev.resultado_acumulado) {
-    let pk = Object.keys(rawPrev.resultado_acumulado)[0];
-    let d  = rawPrev.resultado_acumulado[pk] || {};
-    function vp(f) { return Array.isArray(d[f]) ? (d[f][1] || 0) : 0; }
-    let prevRevenue = vp('revenue');
-    if (prevRevenue > 0 && metrics.revenueTotal > 0) {
-      metrics.revenueGrowthTTMYoy = ((metrics.revenueTotal - prevRevenue) / prevRevenue) * 100;
-    }
-  }
-
-  // — posicion (balance general) —
-  if (rawPosition && rawPosition.posicion) {
-    let pk = Object.keys(rawPosition.posicion)[0];
-    let d  = rawPosition.posicion[pk] || {};
-    function vb(f) { return Array.isArray(d[f]) ? (d[f][1] || 0) : 0; }
-    let equity             = vb('equity');
-    let currentAssets      = vb('currentassets');
-    let currentLiabilities = vb('currentliabilities');
-    let totalLiabilities   = vb('liabilities');
-    metrics.roeAnnual                  = equity > 0 ? (metrics.netIncome / equity) * 100 : 0;
-    metrics.currentRatioAnnual         = currentLiabilities > 0 ? currentAssets / currentLiabilities : 0;
-    metrics['totalDebt/totalEquityAnnual'] = equity > 0 ? totalLiabilities / equity : 0;
-  }
-
-  return metrics;
-}
-
-// Calculate beta from two price series (weekly returns)
-function calculateMXBeta(stockBars, ipcBars) {
-  if (stockBars.length < 20 || ipcBars.length < 20) return 0;
-  // Build weekly close map for IPC keyed by approx week
-  let ipcMap = {};
-  ipcBars.forEach(function(b) { ipcMap[Math.round(b.t / 604800000)] = b.c; });
-  // Align stock and IPC weekly, compute returns
-  let sReturns = [], mReturns = [];
-  let prevS = null, prevM = null;
-  stockBars.forEach(function(b) {
-    let wk = Math.round(b.t / 604800000);
-    let mc = ipcMap[wk] || ipcMap[wk - 1] || ipcMap[wk + 1];
-    if (!mc) return;
-    if (prevS !== null && prevM !== null) {
-      sReturns.push((b.c - prevS) / prevS);
-      mReturns.push((mc - prevM) / prevM);
-    }
-    prevS = b.c; prevM = mc;
-  });
-  if (sReturns.length < 10) return 0;
-  let n = sReturns.length;
-  let avgS = sReturns.reduce(function(a, b) { return a + b; }, 0) / n;
-  let avgM = mReturns.reduce(function(a, b) { return a + b; }, 0) / n;
-  let cov = 0, varM = 0;
-  for (let i = 0; i < n; i++) {
-    cov  += (sReturns[i] - avgS) * (mReturns[i] - avgM);
-    varM += (mReturns[i] - avgM) * (mReturns[i] - avgM);
-  }
-  return varM > 0 ? cov / varM : 0;
-}
-
-function adaptMXHistorical(raw) {
-  // real format: { "2026-01-01": [precio_cierre, volumen_pesos], ... }
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return [];
-  return Object.keys(raw).map(function(dateStr) {
-    let vals = raw[dateStr];
-    return {
-      t: new Date(dateStr + 'T12:00:00').getTime(),
-      c: Array.isArray(vals) ? (vals[0] || 0) : 0,
-      v: Array.isArray(vals) ? (vals[1] || 0) : 0
-    };
-  }).filter(function(d) { return d.t > 0 && d.c > 0; })
-    .sort(function(a, b) { return a.t - b.t; });
-}
-
-function adaptMXNews(raw) {
-  // real format: [{ "n": titulo, "c": contenido, "f": url }, ...]
-  let items = Array.isArray(raw) ? raw : [];
-  return items.slice(0, 20).map(function(n) {
-    return {
-      headline: n.n || '',
-      summary:  n.c || '',
-      url:      n.f || '',
-      datetime: 0,
-      source:   'DataBursatil'
-    };
-  }).filter(function(n) { return n.headline; });
-}
-// ── END DataBursatil ──────────────────────────────────────────
-
 function showTab(name) {
   document.querySelectorAll('.tab-content').forEach(function(t) { t.classList.remove('active'); });
   document.querySelectorAll('.nav-tab').forEach(function(t) { t.classList.remove('active'); });
@@ -348,59 +95,6 @@ function showTab(name) {
   if (name === 'watchlist') renderWatchlist();
 }
 
-// ── Market switcher ───────────────────────────────────────────
-let _mxEmisorasCache = null; // cached list of BMV/BIVA stocks for autocomplete
-
-function switchMarket(market) {
-  activeMarket = market;
-  localStorage.setItem('activeMarket', market);
-  document.querySelectorAll('.market-switch-btn').forEach(function(b) {
-    b.classList.toggle('active', b.dataset.market === market);
-  });
-  let input = document.getElementById('stock-input');
-  if (input) input.placeholder = market === 'MX' ? 'Buscar emisora (ej. WALMEX, CEMEX…)' : 'Search ticker (e.g. AAPL, NVDA…)';
-  // Clear caches so fresh market data loads
-  localStorage.removeItem('trending-cache');
-  localStorage.removeItem('sectors-cache');
-  cache = {};
-  loadMarketOverview();
-  loadTrendingTickers(true);
-  loadSectors();
-  renderWatchlist();
-  renderPortfolioTabs();
-  renderPortfolio();
-}
-
-function getMXEmisoras(callback) {
-  if (_mxEmisorasCache) { callback(_mxEmisorasCache); return; }
-  mxEmisoras().then(function(data) {
-    // real format: { "WALMEX": { "*": { razon_social, bolsa, estatus, ... } }, ... }
-    let list = [];
-    if (data && typeof data === 'object' && !Array.isArray(data)) {
-      Object.keys(data).forEach(function(emisora) {
-        if (emisora === 'null') return;
-        let seriesObj = data[emisora];
-        if (!seriesObj || typeof seriesObj !== 'object') return;
-        Object.keys(seriesObj).forEach(function(serie) {
-          let info = seriesObj[serie] || {};
-          if (info.estatus === 'SUSPENDIDA') return;
-          list.push({
-            emisoraSerie:          emisora + serie,   // e.g. "WALMEX*" or "CEMEXCPO"
-            emisora:               emisora,
-            serie:                 serie,
-            razon_social:          info.razon_social || emisora,
-            bolsa:                 info.bolsa || 'BMV',
-            acciones_en_circulacion: info.acciones_en_circulacion || 0
-          });
-        });
-      });
-    }
-    _mxEmisorasCache = list;
-    callback(list);
-  }).catch(function() { callback([]); });
-}
-// ── END market switcher ───────────────────────────────────────
-
 let _autocompleteTimer = null;
 
 function onSearchInput() {
@@ -408,45 +102,23 @@ function onSearchInput() {
   let dropdown = document.getElementById('search-dropdown');
   clearTimeout(_autocompleteTimer);
   if (query.length < 2) { dropdown.style.display = 'none'; return; }
-
-  if (activeMarket === 'MX') {
-    _autocompleteTimer = setTimeout(function() {
-      let q = query.toUpperCase();
-      getMXEmisoras(function(list) {
-        let matches = list.filter(function(e) {
-          return e.emisoraSerie.includes(q) || (e.razon_social || '').toUpperCase().includes(q);
-        }).slice(0, 5);
-        if (matches.length === 0) { dropdown.style.display = 'none'; return; }
-        dropdown.innerHTML = matches.map(function(e) {
-          let sym  = escHtml(e.emisoraSerie);
-          let name = escHtml(e.razon_social || '');
-          return "<div class='autocomplete-item' onmousedown='selectAutocomplete(\"" + sym + "\")'>" +
-            "<span class='autocomplete-ticker'>" + sym + "</span>" +
-            "<span class='autocomplete-name'>" + name + "</span>" +
+  _autocompleteTimer = setTimeout(function() {
+    fetch('https://finnhub.io/api/v1/search?q=' + encodeURIComponent(query) + '&token=' + finnhubKey)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data.result || data.result.length === 0) { dropdown.style.display = 'none'; return; }
+        let items = data.result.filter(function(r) { return r.type === 'Common Stock'; }).slice(0, 5);
+        if (items.length === 0) { dropdown.style.display = 'none'; return; }
+        dropdown.innerHTML = items.map(function(item) {
+          return "<div class='autocomplete-item' onmousedown='selectAutocomplete(\"" + item.symbol + "\")'>" +
+            "<span class='autocomplete-ticker'>" + escHtml(item.symbol) + "</span>" +
+            "<span class='autocomplete-name'>" + escHtml(item.description) + "</span>" +
             "</div>";
         }).join('');
         dropdown.style.display = 'block';
-      });
-    }, 200);
-  } else {
-    _autocompleteTimer = setTimeout(function() {
-      fetch('https://finnhub.io/api/v1/search?q=' + encodeURIComponent(query) + '&token=' + finnhubKey)
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          if (!data.result || data.result.length === 0) { dropdown.style.display = 'none'; return; }
-          let items = data.result.filter(function(r) { return r.type === 'Common Stock'; }).slice(0, 5);
-          if (items.length === 0) { dropdown.style.display = 'none'; return; }
-          dropdown.innerHTML = items.map(function(item) {
-            return "<div class='autocomplete-item' onmousedown='selectAutocomplete(\"" + item.symbol + "\")'>" +
-              "<span class='autocomplete-ticker'>" + escHtml(item.symbol) + "</span>" +
-              "<span class='autocomplete-name'>" + escHtml(item.description) + "</span>" +
-              "</div>";
-          }).join('');
-          dropdown.style.display = 'block';
-        })
-        .catch(function() { dropdown.style.display = 'none'; });
-    }, 300);
-  }
+      })
+      .catch(function() { dropdown.style.display = 'none'; });
+  }, 300);
 }
 
 function selectAutocomplete(ticker) {
@@ -466,49 +138,23 @@ function onPortTickerInput() {
   let dropdown = document.getElementById('port-ticker-dropdown');
   clearTimeout(_portAutocompleteTimer);
   if (query.length < 2) { dropdown.style.display = 'none'; return; }
-
-  // Determine market from the active portfolio (if set), else fall back to activeMarket
-  let activePort = getActivePortfolio();
-  let portMarket = activePort ? (activePort.market || 'US') : activeMarket;
-
-  if (portMarket === 'MX') {
-    _portAutocompleteTimer = setTimeout(function() {
-      let q = query.toUpperCase();
-      getMXEmisoras(function(list) {
-        let matches = list.filter(function(e) {
-          return e.emisoraSerie.includes(q) || (e.razon_social || '').toUpperCase().includes(q);
-        }).slice(0, 5);
-        if (matches.length === 0) { dropdown.style.display = 'none'; return; }
-        dropdown.innerHTML = matches.map(function(e) {
-          let sym  = escHtml(e.emisoraSerie);
-          let name = escHtml(e.razon_social || '');
-          return "<div class='autocomplete-item' onmousedown='selectPortAutocomplete(\"" + sym + "\")'>" +
-            "<span class='autocomplete-ticker'>" + sym + "</span>" +
-            "<span class='autocomplete-name'>" + name + "</span>" +
+  _portAutocompleteTimer = setTimeout(function() {
+    fetch('https://finnhub.io/api/v1/search?q=' + encodeURIComponent(query) + '&token=' + finnhubKey)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data.result || data.result.length === 0) { dropdown.style.display = 'none'; return; }
+        let items = data.result.filter(function(r) { return r.type === 'Common Stock'; }).slice(0, 5);
+        if (items.length === 0) { dropdown.style.display = 'none'; return; }
+        dropdown.innerHTML = items.map(function(item) {
+          return "<div class='autocomplete-item' onmousedown='selectPortAutocomplete(\"" + item.symbol + "\")'>" +
+            "<span class='autocomplete-ticker'>" + escHtml(item.symbol) + "</span>" +
+            "<span class='autocomplete-name'>" + escHtml(item.description) + "</span>" +
             "</div>";
         }).join('');
         dropdown.style.display = 'block';
-      });
-    }, 200);
-  } else {
-    _portAutocompleteTimer = setTimeout(function() {
-      fetch('https://finnhub.io/api/v1/search?q=' + encodeURIComponent(query) + '&token=' + finnhubKey)
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          if (!data.result || data.result.length === 0) { dropdown.style.display = 'none'; return; }
-          let items = data.result.filter(function(r) { return r.type === 'Common Stock'; }).slice(0, 5);
-          if (items.length === 0) { dropdown.style.display = 'none'; return; }
-          dropdown.innerHTML = items.map(function(item) {
-            return "<div class='autocomplete-item' onmousedown='selectPortAutocomplete(\"" + item.symbol + "\")'>" +
-              "<span class='autocomplete-ticker'>" + escHtml(item.symbol) + "</span>" +
-              "<span class='autocomplete-name'>" + escHtml(item.description) + "</span>" +
-              "</div>";
-          }).join('');
-          dropdown.style.display = 'block';
-        })
-        .catch(function() { dropdown.style.display = 'none'; });
-    }, 300);
-  }
+      })
+      .catch(function() { dropdown.style.display = 'none'; });
+  }, 300);
 }
 
 function onPortDateChange() {
@@ -516,60 +162,41 @@ function onPortDateChange() {
   let dateVal = document.getElementById('port-date').value;
   if (!ticker || !dateVal) return;
 
+  // Don't overwrite if user already typed a price
   let priceEl = document.getElementById('port-price');
   let loadingEl = document.getElementById('port-price-loading');
 
+  // Check it's a past date
   let selected = new Date(dateVal);
   let today = new Date();
   today.setHours(0, 0, 0, 0);
-  if (selected >= today) return;
+  if (selected >= today) return; // today or future — use live price
 
   priceEl.value = '';
   if (loadingEl) { loadingEl.style.display = 'inline'; loadingEl.textContent = '...'; }
 
-  let activePort = getActivePortfolio();
-  let portMarket = activePort ? (activePort.market || 'US') : activeMarket;
-
-  if (portMarket === 'MX') {
-    // Use DataBursatil /historicos — fetch a small window around the target date
-    let dayBefore = new Date(dateVal + 'T00:00:00');
-    dayBefore.setDate(dayBefore.getDate() - 5);
-    let inicio = dayBefore.toISOString().split('T')[0];
-    mxHistorical(ticker, inicio, dateVal).then(function(raw) {
-      let bars = adaptMXHistorical(raw);
-      // Find closest date on or before dateVal
-      let target = new Date(dateVal).getTime();
-      let best = bars.filter(function(b) { return b.t <= target; }).sort(function(a, b) { return b.t - a.t; })[0];
-      if (best && best.c) {
-        priceEl.value = best.c.toFixed(2);
-        let usedDate = new Date(best.t).toISOString().split('T')[0];
-        if (loadingEl) { loadingEl.style.display = 'inline'; loadingEl.textContent = usedDate !== dateVal ? 'Used ' + usedDate : ''; setTimeout(function() { if (loadingEl) loadingEl.style.display = 'none'; }, 2000); }
-      } else {
-        if (loadingEl) loadingEl.style.display = 'none';
-      }
-    }).catch(function() { if (loadingEl) loadingEl.style.display = 'none'; });
-  } else {
-    // Try the selected date first, then fall back up to 5 days for weekends/holidays
-    function tryDate(dateStr, triesLeft) {
-      fetch('https://api.polygon.io/v1/open-close/' + ticker + '/' + dateStr + '?adjusted=true&apiKey=' + polygonKey)
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          if (data.close) {
-            priceEl.value = data.close.toFixed(2);
-            if (loadingEl) { loadingEl.style.display = 'inline'; loadingEl.textContent = dateStr !== dateVal ? 'Used ' + dateStr : ''; setTimeout(function() { if (loadingEl) loadingEl.style.display = 'none'; }, 2000); }
-          } else if (triesLeft > 0) {
-            let d = new Date(dateStr + 'T00:00:00');
-            d.setDate(d.getDate() - 1);
-            let prev = d.toISOString().split('T')[0];
-            tryDate(prev, triesLeft - 1);
-          } else {
-            if (loadingEl) loadingEl.style.display = 'none';
-          }
-        })
-        .catch(function() { if (loadingEl) loadingEl.style.display = 'none'; });
-    }
-    tryDate(dateVal, 5);
+  // Try the selected date first, then fall back up to 5 days for weekends/holidays
+  function tryDate(dateStr, triesLeft) {
+    fetch('https://api.polygon.io/v1/open-close/' + ticker + '/' + dateStr + '?adjusted=true&apiKey=' + polygonKey)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.close) {
+          priceEl.value = data.close.toFixed(2);
+          if (loadingEl) { loadingEl.style.display = 'inline'; loadingEl.textContent = dateStr !== dateVal ? 'Used ' + dateStr : ''; setTimeout(function() { if (loadingEl) loadingEl.style.display = 'none'; }, 2000); }
+        } else if (triesLeft > 0) {
+          // Move back one day (weekend/holiday)
+          let d = new Date(dateStr + 'T00:00:00');
+          d.setDate(d.getDate() - 1);
+          let prev = d.toISOString().split('T')[0];
+          tryDate(prev, triesLeft - 1);
+        } else {
+          if (loadingEl) loadingEl.style.display = 'none';
+        }
+      })
+      .catch(function() { if (loadingEl) loadingEl.style.display = 'none'; });
   }
+
+  tryDate(dateVal, 5);
 }
 
 function hidePortDropdown() {
@@ -583,25 +210,13 @@ function selectPortAutocomplete(ticker) {
   let priceEl = document.getElementById('port-price');
   priceEl.value = '';
   if (loadingEl) loadingEl.style.display = 'inline';
-
-  let activePort = getActivePortfolio();
-  let portMarket = activePort ? (activePort.market || 'US') : activeMarket;
-
-  if (portMarket === 'MX') {
-    mxQuote(ticker).then(function(raw) {
+  fetch('https://finnhub.io/api/v1/quote?symbol=' + encodeURIComponent(ticker) + '&token=' + finnhubKey)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
       if (loadingEl) loadingEl.style.display = 'none';
-      let q = adaptMXQuote(raw);
-      if (q.c) priceEl.value = q.c.toFixed(2);
-    }).catch(function() { if (loadingEl) loadingEl.style.display = 'none'; });
-  } else {
-    fetch('https://finnhub.io/api/v1/quote?symbol=' + encodeURIComponent(ticker) + '&token=' + finnhubKey)
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        if (loadingEl) loadingEl.style.display = 'none';
-        if (data && data.c) priceEl.value = data.c.toFixed(2);
-      })
-      .catch(function() { if (loadingEl) loadingEl.style.display = 'none'; });
-  }
+      if (data && data.c) priceEl.value = data.c.toFixed(2);
+    })
+    .catch(function() { if (loadingEl) loadingEl.style.display = 'none'; });
 }
 
 function saveSearchHistory(ticker, name) {
@@ -631,7 +246,10 @@ function clearSearchHistory() {
   renderSearchHistory();
 }
 
-function _resetSearchUI(query) {
+function searchStock() {
+  let query = document.getElementById("stock-input").value.trim().toUpperCase();
+  if (!query) { showToast("Please enter a company name or ticker!"); return; }
+
   document.getElementById("loading").style.display = "block";
   let loadingTickerEl = document.getElementById("loading-ticker");
   if (loadingTickerEl) loadingTickerEl.textContent = query;
@@ -654,112 +272,9 @@ function _resetSearchUI(query) {
   if (fundCard) fundCard.style.display = 'none';
   let newsSection = document.getElementById('news-section');
   if (newsSection) newsSection.style.display = 'none';
-}
 
-function searchStock() {
-  let query = document.getElementById("stock-input").value.trim().toUpperCase();
-  if (!query) { showToast("Please enter a company name or ticker!"); return; }
-
-  _resetSearchUI(query);
   if (cache[query]) { displayData(cache[query]); return; }
 
-  if (activeMarket === 'MX') {
-    _searchStockMX(query);
-  } else {
-    _searchStockUS(query);
-  }
-}
-
-function _searchStockMX(query) {
-  let today = new Date();
-  let toDate = today.toISOString().split("T")[0];
-  let from365 = new Date(today); from365.setDate(today.getDate() - 365);
-  let from365Str = from365.toISOString().split("T")[0];
-
-  // Always ensure emisoras cache is loaded before proceeding,
-  // so we can reliably extract the base emisora (e.g. CEMEXCPO → CEMEX)
-  getMXEmisoras(function() {
-    let emisInfoFromCache = _mxEmisorasCache
-      ? _mxEmisorasCache.find(function(e) { return e.emisoraSerie === query; }) || null
-      : null;
-    // Fallback: find by prefix match if exact not found (handles direct typing)
-    if (!emisInfoFromCache && _mxEmisorasCache) {
-      emisInfoFromCache = _mxEmisorasCache.find(function(e) {
-        return query.startsWith(e.emisora) && query === e.emisoraSerie;
-      }) || _mxEmisorasCache.find(function(e) {
-        return e.emisora === query.replace(/\*$/, '');
-      }) || null;
-    }
-    let baseEmisora = emisInfoFromCache
-      ? emisInfoFromCache.emisora
-      : query.replace(/\*$/, '');
-
-    Promise.all([
-      mxQuote(query).catch(function() { return {}; }),
-      mxNoticias().catch(function() { return []; }),
-      mxFinancials(baseEmisora).catch(function() { return {}; }),
-      mxFinancialsPrev(baseEmisora).catch(function() { return {}; }),
-      mxPosition(baseEmisora).catch(function() { return {}; }),
-      mxHistorical(query, from365Str, toDate).catch(function() { return {}; }),
-      mxHistorical('IPC', from365Str, toDate).catch(function() { return {}; })
-    ]).then(function(results) {
-      let rawQuote          = results[0];
-      let rawNoticias       = results[1];
-      let rawFinancials     = results[2];
-      let rawFinancialsPrev = results[3];
-      let rawPosition       = results[4];
-      let rawHistorical     = results[5];
-      let rawIPC            = results[6];
-
-      let quote   = adaptMXQuote(rawQuote);
-      let profile = adaptMXProfile(emisInfoFromCache, query);
-      let news    = adaptMXNews(rawNoticias);
-      let metrics = adaptMXMetrics(rawFinancials, rawFinancialsPrev, rawPosition);
-      let bars    = adaptMXHistorical(rawHistorical);
-      let ipcBars = adaptMXHistorical(rawIPC);
-
-      // P/U = precio ÷ EPS
-      if (metrics.epsBasic > 0 && quote.c > 0) {
-        metrics.peBasicExclExtraTTM = quote.c / metrics.epsBasic;
-      }
-
-      // Beta vs IPC
-      let beta = calculateMXBeta(bars, ipcBars);
-      if (beta > 0) metrics.beta = parseFloat(beta.toFixed(2));
-
-      // 52-week high/low
-      if (bars.length > 0) {
-        let closes = bars.map(function(b) { return b.c; });
-        metrics['52WeekHigh'] = Math.max.apply(null, closes);
-        metrics['52WeekLow']  = Math.min.apply(null, closes);
-      }
-
-      if (!quote.c) {
-        document.getElementById("loading").style.display = "none";
-        showToast("\"" + query + "\" no encontrado en BMV/BIVA. Verifica el ticker (ej. WALMEX*, CEMEXCPO).");
-        return;
-      }
-
-      let mxPrices  = bars.map(function(b) { return b.c; });
-      let mxDates   = bars.map(function(b) { return new Date(b.t).toISOString().split("T")[0]; });
-      let mxVolumes = bars.map(function(b) { return b.v || 0; });
-
-      let data = { ticker: query, quote, profile, news, metrics, prices: mxPrices, dates: mxDates, volumes: mxVolumes, earningsData: {}, pastEarnings: [], market: 'MX' };
-      cache[query] = data;
-      displayData(data);
-
-      if (mxPrices.length > 0) {
-        loadChart(mxPrices, mxDates, mxVolumes, quote.pc || 0, quote.h || 0, quote.l || 0, metrics['52WeekHigh'] || 0);
-        updateTechnicalFactors(mxPrices, quote.c || 0);
-      }
-    }).catch(function() {
-      document.getElementById("loading").style.display = "none";
-      document.getElementById("explanation").textContent = "Error cargando datos. Intenta de nuevo.";
-    });
-  }); // end getMXEmisoras callback
-}
-
-function _searchStockUS(query) {
   fetch("https://finnhub.io/api/v1/search?q=" + query + "&token=" + finnhubKey)
     .then(function(r) { return r.json(); })
     .then(function(searchData) {
@@ -784,6 +299,7 @@ function _searchStockUS(query) {
       let earningsTo = new Date(today); earningsTo.setDate(today.getDate() + 90);
       let earningsToStr = earningsTo.toISOString().split("T")[0];
 
+      // Load core data first (no chart) — show results immediately
       Promise.all([
         fetch("https://finnhub.io/api/v1/quote?symbol=" + ticker + "&token=" + finnhubKey).then(function(r) { return r.json(); }),
         fetch("https://finnhub.io/api/v1/stock/profile2?symbol=" + ticker + "&token=" + finnhubKey).then(function(r) { return r.json(); }),
@@ -793,25 +309,28 @@ function _searchStockUS(query) {
         fetch("https://finnhub.io/api/v1/stock/earnings?symbol=" + ticker + "&limit=1&token=" + finnhubKey).then(function(r) { return r.json(); }).catch(function() { return []; }),
         fetch("https://api.polygon.io/v3/reference/tickers/" + ticker + "?apiKey=" + polygonKey).then(function(r) { return r.json(); }).catch(function() { return {}; })
       ]).then(function(results) {
-        let quote        = results[0];
-        let profile      = results[1];
-        let news         = results[2];
-        let metrics      = results[3].metric || {};
+        let quote      = results[0];
+        let profile    = results[1];
+        let news       = results[2];
+        let metrics    = results[3].metric || {};
         let earningsData = results[4];
         let pastEarnings = results[5];
         let tickerDetails = results[6].results || {};
         if (tickerDetails.description) profile.description = tickerDetails.description;
 
+        // Unsupported ticker — no price and no company name means Finnhub doesn't cover it
         if (!quote.c && !profile.name) {
           document.getElementById("loading").style.display = "none";
-          showToast("\"" + ticker + "\" isn't supported. StockIQ covers US-listed stocks.");
+          let isMXq = ticker.endsWith('.MX');
+          showToast("\"" + ticker + "\" isn't supported." + (isMXq ? " Try the full ticker, e.g. AMXL.MX" : " StockIQ covers US-listed stocks and major Mexican tickers (.MX)."));
           return;
         }
 
-        let data = { ticker, quote, profile, news, metrics, prices: [], dates: [], volumes: [], earningsData, pastEarnings, market: 'US' };
+        let data = { ticker, quote, profile, news, metrics, prices: [], dates: [], volumes: [], earningsData, pastEarnings };
         cache[query] = data;
         displayData(data);
 
+        // Load chart separately — doesn't block the main results
         historyPromise.then(function(history) {
           let prices = [], dates = [], volumes = [];
           if (history.results && history.results.length > 0) {
@@ -1018,7 +537,7 @@ function displayData(data) {
   let { ticker, quote, profile, news, metrics, prices, dates, volumes, earningsData, pastEarnings } = data;
   let price = quote.c, changePct = quote.dp, prevClose = quote.pc, dayHigh = quote.h, dayLow = quote.l;
   let companyName = profile.name || ticker;
-  let isMX = data.market === 'MX' || ticker.endsWith('.MX');
+  let isMX = ticker.endsWith('.MX');
   let currSym = isMX ? 'MX$' : '$';
   let industry = profile.finnhubIndustry || "";
   let week52High = metrics["52WeekHigh"] || 0;
@@ -1043,10 +562,8 @@ function displayData(data) {
     });
     let articles = relevant.length > 0 ? relevant : news;
     topHeadline = articles[0].headline;
-    let pos = ["beat","growth","record","profit","strong","up","gains","rise","boost","high",
-               "crecimiento","récord","utilidad","sólido","alza","ganancias","positivo","expansión","superó","incremento"];
-    let neg = ["miss","loss","down","fall","cut","weak","drop","layoff","debt","crash",
-               "pérdida","baja","caída","débil","recorte","deuda","riesgo","crisis","contracción","incumplimiento"];
+    let pos = ["beat","growth","record","profit","strong","up","gains","rise","boost","high"];
+    let neg = ["miss","loss","down","fall","cut","weak","drop","layoff","debt","crash"];
     let s = 0;
     articles.slice(0, 10).forEach(function(a) {
       let tx = a.headline.toLowerCase();
@@ -1101,9 +618,7 @@ function displayData(data) {
     "</div>";
 
   let scoreColor = totalScore >= 65 ? "#16a34a" : totalScore >= 50 ? "#d97706" : "#dc2626";
-  let scoreLabel = isMX
-    ? (totalScore >= 65 ? "Sólida" : totalScore >= 50 ? "Vigilar" : "Riesgo")
-    : (totalScore >= 65 ? "Strong" : totalScore >= 50 ? "Watch" : "Risky");
+  let scoreLabel = totalScore >= 65 ? "Strong" : totalScore >= 50 ? "Watch" : "Risky";
   document.getElementById("health-score").innerHTML =
     "<div class='score-badge' style='border-color:" + scoreColor + ";'>" +
       "<div class='score-badge-num' style='color:" + scoreColor + ";'>" + totalScore + "</div>" +
@@ -1114,17 +629,17 @@ function displayData(data) {
 
   let signalEl = document.getElementById("signal");
   if (totalScore >= 65) {
-    signalEl.textContent = isMX ? "Oportunidad Sólida — fundamentales favorables" : "Strong Opportunity — fundamentals look solid";
+    signalEl.textContent = "Strong Opportunity — fundamentals look solid";
     signalEl.style.color = "#16a34a";
     signalEl.style.background = "rgba(22,163,74,0.1)";
     signalEl.style.border = "1px solid rgba(22,163,74,0.2)";
   } else if (totalScore >= 50) {
-    signalEl.textContent = isMX ? "Observar — hay positivos pero también riesgos" : "Watch & Wait — some positives, some risks";
+    signalEl.textContent = "Watch & Wait — some positives, some risks";
     signalEl.style.color = "#d97706";
     signalEl.style.background = "rgba(217,119,6,0.1)";
     signalEl.style.border = "1px solid rgba(217,119,6,0.2)";
   } else {
-    signalEl.textContent = isMX ? "Alto Riesgo — procede con precaución" : "High Risk — proceed with caution";
+    signalEl.textContent = "High Risk — proceed with caution";
     signalEl.style.color = "#dc2626";
     signalEl.style.background = "rgba(220,38,38,0.1)";
     signalEl.style.border = "1px solid rgba(220,38,38,0.2)";
@@ -1160,23 +675,9 @@ function displayData(data) {
   document.getElementById("show-details-btn").textContent = "Show Full Analysis";
 
   document.getElementById("explanation").innerHTML =
-    (isMX ? "<strong>Análisis (13 Factores):</strong>" : "<strong>Score Breakdown (13 Factors):</strong>") +
+    "<strong>Score Breakdown (13 Factors):</strong>" +
 (function() {
-  let factors = isMX ? [
-    { label: "Movimiento", score: breakdown.price, what: "Hoy " + (changePct >= 0 ? "+" : "") + changePct.toFixed(2) + "% de cambio. " + (changePct > 1 ? "Subir más de 1% en un día es señal positiva de momentum." : changePct < -1 ? "Caer más de 1% indica presión vendedora." : "Menos de 1% de movimiento — día de baja actividad."), verdict: changePct > 1 ? "Sube hoy" : changePct < -1 ? "Cae hoy" : "Sin movimiento significativo" },
-    { label: "Posición 52s", score: breakdown.position, what: pctFrom52High !== null ? "La acción está " + Math.abs(pctFrom52High) + "% " + (parseFloat(pctFrom52High) < 0 ? "por debajo de" : "cerca de") + " su máximo anual (MX$" + week52High.toFixed(2) + "). " + (breakdown.position >= 7 ? "Estar cerca del máximo anual es señal de fuerte momentum." : breakdown.position >= 4 ? "Se alejó del máximo pero sigue en rango normal." : "Lejos del máximo anual — puede ser oportunidad o señal de alerta.") : "Sin dato de máximo anual.", verdict: breakdown.position >= 7 ? "Cerca del máximo anual" : breakdown.position >= 4 ? "Retroceso desde el máximo" : "Lejos del máximo anual" },
-    { label: "Razón P/U", score: breakdown.pe, what: pe > 0 ? "Pagas MX$" + pe.toFixed(1) + " por cada MX$1 que gana la empresa. " + (pe < 20 ? "P/U bajo — la acción está barata respecto a sus ganancias." : pe < 35 ? "P/U razonable para una empresa de calidad." : "P/U alto — los inversionistas esperan mucho crecimiento futuro.") : "Sin datos de P/U.", verdict: pe > 0 && pe < 20 ? "Precio atractivo vs ganancias" : pe > 0 && pe < 35 ? "Precio justo" : pe > 35 ? "Precio elevado — expectativas altas" : "Sin datos" },
-    { label: "Riesgo (Beta)", score: breakdown.beta, what: beta > 0 ? "Beta " + beta.toFixed(2) + " — si el mercado sube o baja 10%, esta acción típicamente se mueve " + (beta * 10).toFixed(1) + "%. " + (beta < 1 ? "Menos volátil que el mercado." : beta < 1.5 ? "Volatilidad similar al mercado." : "Más volátil que el mercado.") : "Sin dato de Beta.", verdict: beta < 1 ? "Menos riesgosa que el mercado" : beta < 1.5 ? "Riesgo similar al mercado" : "Más riesgosa que el mercado" },
-    { label: "Margen Neto", score: breakdown.margin, what: margin !== 0 ? "La empresa conserva el " + margin.toFixed(1) + "% de sus ingresos como utilidad neta. " + (margin > 25 ? "Excepcional — muy pocas empresas logran esto." : margin > 10 ? "Margen saludable. La empresa es eficiente y rentable." : margin > 0 ? "Margen delgado — vulnerable a costos imprevistos." : "La empresa está perdiendo dinero.") : "Sin dato de margen.", verdict: margin > 25 ? "Rentabilidad excepcional" : margin > 10 ? "Margen saludable" : margin > 0 ? "Margen delgado" : "Pérdidas actuales" },
-    { label: "Crecimiento", score: breakdown.growth, what: growth !== 0 ? "Los ingresos crecieron " + growth.toFixed(1) + "% vs el año anterior. " + (growth > 15 ? "Crecimiento acelerado — la empresa se expande rápido." : growth > 0 ? "Crecimiento estable. La empresa sigue expandiéndose." : "Los ingresos caen — señal de alerta importante.") : "Sin datos de crecimiento.", verdict: growth > 15 ? "Crecimiento acelerado" : growth > 0 ? "Crecimiento estable" : "Ingresos en caída" },
-    { label: "Nivel de Deuda", score: breakdown.debt, what: "Mide cuánta deuda tiene la empresa respecto a sus activos. " + (breakdown.debt >= 7 ? "Deuda baja — empresa financieramente sólida." : breakdown.debt >= 4 ? "Deuda manejable." : "Deuda alta — puede ser problema si suben las tasas de interés."), verdict: breakdown.debt >= 7 ? "Deuda baja — empresa sólida" : breakdown.debt >= 4 ? "Deuda manejable" : "Deuda alta — precaución" },
-    { label: "RSI", score: breakdown.rsi, what: rsi !== null ? "RSI " + rsi + "/100. " + (rsi < 30 ? "Zona de sobreventa — la acción ha caído mucho y podría rebotar." : rsi > 70 ? "Zona de sobrecompra — la acción ha subido mucho y podría corregir." : "Zona neutral — sin señal extrema.") : "Datos insuficientes.", verdict: rsi !== null && rsi < 30 ? "Sobrevendida — posible rebote" : rsi !== null && rsi > 70 ? "Sobrecomprada — posible corrección" : "Zona neutral" },
-    { label: "Media Móvil", score: breakdown.ma, what: ma50 !== null ? "Promedio 50 días MX$" + ma50.toFixed(2) + ", precio actual MX$" + price.toFixed(2) + ". " + (price > ma50 ? "Por encima del promedio — tendencia alcista." : "Por debajo del promedio — tendencia bajista. Precaución.") : "Datos insuficientes.", verdict: (ma50 !== null && price > ma50) || (ma20 !== null && price > ma20) ? "Tendencia alcista" : "Tendencia bajista" },
-    { label: "Noticias", score: breakdown.news, what: "Análisis de titulares recientes. " + (breakdown.news >= 7 ? "Mayoría de noticias positivas." : breakdown.news >= 4 ? "Noticias mixtas — normal para la mayoría de empresas." : "Noticias negativas recientes — puede estar afectando el precio."), verdict: breakdown.news >= 7 ? "Noticias positivas" : breakdown.news >= 4 ? "Noticias mixtas" : "Noticias negativas" },
-    { label: "ROE", score: breakdown.roe, what: roe !== 0 ? "Retorno sobre Capital: " + roe.toFixed(1) + "%. Por cada MX$100 que invirtieron los accionistas, la empresa genera MX$" + roe.toFixed(1) + " de utilidad. " + (roe > 15 ? "Excelente — administración generando retornos sólidos." : roe > 10 ? "Saludable — buen uso del capital." : roe > 0 ? "Por debajo del promedio — margen de mejora." : "Negativo — destruyendo capital.") : "Sin dato de ROE.", verdict: roe > 15 ? "Excelentes retornos sobre capital" : roe > 10 ? "Retornos saludables" : roe > 0 ? "Retornos por debajo del promedio" : "Retornos negativos" },
-    { label: "Razón Corriente", score: breakdown.currentRatio, what: currentRatio !== 0 ? "Razón corriente de " + currentRatio.toFixed(2) + ". " + (currentRatio > 2 ? "Muy saludable — cubre fácilmente obligaciones a corto plazo." : currentRatio > 1 ? "Adecuada — puede cubrir sus deudas actuales." : "Advertencia — puede tener problemas para pagar a corto plazo.") : "Sin dato de razón corriente.", verdict: currentRatio > 2 ? "Muy saludable — cubre sus compromisos" : currentRatio > 1 ? "Adecuada — cubre deudas actuales" : "Advertencia — riesgo de liquidez" },
-    { label: "Cobertura Int.", score: breakdown.interest, what: interestCoverage !== 0 ? "Cubre intereses " + interestCoverage.toFixed(1) + "x. " + (interestCoverage > 5 ? "Muy seguro — las ganancias superan ampliamente los pagos de deuda." : interestCoverage > 3 ? "Adecuado — puede cubrir los pagos de intereses." : interestCoverage > 1 ? "Ajustado — apenas cubre intereses. Riesgoso si caen ingresos." : "Peligro — no puede cubrir los pagos de intereses.") : "Sin dato de cobertura.", verdict: interestCoverage > 5 ? "Muy seguro — ganancias superan deuda" : interestCoverage > 3 ? "Adecuado — cubre intereses" : "Ajustado o peligroso — riesgo de deuda" },
-  ] : [
+  let factors = [
     { label: "Price Movement", score: breakdown.price, what: "Today " + (changePct >= 0 ? "+" : "") + changePct.toFixed(2) + "% change. " + (changePct > 1 ? "Moving up more than 1% today is a positive momentum signal." : changePct < -1 ? "Dropping more than 1% today indicates selling pressure." : "Less than 1% movement means low activity today."), verdict: changePct > 1 ? "Moving up today" : changePct < -1 ? "Dropping today" : "No significant movement" },
     { label: "52wk Position", score: breakdown.position, what: pctFrom52High !== null ? "Stock is " + Math.abs(pctFrom52High) + "% " + (parseFloat(pctFrom52High) < 0 ? "below" : "near") + " its yearly high ($" + week52High.toFixed(2) + "). " + (breakdown.position >= 7 ? "Being near the yearly high indicates strong momentum." : breakdown.position >= 4 ? "Pulled back from high but still in normal range." : "Far from yearly high — could be opportunity or warning sign.") : "No yearly high data.", verdict: breakdown.position >= 7 ? "Near yearly high" : breakdown.position >= 4 ? "Pullback from high" : "Far from yearly high" },
     { label: "P/E Ratio", score: breakdown.pe, what: pe > 0 ? "You pay $" + pe.toFixed(1) + " for every $1 the company earns. " + (pe < 20 ? "A low P/E means the stock is cheap relative to earnings." : pe < 35 ? "Reasonable P/E for a quality company." : "High P/E means investors expect a lot of future growth.") : "No P/E data available.", verdict: pe > 0 && pe < 20 ? "Attractive price vs earnings" : pe > 0 && pe < 35 ? "Fair price" : pe > 35 ? "High price — elevated expectations" : "No data" },
@@ -1199,24 +700,19 @@ function displayData(data) {
 
 
     getScoreHistoryHtml(ticker, totalScore) +
-    getSectorContext(industry, pe, margin, growth, beta, isMX);
+    getSectorContext(industry, pe, margin, growth, beta);
 
-  initStockChat(ticker, companyName, totalScore, changePct, pe, margin, growth, beta, rsi, price, isMX);
+  initStockChat(ticker, companyName, totalScore, changePct, pe, margin, growth, beta, rsi, price);
   let chatEl = document.getElementById('ai-chat');
   if (chatEl) { chatEl.style.display = 'none'; document.getElementById('ai-chat-messages').innerHTML = ''; document.getElementById('ai-chat-suggestions').style.display = 'flex'; }
-  getAIExplanation(ticker, companyName, totalScore, changePct, pe, margin, growth, beta, rsi, ma50, price, topHeadline, roe, currentRatio, interestCoverage, isMX);
+  getAIExplanation(ticker, companyName, totalScore, changePct, pe, margin, growth, beta, rsi, ma50, price, topHeadline, roe, currentRatio, interestCoverage);
   loadChart(prices, dates, volumes || [], prevClose, dayHigh, dayLow, week52High);
-  renderCompanyAbout(profile, metrics['dividendYieldIndicatedAnnual'] || 0, isMX);
-  // For MX: calculate market cap from shares × price (shares in units, price in MXN)
-  let mxMarketCap = 0;
-  if (isMX && profile.sharesOutstanding && price > 0) {
-    mxMarketCap = (profile.sharesOutstanding * price) / 1e9; // in billions MXN
-  }
-  renderFundamentals({ price, changePct, prevClose, dayHigh, dayLow, week52High, week52Low, pe, beta, margin, growth, roe, marketCap: isMX ? mxMarketCap : profile.marketCapitalization, dividend: metrics['dividendYieldIndicatedAnnual'], nextEarningsDate, lastEarnings, isMX, epsBasic: metrics.epsBasic || 0 });
+  renderCompanyAbout(profile, metrics['dividendYieldIndicatedAnnual'] || 0);
+  renderFundamentals({ price, changePct, prevClose, dayHigh, dayLow, week52High, week52Low, pe, beta, margin, growth, roe, marketCap: profile.marketCapitalization, dividend: metrics['dividendYieldIndicatedAnnual'], nextEarningsDate, lastEarnings });
   renderNewsSection(news, ticker, companyName);
 }
 
-function renderCompanyAbout(profile, dividend, isMX) {
+function renderCompanyAbout(profile, dividend) {
   let el = document.getElementById('company-about');
   if (!el) return;
   let industry = profile.finnhubIndustry || '';
@@ -1224,23 +720,18 @@ function renderCompanyAbout(profile, dividend, isMX) {
   let website = profile.weburl || '';
   let ipo = profile.ipo ? profile.ipo.split('-')[0] : '';
   let mktCap = profile.marketCapitalization;
+  let capSize = mktCap >= 200000 ? 'Mega Cap' : mktCap >= 10000 ? 'Large Cap' : mktCap >= 2000 ? 'Mid Cap' : mktCap >= 300 ? 'Small Cap' : 'Micro Cap';
+  let capDesc = mktCap >= 10000 ? 'Large, established company' : mktCap >= 2000 ? 'Mid-size company' : 'Smaller, higher-risk company';
 
   let items = [];
-  if (industry) items.push({ label: isMX ? 'Sector' : 'Industry', value: escHtml(industry) });
-  if (country) items.push({ label: isMX ? 'País' : 'Country', value: escHtml(country) });
-  if (profile.exchange) items.push({ label: isMX ? 'Bolsa' : 'Exchange', value: escHtml(profile.exchange) });
-  if (!isMX) {
-    if (ipo) items.push({ label: 'Public Since', value: escHtml(ipo) });
-    if (mktCap > 0) {
-      let capSize = mktCap >= 200000 ? 'Mega Cap' : mktCap >= 10000 ? 'Large Cap' : mktCap >= 2000 ? 'Mid Cap' : mktCap >= 300 ? 'Small Cap' : 'Micro Cap';
-      let capDesc = mktCap >= 10000 ? 'Large, established company' : mktCap >= 2000 ? 'Mid-size company' : 'Smaller, higher-risk company';
-      items.push({ label: 'Size', value: capSize + ' — ' + capDesc });
-    }
-    let divValue = dividend > 0 ? dividend.toFixed(2) + '% per year' : 'No dividend';
-    let divColor = dividend > 0 ? 'var(--text)' : 'var(--text-muted)';
-    items.push({ label: 'Dividend', value: "<span style='color:" + divColor + ";'>" + divValue + "</span>" });
-  }
-  if (website) items.push({ label: isMX ? 'Sitio Web' : 'Website', value: "<a href='" + escHtml(website) + "' target='_blank' rel='noopener' style='color:var(--accent-blue);text-decoration:none;'>" + escHtml(website.replace(/^https?:\/\//, '').replace(/\/$/, '')) + "</a>" });
+  if (industry) items.push({ label: 'Industry', value: escHtml(industry) });
+  if (country) items.push({ label: 'Country', value: escHtml(country) });
+  if (ipo) items.push({ label: 'Public Since', value: escHtml(ipo) });
+  if (mktCap > 0) items.push({ label: 'Size', value: capSize + ' — ' + capDesc });
+  let divValue = dividend > 0 ? dividend.toFixed(2) + '% per year' : 'No dividend';
+  let divColor = dividend > 0 ? 'var(--text)' : 'var(--text-muted)';
+  items.push({ label: 'Dividend', value: "<span style='color:" + divColor + ";'>" + divValue + "</span>" });
+  if (website) items.push({ label: 'Website', value: "<a href='" + escHtml(website) + "' target='_blank' rel='noopener' style='color:var(--accent-blue);text-decoration:none;'>" + escHtml(website.replace(/^https?:\/\//, '').replace(/\/$/, '')) + "</a>" });
 
   if (items.length === 0) { el.style.display = 'none'; return; }
 
@@ -1249,7 +740,7 @@ function renderCompanyAbout(profile, dividend, isMX) {
     descHtml = '<p class="company-description">' + escHtml(profile.description) + '</p>';
   }
 
-  el.innerHTML = '<h2>' + (isMX ? 'ACERCA DE' : 'ABOUT') + '</h2>' + descHtml + '<div class="about-grid">' +
+  el.innerHTML = '<h2>ABOUT</h2>' + descHtml + '<div class="about-grid">' +
     items.map(function(i) {
       return "<div class='about-item'><div class='about-label'>" + i.label + "</div><div class='about-value'>" + i.value + "</div></div>";
     }).join('') + '</div>';
@@ -1259,42 +750,24 @@ function renderCompanyAbout(profile, dividend, isMX) {
 function renderFundamentals(f) {
   let el = document.getElementById('fundamentals-card');
   if (!el) return;
-  let isMX = f.isMX || false;
-  let mktCap;
-  if (f.marketCap > 0) {
-    if (isMX) {
-      mktCap = f.marketCap >= 1000 ? 'MX$' + (f.marketCap / 1000).toFixed(2) + 'B' : 'MX$' + f.marketCap.toFixed(1) + 'MM';
-    } else {
-      mktCap = f.marketCap >= 1000 ? '$' + (f.marketCap / 1000).toFixed(2) + 'T' : '$' + f.marketCap.toFixed(1) + 'B';
-    }
-  } else {
-    mktCap = '—';
-  }
-  let divYield = f.dividend > 0 ? f.dividend.toFixed(2) + '%' : (isMX ? 'Sin dividendo' : 'None');
+  let mktCap = f.marketCap > 0 ? (f.marketCap >= 1000 ? '$' + (f.marketCap / 1000).toFixed(2) + 'T' : '$' + f.marketCap.toFixed(1) + 'B') : '—';
+  let divYield = f.dividend > 0 ? f.dividend.toFixed(2) + '%' : 'None';
 
-  // Earnings values (MX: no earnings calendar, show EPS from financieros if available)
+  // Earnings values
   let nextEarningsVal = '—';
-  if (!isMX && f.nextEarningsDate) {
+  if (f.nextEarningsDate) {
     let d = new Date(f.nextEarningsDate + "T12:00:00");
-    nextEarningsVal = d.toLocaleDateString("es-MX", { month: "short", day: "numeric", year: "numeric" });
+    nextEarningsVal = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   }
   let lastEarningsVal = '—';
-  if (!isMX && f.lastEarnings && f.lastEarnings.actual != null) {
-    let beat = f.lastEarnings.estimate != null ? (f.lastEarnings.actual >= f.lastEarnings.estimate ? "Superó" : "Debajo") : null;
-    let beatColor = beat === "Superó" ? "#16a34a" : "#dc2626";
+  if (f.lastEarnings && f.lastEarnings.actual != null) {
+    let beat = f.lastEarnings.estimate != null ? (f.lastEarnings.actual >= f.lastEarnings.estimate ? "Beat" : "Missed") : null;
+    let beatColor = beat === "Beat" ? "#16a34a" : "#dc2626";
     lastEarningsVal = "$" + f.lastEarnings.actual.toFixed(2) +
       (beat ? " <span style='color:" + beatColor + ";font-weight:700;font-size:11px;'>" + beat + "</span>" : "");
   }
 
-  let fundTips = isMX ? {
-    'Cap. Mercado':    'Valor total de todas las acciones en circulación. Mayor = empresa más establecida.',
-    'Razón P/U':       'Precio entre utilidad. Alta = se espera mucho crecimiento; baja = puede estar barata.',
-    'Dividendo':       'Efectivo que paga la empresa a accionistas como % del precio. 0% = sin dividendo.',
-    'Beta':            'Volatilidad vs el mercado. >1 = más movimiento; <1 = más estable.',
-    'Margen Neto':     '% de ingresos que se convierte en utilidad después de todos los costos.',
-    'Crec. Ingresos':  'Qué tan rápido crecieron las ventas vs el año anterior.',
-    'Últ. UPA':        'Utilidad por Acción del último período reportado.'
-  } : {
+  let fundTips = {
     'Market Cap':     'Total value of all shares. Larger = more established & stable.',
     'P/E Ratio':      'Price ÷ earnings. High = growth expected, low = cheap or struggling.',
     'Dividend Yield': 'Annual cash paid to shareholders as % of price. 0% = no dividend.',
@@ -1304,15 +777,7 @@ function renderFundamentals(f) {
     'Next Earnings':  'Date the company reports quarterly results — often causes big price moves.',
     'Last EPS':       'Earnings per share last quarter. "Beat" = did better than analysts expected.'
   };
-  let items = isMX ? [
-    { label: 'Cap. Mercado',   value: mktCap },
-    { label: 'Razón P/U',      value: f.pe > 0 ? f.pe.toFixed(1) : '—' },
-    { label: 'Dividendo',      value: divYield },
-    { label: 'Beta',           value: f.beta > 0 ? f.beta.toFixed(2) : '—' },
-    { label: 'Margen Neto',    value: f.margin !== 0 ? f.margin.toFixed(1) + '%' : '—' },
-    { label: 'Crec. Ingresos', value: f.growth !== 0 ? (f.growth > 0 ? '+' : '') + f.growth.toFixed(1) + '%' : '—' },
-    { label: 'Últ. UPA',       value: f.epsBasic > 0 ? 'MX$' + f.epsBasic.toFixed(2) : '—' },
-  ] : [
+  let items = [
     { label: 'Market Cap',     value: mktCap },
     { label: 'P/E Ratio',      value: f.pe > 0 ? f.pe.toFixed(1) : '—' },
     { label: 'Dividend Yield', value: divYield },
@@ -1323,7 +788,7 @@ function renderFundamentals(f) {
     { label: 'Last EPS',       value: lastEarningsVal },
   ];
   let tipId = 0;
-  el.innerHTML = '<h2>' + (isMX ? 'DATOS CLAVE' : 'KEY STATS') + '</h2><div class="fundamentals-grid">' +
+  el.innerHTML = '<h2>KEY STATS</h2><div class="fundamentals-grid">' +
     items.map(function(i) {
       let tid = 'fund-tip-' + (tipId++);
       let tip = fundTips[i.label] ? "<button class='fund-tip-btn' onclick=\"var e=document.getElementById('" + tid + "');e.style.display=e.style.display==='none'?'block':'none';\">?</button><div class='fund-tip' id='" + tid + "' style='display:none;'>" + fundTips[i.label] + "</div>" : '';
@@ -1596,37 +1061,28 @@ function renderPriceChart(prices, dates, volumes) {
   });
 }
 
-function getAIExplanation(ticker, companyName, totalScore, changePct, pe, margin, growth, beta, rsi, ma50, price, topHeadline, roe, currentRatio, interestCoverage, isMX) {
+function getAIExplanation(ticker, companyName, totalScore, changePct, pe, margin, growth, beta, rsi, ma50, price, topHeadline, roe, currentRatio, interestCoverage) {
   let aiBox = document.getElementById("ai-explanation");
   let aiText = document.getElementById("ai-text");
   if (!aiBox || !aiText) return;
   aiBox.style.display = "block";
-  aiText.textContent = isMX ? "Analizando " + companyName + "..." : "Analyzing " + companyName + "...";
+  aiText.textContent = "Analyzing " + companyName + "...";
 
-  let profileContext = userProfile ? (isMX
-    ? "El usuario es un inversionista " + userProfile.type + " con horizonte " + userProfile.horizon + " y meta de " + userProfile.goal + ". Adapta tu explicación a su nivel. "
-    : "The reader is a " + userProfile.type + " investor with a " + userProfile.horizon + " time horizon and a goal to " + userProfile.goal + ". Tailor your explanation to their level. ") : "";
+  let profileContext = userProfile ? "The reader is a " + userProfile.type + " investor with a " + userProfile.horizon + " time horizon and a goal to " + userProfile.goal + ". Tailor your explanation to their level. " : "";
 
-  let prompt = isMX
-    ? "Eres StockIQ, una herramienta de educación financiera. Tu misión es ayudar al usuario a entender genuinamente lo que dicen los datos de esta empresa en la Bolsa Mexicana de Valores (BMV). Escribe 4-5 oraciones en español. Haz lo siguiente: (1) Resume qué dice el score y la imagen general sobre la salud de la empresa. (2) Señala 1-2 patrones o tensiones interesantes en los datos — por ejemplo si el crecimiento es alto pero el margen es delgado. (3) Explica qué podría significar el titular más reciente para la historia de la empresa. (4) Menciona una cosa a la que un principiante debería poner atención. Escribe en tono cálido y cercano — como un amigo con conocimiento, no un libro de texto. Nunca uses las palabras comprar, vender, invertir o recomendar. Nunca des consejos financieros. Todo en español. "
-    : "You are StockIQ, a plain-English financial education tool. Your job is to help beginners genuinely understand what this company's data means — not just list numbers, but connect the dots between them. Write 4-5 sentences. Do the following: (1) Summarize what the score and overall picture says about the company's health. (2) Point out 1-2 interesting patterns or tensions in the data — for example if growth is high but margins are thin, or if the stock is volatile but fundamentals are strong. (3) Explain what the most recent news might mean for the company's story. (4) Mention one thing a beginner should pay attention to going forward. Write in a warm, curious tone — like a knowledgeable friend, not a textbook. Never use the words buy, sell, invest, or recommend. Never give financial advice. Focus entirely on helping the user understand and learn. ";
-
-  prompt += profileContext;
-  prompt += (isMX ? "Datos — Empresa: " : "Data — Company: ") + companyName + " (" + ticker + "). Score: " + totalScore + "/100. " +
-    (isMX ? "Hoy: " : "Today: ") + (changePct >= 0 ? "+" : "") + changePct.toFixed(2) + "%. " +
-    (isMX ? "Precio: MX$" : "Price: $") + price.toFixed(2) + ". " +
-    (isMX ? "Bolsa: BMV/BIVA. Moneda: MXN. " : "") +
-    (pe > 0 ? (isMX ? "P/U: " : "P/E: ") + pe.toFixed(1) + ". " : "") +
-    (margin !== 0 ? (isMX ? "Margen neto: " : "Profit margin: ") + margin.toFixed(1) + "%. " : "") +
-    (growth !== 0 ? (isMX ? "Crec. ingresos: " : "Revenue growth: ") + growth.toFixed(1) + "%. " : "") +
+  let prompt = "You are StockIQ, a plain-English financial education tool. Your job is to help beginners genuinely understand what this company's data means — not just list numbers, but connect the dots between them. Write 4-5 sentences. Do the following: (1) Summarize what the score and overall picture says about the company's health. (2) Point out 1-2 interesting patterns or tensions in the data — for example if growth is high but margins are thin, or if the stock is volatile but fundamentals are strong. (3) Explain what the most recent news might mean for the company's story. (4) Mention one thing a beginner should pay attention to going forward. Write in a warm, curious tone — like a knowledgeable friend, not a textbook. Never use the words buy, sell, invest, or recommend. Never give financial advice. Focus entirely on helping the user understand and learn. " +
+    profileContext +
+    "Data — Company: " + companyName + " (" + ticker + "). Score: " + totalScore + "/100. Today: " + (changePct >= 0 ? "+" : "") + changePct.toFixed(2) + "%. Price: $" + price.toFixed(2) + ". " +
+    (pe > 0 ? "P/E: " + pe.toFixed(1) + ". " : "") +
+    (margin !== 0 ? "Profit margin: " + margin.toFixed(1) + "%. " : "") +
+    (growth !== 0 ? "Revenue growth: " + growth.toFixed(1) + "%. " : "") +
     (beta > 0 ? "Beta: " + beta.toFixed(2) + ". " : "") +
     (roe !== 0 ? "ROE: " + roe.toFixed(1) + "%. " : "") +
-    (currentRatio !== 0 ? (isMX ? "Razón corriente: " : "Current ratio: ") + currentRatio.toFixed(2) + ". " : "") +
-    (interestCoverage !== 0 ? (isMX ? "Cobertura int.: " : "Interest coverage: ") + interestCoverage.toFixed(1) + "x. " : "") +
+    (currentRatio !== 0 ? "Current ratio: " + currentRatio.toFixed(2) + ". " : "") +
+    (interestCoverage !== 0 ? "Interest coverage: " + interestCoverage.toFixed(1) + "x. " : "") +
     (rsi !== null ? "RSI: " + rsi + ". " : "") +
-    (ma50 !== null ? (isMX ? "MA 50 días: MX$" : "50-day MA: $") + ma50.toFixed(2) + ". " : "") +
-    (isMX ? "Titular reciente: \"" : "Latest headline: \"") + topHeadline + "\". " +
-    (isMX ? "Señal general: " : "Overall signal: ") + (totalScore >= 65 ? (isMX ? "Sólida" : "Strong") : totalScore >= 50 ? (isMX ? "Vigilar" : "Watch") : (isMX ? "Alto Riesgo" : "Risky")) + ".";
+    (ma50 !== null ? "50-day MA: $" + ma50.toFixed(2) + ". " : "") +
+    "Latest headline: \"" + topHeadline + "\". Overall signal: " + (totalScore >= 65 ? "Strong" : totalScore >= 50 ? "Watch" : "Risky") + ".";
 
   fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -1655,10 +1111,9 @@ function getAIExplanation(ticker, companyName, totalScore, changePct, pe, margin
   .catch(function() { aiText.textContent = "Analysis unavailable right now."; });
 }
 
-function getSectorContext(industry, pe, margin, growth, beta, isMX) {
-  let avgs = isMX ? mxSectorAverages : sectorAverages;
+function getSectorContext(industry, pe, margin, growth, beta) {
   let sector = null;
-  let keys = Object.keys(avgs);
+  let keys = Object.keys(sectorAverages);
   for (let i = 0; i < keys.length; i++) {
     if (industry.toLowerCase().includes(keys[i].toLowerCase()) ||
         keys[i].toLowerCase().includes(industry.toLowerCase())) {
@@ -1667,31 +1122,31 @@ function getSectorContext(industry, pe, margin, growth, beta, isMX) {
     }
   }
   if (!sector) return "";
-  let avg = avgs[sector];
+  let avg = sectorAverages[sector];
   let rows = "";
 
   if (pe > 0 && avg.pe) {
     let diff = (((pe - avg.pe) / avg.pe) * 100).toFixed(0);
     let color = diff > 20 ? "#dc2626" : diff > 0 ? "#d97706" : "#16a34a";
-    rows += "<div class='sector-row'><span class='sector-label'>" + (isMX ? "Razón P/U" : "P/E Ratio") + "</span><span class='sector-val'>" + pe.toFixed(1) + "</span><span class='sector-vs'>vs " + (isMX ? "prom " : "avg ") + avg.pe + "</span><span class='sector-verdict' style='color:" + color + ";'>" + Math.abs(diff) + "% " + (isMX ? (diff > 0 ? "más caro" : "más barato") + " que el sector" : (diff > 0 ? "more expensive" : "cheaper") + " than peers") + "</span></div>";
+    rows += "<div class='sector-row'><span class='sector-label'>P/E Ratio</span><span class='sector-val'>" + pe.toFixed(1) + "</span><span class='sector-vs'>vs avg " + avg.pe + "</span><span class='sector-verdict' style='color:" + color + ";'>" + Math.abs(diff) + "% " + (diff > 0 ? "more expensive" : "cheaper") + " than peers</span></div>";
   }
   if (margin !== 0 && avg.margin) {
     let diff = (margin - avg.margin).toFixed(1);
     let color = diff >= 0 ? "#16a34a" : "#dc2626";
-    rows += "<div class='sector-row'><span class='sector-label'>" + (isMX ? "Margen Neto" : "Profit Margin") + "</span><span class='sector-val'>" + margin.toFixed(1) + "%</span><span class='sector-vs'>vs " + (isMX ? "prom " : "avg ") + avg.margin + "%</span><span class='sector-verdict' style='color:" + color + ";'>" + Math.abs(diff) + "% " + (isMX ? (diff >= 0 ? "arriba del" : "abajo del") + " promedio" : (diff >= 0 ? "above" : "below") + " average") + "</span></div>";
+    rows += "<div class='sector-row'><span class='sector-label'>Profit Margin</span><span class='sector-val'>" + margin.toFixed(1) + "%</span><span class='sector-vs'>vs avg " + avg.margin + "%</span><span class='sector-verdict' style='color:" + color + ";'>" + Math.abs(diff) + "% " + (diff >= 0 ? "above" : "below") + " average</span></div>";
   }
   if (growth !== 0 && avg.growth) {
     let diff = (growth - avg.growth).toFixed(1);
     let color = diff >= 0 ? "#16a34a" : "#dc2626";
-    rows += "<div class='sector-row'><span class='sector-label'>" + (isMX ? "Crecimiento" : "Revenue Growth") + "</span><span class='sector-val'>" + growth.toFixed(1) + "%</span><span class='sector-vs'>vs " + (isMX ? "prom " : "avg ") + avg.growth + "%</span><span class='sector-verdict' style='color:" + color + ";'>" + (isMX ? "Crece " + Math.abs(diff) + "% " + (diff >= 0 ? "más rápido que" : "más lento que") + " el sector" : "Growing " + Math.abs(diff) + "% " + (diff >= 0 ? "faster than" : "slower than") + " peers") + "</span></div>";
+    rows += "<div class='sector-row'><span class='sector-label'>Revenue Growth</span><span class='sector-val'>" + growth.toFixed(1) + "%</span><span class='sector-vs'>vs avg " + avg.growth + "%</span><span class='sector-verdict' style='color:" + color + ";'>Growing " + Math.abs(diff) + "% " + (diff >= 0 ? "faster than" : "slower than") + " peers</span></div>";
   }
   if (beta > 0 && avg.beta) {
     let diff = (beta - avg.beta).toFixed(2);
     let color = diff <= 0 ? "#16a34a" : "#d97706";
-    rows += "<div class='sector-row'><span class='sector-label'>" + (isMX ? "Riesgo (Beta)" : "Risk (Beta)") + "</span><span class='sector-val'>" + beta.toFixed(2) + "</span><span class='sector-vs'>vs " + (isMX ? "prom " : "avg ") + avg.beta + "</span><span class='sector-verdict' style='color:" + color + ";'>" + Math.abs(diff) + " " + (isMX ? (diff <= 0 ? "menos volátil" : "más volátil") + " que el sector" : (diff <= 0 ? "less volatile" : "more volatile") + " than peers") + "</span></div>";
+    rows += "<div class='sector-row'><span class='sector-label'>Risk (Beta)</span><span class='sector-val'>" + beta.toFixed(2) + "</span><span class='sector-vs'>vs avg " + avg.beta + "</span><span class='sector-verdict' style='color:" + color + ";'>" + Math.abs(diff) + " " + (diff <= 0 ? "less volatile" : "more volatile") + " than peers</span></div>";
   }
   if (!rows) return "";
-  return "<br><details class='sector-details'><summary class='sector-summary'>" + (isMX ? "Comparar con sector " + sector + " ▾" : "Compare to " + sector + " sector ▾") + "</summary><div class='sector-rows'>" + rows + "</div></details>";
+  return "<br><details class='sector-details'><summary class='sector-summary'>Compare to " + sector + " sector ▾</summary><div class='sector-rows'>" + rows + "</div></details>";
 }
 
 function getRiskProfileWarning(beta, totalScore) {
@@ -1890,16 +1345,9 @@ function quickAddToPortfolio() {
   if (!currentTicker) return;
   showTab('portfolio');
   document.getElementById('port-ticker').value = currentTicker;
-  if (activeMarket === 'MX') {
-    mxQuote(currentTicker).then(function(raw) {
-      let q = adaptMXQuote(raw);
-      if (q.c) document.getElementById('port-price').value = q.c.toFixed(2);
-    });
-  } else {
-    fetch('https://finnhub.io/api/v1/quote?symbol=' + encodeURIComponent(currentTicker) + '&token=' + finnhubKey)
-      .then(function(r) { return r.json(); })
-      .then(function(q) { if (q.c) document.getElementById('port-price').value = q.c.toFixed(2); });
-  }
+  fetch('https://finnhub.io/api/v1/quote?symbol=' + encodeURIComponent(currentTicker) + '&token=' + finnhubKey)
+    .then(function(r) { return r.json(); })
+    .then(function(q) { if (q.c) document.getElementById('port-price').value = q.c.toFixed(2); });
   document.getElementById('port-shares').focus();
 }
 
@@ -1910,7 +1358,7 @@ function addToWatchlist() {
     showToast(currentTicker + " is already in your watchlist!");
     return;
   }
-  watchlist.push({ ticker: currentTicker, name: currentName, score: currentScore, market: activeMarket });
+  watchlist.push({ ticker: currentTicker, name: currentName, score: currentScore });
   localStorage.setItem("watchlist", JSON.stringify(watchlist));
   saveToFirestore({ watchlist: watchlist });
   let btn = document.getElementById("watchlist-btn");
@@ -1934,9 +1382,7 @@ function setWlSort(sort) {
 }
 
 function renderWatchlist() {
-  let allWatchlist = JSON.parse(localStorage.getItem("watchlist") || "[]");
-  // Filter to items matching the active market (items without a market field default to 'US')
-  let watchlist = allWatchlist.filter(function(i) { return (i.market || 'US') === activeMarket; });
+  let watchlist = JSON.parse(localStorage.getItem("watchlist") || "[]");
   let empty = document.getElementById("watchlist-empty");
   let items = document.getElementById("watchlist-items");
   if (watchlist.length === 0) { empty.style.display = "flex"; items.innerHTML = ""; return; }
@@ -1960,10 +1406,9 @@ function renderWatchlist() {
   function buildRow(item, price, changePct) {
     let scoreColor = item.score >= 65 ? "#16a34a" : item.score >= 50 ? "#d97706" : "#dc2626";
     let signal = item.score >= 65 ? "Strong" : item.score >= 50 ? "Watch" : "Risky";
-    let currSym = (item.market || 'US') === 'MX' ? 'MX$' : '$';
     let priceHtml = price == null
       ? "<span class='wl-price'>—</span>"
-      : "<span class='wl-price'>" + currSym + price.toFixed(2) + "</span><span class='wl-change' style='color:" + (changePct >= 0 ? "#16a34a" : "#dc2626") + ";'>" + (changePct >= 0 ? "+" : "") + changePct.toFixed(2) + "%</span>";
+      : "<span class='wl-price'>$" + price.toFixed(2) + "</span><span class='wl-change' style='color:" + (changePct >= 0 ? "#16a34a" : "#dc2626") + ";'>" + (changePct >= 0 ? "+" : "") + changePct.toFixed(2) + "%</span>";
     let hist = buildScoreHistoryBars(item.ticker, item.score);
     let histDrawer = hist.bars
       ? "<div class='wl-history-drawer' id='wl-hist-" + item.ticker + "' style='display:none;'>" +
@@ -2005,17 +1450,8 @@ function renderWatchlist() {
   else if (wlSort === 'ticker') initSorted.sort(function(a, b) { return a.ticker.localeCompare(b.ticker); });
   items.innerHTML = initSorted.map(function(item) { return buildRow(item, null, 0); }).join("");
 
-  // Fetch live quotes in parallel — route to correct API per market
+  // Fetch live quotes in parallel
   Promise.all(watchlist.map(function(item) {
-    let itemMarket = item.market || 'US';
-    if (itemMarket === 'MX') {
-      return mxQuote(item.ticker)
-        .then(function(raw) {
-          let q = adaptMXQuote(raw);
-          return { ticker: item.ticker, price: q.c || null, changePct: q.dp || 0, prevClose: q.pc || 0 };
-        })
-        .catch(function() { return { ticker: item.ticker, price: null, changePct: 0, prevClose: 0 }; });
-    }
     return fetch('https://finnhub.io/api/v1/quote?symbol=' + encodeURIComponent(item.ticker) + '&token=' + finnhubKey)
       .then(function(r) { return r.json(); })
       .then(function(q) { return { ticker: item.ticker, price: q.c || null, changePct: q.dp || 0, prevClose: q.pc || 0 }; })
@@ -2149,9 +1585,21 @@ function loadFromWatchlist(ticker) {
 }
 
 function loadTrendingTickers(forceRefresh) {
+  let tickers = [
+    { symbol: 'AAPL', name: 'Apple Inc.' },
+    { symbol: 'NVDA', name: 'NVIDIA Corp.' },
+    { symbol: 'TSLA', name: 'Tesla Inc.' },
+    { symbol: 'MSFT', name: 'Microsoft Corp.' },
+    { symbol: 'AMZN', name: 'Amazon.com Inc.' },
+    { symbol: 'GOOGL', name: 'Alphabet Inc.' },
+    { symbol: 'META', name: 'Meta Platforms' },
+    { symbol: 'JPM', name: 'JPMorgan Chase' },
+  ];
+
   let list = document.getElementById('trending-list');
   if (!list) return;
 
+  // Check cache (5 min TTL) — skip if forcing refresh
   if (!forceRefresh) {
     let cached = localStorage.getItem('trending-cache');
     if (cached) {
@@ -2162,62 +1610,31 @@ function loadTrendingTickers(forceRefresh) {
 
   list.innerHTML = '<div class="trending-loading">Fetching prices...</div>';
 
-  if (activeMarket === 'MX') {
-    mxTop().then(function(raw) {
-      // real format: { "SUBEN": [{"e": "FPLUS16", "u": 5.5, "c": 3.77}, ...], "BAJAN": [...] }
-      let suben = raw.SUBEN || raw.suben || [];
-      let bajan = raw.BAJAN || raw.bajan || [];
-      let combined = suben.concat(bajan).slice(0, 8);
-      let results = combined.map(function(e) {
-        return {
-          symbol:    e.e || '',   // emisora_serie
-          name:      e.e || '',   // no company name in top endpoint
-          price:     e.u || 0,   // último
-          change:    0,
-          changePct: e.c || 0    // cambio porcentual
-        };
-      }).filter(function(r) { return r.symbol && r.price > 0; });
-      localStorage.setItem('trending-cache', JSON.stringify({ ts: Date.now(), data: results }));
-      allTrendingData = results;
-      renderTrending(results);
-    }).catch(function() {
-      list.innerHTML = '<div class="trending-loading">No data available.</div>';
+  // Stagger requests 200ms apart to avoid rate limit
+  let delay = 0;
+  let promises = tickers.map(function(t) {
+    let d = delay;
+    delay += 200;
+    return new Promise(function(resolve) {
+      setTimeout(function() {
+        fetch('https://finnhub.io/api/v1/quote?symbol=' + t.symbol + '&token=' + finnhubKey)
+          .then(function(r) { return r.json(); })
+          .then(function(q) {
+            let price = q.c > 0 ? q.c : q.pc;
+            resolve({ symbol: t.symbol, name: t.name, price: price, change: q.d || 0, changePct: q.dp || 0 });
+          })
+          .catch(function() { resolve(null); });
+      }, d);
     });
-  } else {
-    let tickers = [
-      { symbol: 'AAPL', name: 'Apple Inc.' },
-      { symbol: 'NVDA', name: 'NVIDIA Corp.' },
-      { symbol: 'TSLA', name: 'Tesla Inc.' },
-      { symbol: 'MSFT', name: 'Microsoft Corp.' },
-      { symbol: 'AMZN', name: 'Amazon.com Inc.' },
-      { symbol: 'GOOGL', name: 'Alphabet Inc.' },
-      { symbol: 'META', name: 'Meta Platforms' },
-      { symbol: 'JPM', name: 'JPMorgan Chase' },
-    ];
-    let delay = 0;
-    let promises = tickers.map(function(t) {
-      let d = delay;
-      delay += 200;
-      return new Promise(function(resolve) {
-        setTimeout(function() {
-          fetch('https://finnhub.io/api/v1/quote?symbol=' + t.symbol + '&token=' + finnhubKey)
-            .then(function(r) { return r.json(); })
-            .then(function(q) {
-              let price = q.c > 0 ? q.c : q.pc;
-              resolve({ symbol: t.symbol, name: t.name, price: price, change: q.d || 0, changePct: q.dp || 0 });
-            })
-            .catch(function() { resolve(null); });
-        }, d);
-      });
-    });
-    Promise.all(promises).then(function(results) {
-      let valid = results.filter(function(r) { return r && r.price > 0; });
-      valid.sort(function(a, b) { return Math.abs(b.changePct) - Math.abs(a.changePct); });
-      localStorage.setItem('trending-cache', JSON.stringify({ ts: Date.now(), data: valid }));
-      allTrendingData = valid;
-      renderTrending(valid);
-    });
-  }
+  });
+
+  Promise.all(promises).then(function(results) {
+    let valid = results.filter(function(r) { return r && r.price > 0; });
+    valid.sort(function(a, b) { return Math.abs(b.changePct) - Math.abs(a.changePct); });
+    localStorage.setItem('trending-cache', JSON.stringify({ ts: Date.now(), data: valid }));
+    allTrendingData = valid;
+    renderTrending(valid);
+  });
 }
 
 let currentTrendingFilter = 'all';
@@ -2250,7 +1667,7 @@ function renderTrending(data) {
         "<div class='trending-name'>" + escHtml(r.name) + "</div>" +
       "</div>" +
       "<div class='trending-right'>" +
-        "<div class='trending-price'>" + (activeMarket === 'MX' ? 'MX$' : '$') + r.price.toFixed(2) + "</div>" +
+        "<div class='trending-price'>$" + r.price.toFixed(2) + "</div>" +
         "<div class='trending-change' style='color:" + color + ";'>" + sign + r.changePct.toFixed(2) + "%</div>" +
       "</div>" +
     "</div>";
@@ -2277,216 +1694,94 @@ function _rebuildTickerClone() {
 }
 
 function loadMarketOverview() {
-  let allWatchlist = JSON.parse(localStorage.getItem("watchlist") || "[]");
-  // Only show watchlist items matching the active market in the bar
-  let watchlist = allWatchlist.filter(function(i) { return (i.market || 'US') === activeMarket; });
+  let indices = [
+    { ticker: "SPY", priceKey: "sp500-price", changeKey: "sp500-change" },
+    { ticker: "QQQ", priceKey: "nasdaq-price", changeKey: "nasdaq-change" },
+    { ticker: "DIA", priceKey: "dow-price", changeKey: "dow-change" },
+    { ticker: "GLD", priceKey: "btc-price", changeKey: "btc-change" }
+  ];
+
+  // Inject watchlist items into the original content div first
+  let watchlist = JSON.parse(localStorage.getItem("watchlist") || "[]");
   let tickerContent = document.getElementById("ticker-content");
-
-  if (activeMarket === 'MX') {
-    // Rebuild ticker bar with MX indices
-    if (tickerContent) {
-      tickerContent.innerHTML =
-        '<div class="market-item" onclick="quickSearch(\'IPC\')">' +
-          '<span class="market-name">IPC</span>' +
-          '<span class="market-price" data-mid="ipc-price">—</span>' +
-          '<span class="market-change" data-mid="ipc-change">—</span>' +
-        '</div>' +
-        '<div class="market-divider"></div>' +
-        '<div class="market-item" onclick="quickSearch(\'INMEX\')">' +
-          '<span class="market-name">INMEX</span>' +
-          '<span class="market-price" data-mid="inmex-price">—</span>' +
-          '<span class="market-change" data-mid="inmex-change">—</span>' +
-        '</div>' +
-        '<div class="market-divider"></div>' +
-        '<div class="market-item">' +
-          '<span class="market-name">USD/MXN</span>' +
-          '<span class="market-price" data-mid="usdmxn-price">—</span>' +
-          '<span class="market-change" data-mid="usdmxn-change">—</span>' +
-        '</div>';
-      // Append MX watchlist items
-      watchlist.forEach(function(item) {
-        let safeT = escHtml(JSON.stringify(item.ticker));
-        let divider = document.createElement("div");
-        divider.className = "market-divider wl-bar-divider";
-        tickerContent.appendChild(divider);
-        let node = document.createElement("div");
-        node.className = "market-item wl-bar-item";
-        node.setAttribute("onclick", "quickSearch(" + safeT + ")");
-        node.innerHTML =
-          "<span class='market-name'>" + escHtml(item.ticker) + "</span>" +
-          "<span class='market-price' data-wlprice='" + escHtml(item.ticker) + "'>—</span>" +
-          "<span class='market-change' data-wlchange='" + escHtml(item.ticker) + "'>—</span>";
-        tickerContent.appendChild(node);
-      });
-    }
-    _rebuildTickerClone();
-
-    // Fetch MX indices
-    // real format: { "IPC": { "e": "Indice...", "u": price, "c": pct_change, "m": abs_change }, ... }
-    mxIndices().then(function(raw) {
-      if (!raw || typeof raw !== 'object') return;
-      [['IPC', 'ipc'], ['FTSEBIVA', 'inmex']].forEach(function(pair) {
-        let code = pair[0], key = pair[1];
-        let idx = raw[code];
-        if (!idx) return;
-        let price = idx.u || 0;
-        let pct   = idx.c || 0;
-        let priceStr = Number(price).toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        let arrow = pct >= 0 ? "▲" : "▼";
-        let sign  = pct >= 0 ? "+" : "";
-        let changeStr = arrow + " " + sign + Number(pct).toFixed(2) + "%";
-        let changeColor = pct >= 0 ? "#16a34a" : "#dc2626";
-        _updateTickerEl('[data-mid="' + key + '-price"]', priceStr, null);
-        _updateTickerEl('[data-mid="' + key + '-change"]', changeStr, changeColor);
-      });
-    }).catch(function() {});
-
-    // Fetch USD/MXN from divisas
-    // real format: { "USDMXN": { "u": 17.78, "c": pct_change, "m": abs_change }, ... }
-    mxDivisas().then(function(raw) {
-      if (!raw || typeof raw !== 'object') return;
-      let usdmxn = raw['USDMXN'];
-      if (!usdmxn) return;
-      let price = usdmxn.u || 0;
-      let pct   = usdmxn.c || 0;
-      let priceStr  = '$' + Number(price).toFixed(4);
-      let arrow = pct >= 0 ? "▲" : "▼";
-      let sign  = pct >= 0 ? "+" : "";
-      let changeStr  = arrow + " " + sign + Number(pct).toFixed(2) + "%";
-      let changeColor = pct >= 0 ? "#16a34a" : "#dc2626";
-      _updateTickerEl('[data-mid="usdmxn-price"]', priceStr, null);
-      _updateTickerEl('[data-mid="usdmxn-change"]', changeStr, changeColor);
-    }).catch(function() {});
-
-    // Fetch MX watchlist prices
-    watchlist.forEach(function(item, i) {
-      setTimeout(function() {
-        mxQuote(item.ticker).then(function(raw) {
-          let q = adaptMXQuote(raw);
-          if (!q.c) return;
-          let priceStr  = 'MX$' + q.c.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-          let arrow = q.dp >= 0 ? "▲" : "▼";
-          let sign  = q.dp >= 0 ? "+" : "";
-          let changeStr  = arrow + " " + sign + q.dp.toFixed(2) + "%";
-          let changeColor = q.dp >= 0 ? "#16a34a" : "#dc2626";
-          _updateTickerEl('[data-wlprice="' + item.ticker + '"]', priceStr, null);
-          _updateTickerEl('[data-wlchange="' + item.ticker + '"]', changeStr, changeColor);
-        }).catch(function() {});
-      }, 300 * (i + 1));
-    });
-
-  } else {
-    // US market: restore original indices HTML
-    if (tickerContent) {
-      tickerContent.innerHTML =
-        '<div class="market-item" onclick="quickSearch(\'SPY\')">' +
-          '<span class="market-name">S&P 500</span>' +
-          '<span class="market-price" data-mid="sp500-price">—</span>' +
-          '<span class="market-change" data-mid="sp500-change">—</span>' +
-        '</div>' +
-        '<div class="market-divider"></div>' +
-        '<div class="market-item" onclick="quickSearch(\'QQQ\')">' +
-          '<span class="market-name">NASDAQ</span>' +
-          '<span class="market-price" data-mid="nasdaq-price">—</span>' +
-          '<span class="market-change" data-mid="nasdaq-change">—</span>' +
-        '</div>' +
-        '<div class="market-divider"></div>' +
-        '<div class="market-item" onclick="quickSearch(\'DIA\')">' +
-          '<span class="market-name">DOW</span>' +
-          '<span class="market-price" data-mid="dow-price">—</span>' +
-          '<span class="market-change" data-mid="dow-change">—</span>' +
-        '</div>' +
-        '<div class="market-divider"></div>' +
-        '<div class="market-item" onclick="quickSearch(\'GLD\')">' +
-          '<span class="market-name">GOLD</span>' +
-          '<span class="market-price" data-mid="btc-price">—</span>' +
-          '<span class="market-change" data-mid="btc-change">—</span>' +
-        '</div>';
-      // Append US watchlist items
-      watchlist.forEach(function(item) {
-        let safeT = escHtml(JSON.stringify(item.ticker));
-        let divider = document.createElement("div");
-        divider.className = "market-divider wl-bar-divider";
-        tickerContent.appendChild(divider);
-        let node = document.createElement("div");
-        node.className = "market-item wl-bar-item";
-        node.setAttribute("onclick", "quickSearch(" + safeT + ")");
-        node.innerHTML =
-          "<span class='market-name'>" + escHtml(item.ticker) + "</span>" +
-          "<span class='market-price' data-wlprice='" + escHtml(item.ticker) + "'>—</span>" +
-          "<span class='market-change' data-wlchange='" + escHtml(item.ticker) + "'>—</span>";
-        tickerContent.appendChild(node);
-      });
-    }
-    _rebuildTickerClone();
-
-    let indices = [
-      { ticker: "SPY", priceKey: "sp500-price", changeKey: "sp500-change" },
-      { ticker: "QQQ", priceKey: "nasdaq-price", changeKey: "nasdaq-change" },
-      { ticker: "DIA", priceKey: "dow-price",    changeKey: "dow-change"   },
-      { ticker: "GLD", priceKey: "btc-price",    changeKey: "btc-change"   }
-    ];
-    indices.forEach(function(index) {
-      fetch("https://finnhub.io/api/v1/quote?symbol=" + index.ticker + "&token=" + finnhubKey)
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          let price = data.c; let changePct = data.dp;
-          if (!price) return;
-          let priceStr   = "$" + price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-          let arrow = changePct >= 0 ? "▲" : "▼";
-          let sign  = changePct >= 0 ? "+" : "";
-          let changeStr  = arrow + " " + sign + changePct.toFixed(2) + "%";
-          let changeColor = changePct >= 0 ? "#16a34a" : "#dc2626";
-          _updateTickerEl('[data-mid="' + index.priceKey + '"]', priceStr, null);
-          _updateTickerEl('[data-mid="' + index.changeKey + '"]', changeStr, changeColor);
-        }).catch(function() {});
-    });
-    watchlist.forEach(function(item, i) {
-      setTimeout(function() {
-        fetch("https://finnhub.io/api/v1/quote?symbol=" + encodeURIComponent(item.ticker) + "&token=" + finnhubKey)
-          .then(function(r) { return r.json(); })
-          .then(function(data) {
-            let price = data.c; let changePct = data.dp;
-            if (!price) return;
-            let priceStr   = "$" + price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            let arrow = changePct >= 0 ? "▲" : "▼";
-            let sign  = changePct >= 0 ? "+" : "";
-            let changeStr  = arrow + " " + sign + changePct.toFixed(2) + "%";
-            let changeColor = changePct >= 0 ? "#16a34a" : "#dc2626";
-            _updateTickerEl('[data-wlprice="' + item.ticker + '"]', priceStr, null);
-            _updateTickerEl('[data-wlchange="' + item.ticker + '"]', changeStr, changeColor);
-          }).catch(function() {});
-      }, 200 * (i + 1));
+  if (tickerContent) {
+    tickerContent.querySelectorAll(".wl-bar-item, .wl-bar-divider").forEach(function(el) { el.remove(); });
+    watchlist.forEach(function(item) {
+      let safeT = escHtml(JSON.stringify(item.ticker));
+      let divider = document.createElement("div");
+      divider.className = "market-divider wl-bar-divider";
+      tickerContent.appendChild(divider);
+      let node = document.createElement("div");
+      node.className = "market-item wl-bar-item";
+      node.setAttribute("onclick", "quickSearch(" + safeT + ")");
+      node.innerHTML =
+        "<span class='market-name'>" + escHtml(item.ticker) + "</span>" +
+        "<span class='market-price' data-wlprice='" + escHtml(item.ticker) + "'>—</span>" +
+        "<span class='market-change' data-wlchange='" + escHtml(item.ticker) + "'>—</span>";
+      tickerContent.appendChild(node);
     });
   }
+
+  // Clone content now (both copies get "—" placeholders; prices update both via querySelectorAll)
+  _rebuildTickerClone();
+
+  // Fetch index prices — update ALL matching elements (original + clone)
+  indices.forEach(function(index) {
+    fetch("https://finnhub.io/api/v1/quote?symbol=" + index.ticker + "&token=" + finnhubKey)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        let price = data.c;
+        let changePct = data.dp;
+        if (!price) return;
+        let priceStr = "$" + price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        let arrow = changePct >= 0 ? "▲" : "▼";
+        let sign = changePct >= 0 ? "+" : "";
+        let changeStr = arrow + " " + sign + changePct.toFixed(2) + "%";
+        let changeColor = changePct >= 0 ? "#16a34a" : "#dc2626";
+        _updateTickerEl('[data-mid="' + index.priceKey + '"]', priceStr, null);
+        _updateTickerEl('[data-mid="' + index.changeKey + '"]', changeStr, changeColor);
+      })
+      .catch(function() {});
+  });
+
+  // Fetch watchlist prices — staggered, update ALL matching elements (original + clone)
+  watchlist.forEach(function(item, i) {
+    setTimeout(function() {
+      fetch("https://finnhub.io/api/v1/quote?symbol=" + encodeURIComponent(item.ticker) + "&token=" + finnhubKey)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          let price = data.c;
+          let changePct = data.dp;
+          if (!price) return;
+          let priceStr = "$" + price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          let arrow = changePct >= 0 ? "▲" : "▼";
+          let sign = changePct >= 0 ? "+" : "";
+          let changeStr = arrow + " " + sign + changePct.toFixed(2) + "%";
+          let changeColor = changePct >= 0 ? "#16a34a" : "#dc2626";
+          _updateTickerEl('[data-wlprice="' + item.ticker + '"]', priceStr, null);
+          _updateTickerEl('[data-wlchange="' + item.ticker + '"]', changeStr, changeColor);
+        })
+        .catch(function() {});
+    }, 200 * (i + 1));
+  });
 }
 
 function loadSectors() {
+  let sectors = [
+    { name: 'Technology',    etf: 'XLK' },
+    { name: 'Healthcare',    etf: 'XLV' },
+    { name: 'Financials',    etf: 'XLF' },
+    { name: 'Energy',        etf: 'XLE' },
+    { name: 'Consumer',      etf: 'XLY' },
+    { name: 'Industrials',   etf: 'XLI' },
+    { name: 'Real Estate',   etf: 'XLRE' },
+    { name: 'Utilities',     etf: 'XLU' },
+  ];
   let cached = localStorage.getItem('sectors-cache');
   if (cached) {
     let p = JSON.parse(cached);
     if (Date.now() - p.ts < 300000) { renderSectors(p.data); return; }
   }
-
-  if (activeMarket === 'MX') {
-    // Show MX sector benchmarks as static reference (no live ETF data for BMV sectors)
-    let mxData = Object.keys(mxSectorAverages).map(function(name) {
-      return { name: name, etf: '', changePct: 0, marketOpen: false };
-    });
-    renderSectors(mxData);
-    return;
-  }
-
-  let sectors = [
-    { name: 'Technology',  etf: 'XLK'  },
-    { name: 'Healthcare',  etf: 'XLV'  },
-    { name: 'Financials',  etf: 'XLF'  },
-    { name: 'Energy',      etf: 'XLE'  },
-    { name: 'Consumer',    etf: 'XLY'  },
-    { name: 'Industrials', etf: 'XLI'  },
-    { name: 'Real Estate', etf: 'XLRE' },
-    { name: 'Utilities',   etf: 'XLU'  },
-  ];
   let delay = 0;
   let promises = sectors.map(function(s) {
     let d = delay; delay += 150;
@@ -2633,7 +1928,7 @@ function migrateToMultiPortfolio(legacyStocks, legacyClosed, legacyHistory) {
   let history = legacyHistory || [];
   let id = 'port_' + Date.now();
   let all = {};
-  all[id] = { name: 'My Portfolio', isDemo: false, stocks: stocks, closedPositions: closed, valueHistory: history, market: 'US' };
+  all[id] = { name: 'My Portfolio', isDemo: false, stocks: stocks, closedPositions: closed, valueHistory: history };
   localStorage.setItem('portfolios', JSON.stringify(all));
   localStorage.setItem('activePortfolioId', id);
   // Clean up old keys
@@ -2642,10 +1937,10 @@ function migrateToMultiPortfolio(legacyStocks, legacyClosed, legacyHistory) {
   localStorage.removeItem('portfolio-value-history');
 }
 
-function createPortfolio(name, isDemo, stocks, market) {
+function createPortfolio(name, isDemo, stocks) {
   let all = getAllPortfolios();
   let id = 'port_' + Date.now();
-  all[id] = { name: name, isDemo: isDemo || false, stocks: stocks || [], closedPositions: [], valueHistory: [], market: market || activeMarket };
+  all[id] = { name: name, isDemo: isDemo || false, stocks: stocks || [], closedPositions: [], valueHistory: [] };
   localStorage.setItem('portfolios', JSON.stringify(all));
   localStorage.setItem('activePortfolioId', id);
   saveToFirestore({ portfolios: all, activePortfolioId: id });
@@ -2689,7 +1984,7 @@ function setActivePortfolio(id) {
 function promptNewPortfolio() {
   let name = prompt('Portfolio name:');
   if (!name || !name.trim()) return;
-  createPortfolio(name.trim(), false, [], activeMarket);
+  createPortfolio(name.trim(), false, []);
   renderPortfolioTabs();
   renderPortfolio();
 }
@@ -2723,14 +2018,7 @@ function renderPortfolioTabs() {
   if (!bar) return;
   let all = getAllPortfolios();
   let activeId = getActiveId();
-  // Only show portfolios that belong to the active market
-  let filtered = Object.keys(all).filter(function(id) { return (all[id].market || 'US') === activeMarket; });
-  // If active portfolio is not in this market, auto-switch to first available
-  if (activeId && all[activeId] && (all[activeId].market || 'US') !== activeMarket) {
-    let first = filtered[0];
-    if (first) { localStorage.setItem('activePortfolioId', first); activeId = first; }
-  }
-  let tabs = filtered.map(function(id) {
+  let tabs = Object.keys(all).map(function(id) {
     let p = all[id];
     let isActive = id === activeId;
     let demoTag = p.isDemo ? '<span class="port-tab-demo-tag">✦</span>' : '';
@@ -2739,8 +2027,7 @@ function renderPortfolioTabs() {
       (isActive ? '<span class="port-tab-menu-btn" id="port-menu-btn-' + id + '" onclick="event.stopPropagation();openPortfolioMenu(\'' + id + '\')">···</span>' : '') +
     '</button>';
   }).join('');
-  let marketLabel = activeMarket === 'MX' ? '🇲🇽 MX Portfolios' : '🇺🇸 US Portfolios';
-  bar.innerHTML = '<span class="port-market-label">' + marketLabel + '</span>' + tabs + '<button class="port-tab-add" onclick="promptNewPortfolio()" title="New portfolio">+</button>';
+  bar.innerHTML = tabs + '<button class="port-tab-add" onclick="promptNewPortfolio()" title="New portfolio">+</button>';
 }
 
 // Pool of candidates per profile — scored live, top 5 selected
@@ -2911,22 +2198,18 @@ function renderPortfolio() {
   empty.style.display = 'none';
   summary.style.display = 'block';
   let totalValue = 0, totalCost = 0, totalDayChange = 0;
-  let portMarket = active ? (active.market || 'US') : 'US';
-  let portCurrSym = portMarket === 'MX' ? 'MX$' : '$';
-  _portCurrSym = portCurrSym; // expose for renderPortfolioRows
   let scores = [], fetchPromises = [], stockData = [], failedTickers = [];
   portfolio.forEach(function(item, idx) {
     // Compute totals across all lots
     let totalShares = item.lots.reduce(function(sum, l) { return sum + l.shares; }, 0);
     let totalLotCost = item.lots.reduce(function(sum, l) { return sum + l.shares * l.price; }, 0);
     let avgPrice = totalShares > 0 ? totalLotCost / totalShares : 0;
+    // Stagger requests 120ms apart to avoid Finnhub rate limiting
     let p = new Promise(function(resolve) { setTimeout(resolve, idx * 120); })
-      .then(function() {
-        if (portMarket === 'MX') return mxQuote(item.ticker).then(function(raw) { let q = adaptMXQuote(raw); return { c: q.c, dp: q.dp }; });
-        return fetch('https://finnhub.io/api/v1/quote?symbol=' + item.ticker + '&token=' + finnhubKey).then(function(r) { return r.json(); });
-      })
+      .then(function() { return fetch('https://finnhub.io/api/v1/quote?symbol=' + item.ticker + '&token=' + finnhubKey); })
+      .then(function(r) { return r.json(); })
       .then(function(q) {
-        let currentPrice = q.c || avgPrice;
+        let currentPrice = q.c || avgPrice; // fall back to buy price if rate-limited
         let dayChange = q.dp || 0;
         let value = currentPrice * totalShares;
         let cost = totalLotCost;
@@ -2951,14 +2234,14 @@ function renderPortfolio() {
     let avgScore = scores.length > 0 ? Math.round(scores.reduce(function(a, b) { return a + b; }, 0) / scores.length) : null;
     let gainColor = totalGain >= 0 ? '#16a34a' : '#dc2626';
     let dayColor = totalDayChange >= 0 ? '#16a34a' : '#dc2626';
-    document.getElementById('port-total-value').textContent = portCurrSym + totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    document.getElementById('port-total-value').textContent = '$' + totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     let fmt = function(n) { return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
-    document.getElementById('port-total-gain').textContent = (totalGain >= 0 ? '+' + portCurrSym : '-' + portCurrSym) + fmt(Math.abs(totalGain));
+    document.getElementById('port-total-gain').textContent = (totalGain >= 0 ? '+$' : '-$') + fmt(Math.abs(totalGain));
     document.getElementById('port-total-gain').style.color = gainColor;
     document.getElementById('port-total-pct').textContent = (totalGainPct >= 0 ? '+' : '') + totalGainPct.toFixed(2) + '% since purchase';
     let prevValue = totalValue - totalDayChange;
     let totalDayChangePct = prevValue > 0 ? (totalDayChange / prevValue) * 100 : 0;
-    document.getElementById('port-today-change').textContent = (totalDayChange >= 0 ? '+' + portCurrSym : '-' + portCurrSym) + fmt(Math.abs(totalDayChange));
+    document.getElementById('port-today-change').textContent = (totalDayChange >= 0 ? '+$' : '-$') + fmt(Math.abs(totalDayChange));
     document.getElementById('port-today-change').style.color = dayColor;
     let todayPctEl = document.getElementById('port-today-pct');
     if (todayPctEl) { todayPctEl.textContent = (totalDayChangePct >= 0 ? '+' : '') + totalDayChangePct.toFixed(2) + '% today'; todayPctEl.style.color = dayColor; }
@@ -3240,9 +2523,9 @@ function renderPortfolioRows(data) {
             return '<div class="port-lot-row">' +
               '<div class="port-lot-info">' +
                 '<span class="port-lot-num">Lot ' + (i + 1) + '</span>' +
-                '<span>' + lot.shares + ' shares @ ' + _portCurrSym + lot.price.toFixed(2) + (lot.date ? ' · ' + lot.date : '') + '</span>' +
+                '<span>' + lot.shares + ' shares @ $' + lot.price.toFixed(2) + (lot.date ? ' · ' + lot.date : '') + '</span>' +
               '</div>' +
-              '<div class="port-lot-gain" style="color:' + lotGc + ';">' + (lotGain >= 0 ? '+' : '') + _portCurrSym + lotGain.toFixed(2) + ' (' + (lotGainPct >= 0 ? '+' : '') + lotGainPct.toFixed(1) + '%)</div>' +
+              '<div class="port-lot-gain" style="color:' + lotGc + ';">' + (lotGain >= 0 ? '+' : '') + '$' + lotGain.toFixed(2) + ' (' + (lotGainPct >= 0 ? '+' : '') + lotGainPct.toFixed(1) + '%)</div>' +
               '<button onclick="event.stopPropagation();removeLotFromPortfolio(' + escHtml(JSON.stringify(s.ticker)) + ',' + i + ')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:13px;padding:2px 6px;flex-shrink:0;">✕</button>' +
             '</div>';
           }).join('') +
@@ -3257,13 +2540,13 @@ function renderPortfolioRows(data) {
             (hasMultiple ? '<button id="lots-btn-' + s.ticker + '" onclick="event.stopPropagation();togglePortLots(' + escHtml(JSON.stringify(s.ticker)) + ')" class="port-lots-toggle">▾</button>' : '') +
             '<div>' +
               '<div style="font-weight:600;font-size:14px;">' + s.ticker + '</div>' +
-              '<div style="font-size:11px;color:#64748b;">' + s.shares.toFixed(s.shares % 1 === 0 ? 0 : 2) + ' shares · avg ' + _portCurrSym + s.buyPrice.toFixed(2) + (hasMultiple ? ' · ' + s.lots.length + ' lots' : '') + '</div>' +
-              '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">now ' + _portCurrSym + s.currentPrice.toFixed(2) + '</div>' +
+              '<div style="font-size:11px;color:#64748b;">' + s.shares.toFixed(s.shares % 1 === 0 ? 0 : 2) + ' shares · avg $' + s.buyPrice.toFixed(2) + (hasMultiple ? ' · ' + s.lots.length + ' lots' : '') + '</div>' +
+              '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">now $' + s.currentPrice.toFixed(2) + '</div>' +
             '</div>' +
           '</div>' +
-          '<div>' + _portCurrSym + s.value.toFixed(2) + '</div>' +
-          '<div class="hide-mobile" style="color:' + gc + ';">' + (s.gain >= 0 ? '+' : '') + _portCurrSym + s.gain.toFixed(2) + '<br><span style="font-size:11px;">' + (s.gainPct >= 0 ? '+' : '') + s.gainPct.toFixed(1) + '%</span></div>' +
-          '<div class="hide-mobile" style="color:' + dc + ';">' + (s.dayChangeAmt >= 0 ? '+' : '') + _portCurrSym + s.dayChangeAmt.toFixed(2) + '</div>' +
+          '<div>$' + s.value.toFixed(2) + '</div>' +
+          '<div class="hide-mobile" style="color:' + gc + ';">' + (s.gain >= 0 ? '+' : '') + '$' + s.gain.toFixed(2) + '<br><span style="font-size:11px;">' + (s.gainPct >= 0 ? '+' : '') + s.gainPct.toFixed(1) + '%</span></div>' +
+          '<div class="hide-mobile" style="color:' + dc + ';">' + (s.dayChangeAmt >= 0 ? '+' : '') + '$' + s.dayChangeAmt.toFixed(2) + '</div>' +
           '<div style="display:flex;align-items:center;gap:8px;">' + portSignal(s.score) +
             '<button onclick="event.stopPropagation();openSellModal(' + escHtml(JSON.stringify(s.ticker)) + ',' + s.currentPrice + ',' + s.shares + ')" class="sell-btn">Sell</button>' +
             '<button onclick="event.stopPropagation();removeFromPortfolio(' + escHtml(JSON.stringify(s.ticker)) + ')" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:16px;padding:0;">✕</button>' +
@@ -3695,25 +2978,19 @@ function renderProfile() {
 let stockChatHistory = [];
 let stockChatContext = '';
 
-function initStockChat(ticker, companyName, totalScore, changePct, pe, margin, growth, beta, rsi, price, isMX) {
+function initStockChat(ticker, companyName, totalScore, changePct, pe, margin, growth, beta, rsi, price) {
   stockChatHistory = [];
-  let profileCtx = userProfile ? (isMX
-    ? 'El usuario es inversionista ' + userProfile.type + ' con horizonte ' + userProfile.horizon + ' y meta de ' + userProfile.goal + '. Adapta tu nivel. '
-    : 'The user is a ' + userProfile.type + ' investor with a ' + userProfile.horizon + ' horizon and goal to ' + userProfile.goal + '. Tailor explanations to their level. ') : '';
-  stockChatContext = isMX
-    ? 'Eres StockIQ, un asistente de educación financiera. Ayuda al usuario a entender genuinamente esta empresa de la Bolsa Mexicana de Valores (BMV). No solo definas términos — haz conexiones reales y da perspectiva significativa. Responde en 3-4 oraciones en español. Escribe como un amigo con conocimiento: cálido, claro, específico. Usa los números reales cuando sea relevante. Nunca digas comprar, vender, invertir o recomendar. Si piden una recomendación directa, redirige a explicar qué significan los datos. '
-    : 'You are StockIQ, a financial education assistant. Help the user genuinely understand this company and its data — not just define terms, but make real connections and give meaningful insight. Keep answers to 3-4 sentences. Write like a knowledgeable friend: warm, clear, specific. Use the actual numbers when relevant. Never say buy, sell, invest, or recommend. If asked for a direct recommendation, redirect to explaining what the data means and what factors matter. ';
-  stockChatContext +=
+  let profileCtx = userProfile ? 'The user is a ' + userProfile.type + ' investor with a ' + userProfile.horizon + ' horizon and goal to ' + userProfile.goal + '. Tailor explanations to their level. ' : '';
+  stockChatContext = 'You are StockIQ, a financial education assistant. Help the user genuinely understand this company and its data — not just define terms, but make real connections and give meaningful insight. Keep answers to 3-4 sentences. Write like a knowledgeable friend: warm, clear, specific. Use the actual numbers when relevant. Never say buy, sell, invest, or recommend. If asked for a direct recommendation, redirect to explaining what the data means and what factors matter. ' +
     profileCtx +
-    (isMX ? 'Acción: ' : 'Stock: ') + companyName + ' (' + ticker + '), score ' + totalScore + '/100, ' +
-    (isMX ? 'hoy ' : 'today ') + (changePct >= 0 ? '+' : '') + changePct.toFixed(2) + '%, ' +
-    (isMX ? 'precio MX$' : 'price $') + price.toFixed(2) + (isMX ? ' MXN, bolsa BMV/BIVA, ' : ', ') +
-    (pe > 0 ? (isMX ? 'P/U ' : 'P/E ') + pe.toFixed(1) + ', ' : '') +
-    (margin !== 0 ? (isMX ? 'margen neto ' : 'profit margin ') + margin.toFixed(1) + '%, ' : '') +
-    (growth !== 0 ? (isMX ? 'crec. ingresos ' : 'revenue growth ') + growth.toFixed(1) + '%, ' : '') +
+    'Stock: ' + companyName + ' (' + ticker + '), score ' + totalScore + '/100, ' +
+    'today ' + (changePct >= 0 ? '+' : '') + changePct.toFixed(2) + '%, price $' + price.toFixed(2) + ', ' +
+    (pe > 0 ? 'P/E ' + pe.toFixed(1) + ', ' : '') +
+    (margin !== 0 ? 'profit margin ' + margin.toFixed(1) + '%, ' : '') +
+    (growth !== 0 ? 'revenue growth ' + growth.toFixed(1) + '%, ' : '') +
     (beta > 0 ? 'beta ' + beta.toFixed(2) + ', ' : '') +
     (rsi !== null ? 'RSI ' + rsi + ', ' : '') +
-    (isMX ? 'señal: ' : 'signal: ') + (totalScore >= 65 ? (isMX ? 'Sólida' : 'Strong') : totalScore >= 50 ? (isMX ? 'Vigilar' : 'Watch') : (isMX ? 'Alto Riesgo' : 'Risky')) + '.';
+    'signal: ' + (totalScore >= 65 ? 'Strong' : totalScore >= 50 ? 'Watch' : 'Risky') + '.';
 }
 
 function askStockQuestion(question) {
@@ -4028,13 +3305,6 @@ auth.onAuthStateChanged(function(user) {
     }
 
     document.getElementById('auth-overlay').style.display = 'none';
-
-    // Sync market switcher button state from localStorage
-    document.querySelectorAll('.market-switch-btn').forEach(function(b) {
-      b.classList.toggle('active', b.dataset.market === activeMarket);
-    });
-    let stockInput = document.getElementById('stock-input');
-    if (stockInput) stockInput.placeholder = activeMarket === 'MX' ? 'Buscar emisora (ej. WALMEX, CEMEX…)' : 'Search ticker (e.g. AAPL, NVDA…)';
 
     if (!userProfile) {
       document.getElementById('quiz-overlay').style.display = 'flex';
