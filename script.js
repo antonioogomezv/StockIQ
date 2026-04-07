@@ -121,8 +121,7 @@ function mxHistorical(emisoraSerie, inicio, final) {
   return dbFetch('historicos', { emisora_serie: emisoraSerie, inicio: inicio, final: final });
 }
 
-function mxFinancials(emisora) {
-  // Compute most recently completed quarter: April 2026 → Q4 2025 = "4T_2025"
+function _mxCurrentPeriod() {
   var now = new Date();
   var y = now.getFullYear();
   var m = now.getMonth() + 1;
@@ -131,9 +130,28 @@ function mxFinancials(emisora) {
   else if (m <= 6) { q = 1; qy = y; }
   else if (m <= 9) { q = 2; qy = y; }
   else             { q = 3; qy = y; }
-  var periodo = q + 'T_' + qy;
-  // param is "financieros" (plural), emisora must be base name without serie
-  return dbFetch('financieros', { emisora: emisora, financieros: 'resultado_acumulado', periodo: periodo });
+  return q + 'T_' + qy;
+}
+
+function mxFinancials(emisora) {
+  return dbFetch('financieros', { emisora: emisora, financieros: 'resultado_acumulado', periodo: _mxCurrentPeriod() });
+}
+
+function mxFinancialsPrev(emisora) {
+  // Prior year same quarter (e.g. 4T_2024 when current is 4T_2025)
+  var now = new Date();
+  var y = now.getFullYear();
+  var m = now.getMonth() + 1;
+  var q, qy;
+  if (m <= 3)      { q = 4; qy = y - 2; }
+  else if (m <= 6) { q = 1; qy = y - 1; }
+  else if (m <= 9) { q = 2; qy = y - 1; }
+  else             { q = 3; qy = y - 1; }
+  return dbFetch('financieros', { emisora: emisora, financieros: 'resultado_acumulado', periodo: q + 'T_' + qy });
+}
+
+function mxPosition(emisora) {
+  return dbFetch('financieros', { emisora: emisora, financieros: 'posicion', periodo: _mxCurrentPeriod() });
 }
 
 function mxEmisoras() {
@@ -196,33 +214,99 @@ function adaptMXProfile(raw, ticker) {
   };
 }
 
-function adaptMXMetrics(raw) {
-  // real format: { "resultado_acumulado": { "2024-01-01_2024-12-31": { "revenue": ["label", val], ... } } }
-  if (!raw || !raw.resultado_acumulado) return {};
-  let periods = raw.resultado_acumulado;
-  let periodKey = Object.keys(periods)[0];
-  if (!periodKey) return {};
-  let d = periods[periodKey];
-  function val(field) { return Array.isArray(d[field]) ? (d[field][1] || 0) : 0; }
-  let revenue   = val('revenue');
-  let netProfit = val('profitloss');
-  let eps       = val('basicearningslosspershare') || val('basicearningslosspersharefromcontinuingoperations');
-  let margin    = revenue > 0 ? (netProfit / revenue) * 100 : 0;
-  return {
+function adaptMXMetrics(rawCurrent, rawPrev, rawPosition) {
+  // rawCurrent / rawPrev: { resultado_acumulado: { "period": { field: ["label", val] } } }
+  // rawPosition:          { posicion:            { "period": { field: ["label", val] } } }
+  let metrics = {
     peBasicExclExtraTTM:           0,
-    netProfitMarginTTM:            margin,
+    netProfitMarginTTM:            0,
     revenueGrowthTTMYoy:           0,
-    beta:                          1,
+    beta:                          0,
     roeAnnual:                     0,
     'totalDebt/totalEquityAnnual': 0,
     currentRatioAnnual:            0,
     netInterestCoverageAnnual:     0,
     '52WeekHigh':                  0,
     '52WeekLow':                   0,
-    epsBasic:                      eps,
-    revenueTotal:                  revenue,
-    netIncome:                     netProfit
+    epsBasic:                      0,
+    revenueTotal:                  0,
+    netIncome:                     0
   };
+
+  // — resultado_acumulado (current year) —
+  if (rawCurrent && rawCurrent.resultado_acumulado) {
+    let pk = Object.keys(rawCurrent.resultado_acumulado)[0];
+    let d  = rawCurrent.resultado_acumulado[pk] || {};
+    function v(f) { return Array.isArray(d[f]) ? (d[f][1] || 0) : 0; }
+    let revenue        = v('revenue');
+    let netProfit      = v('profitloss');
+    let opProfit       = v('profitlossfromoperatingactivities');
+    let financeCosts   = v('financecosts');
+    let eps            = v('basicearningslosspershare') || v('basicearningslosspersharefromcontinuingoperations');
+    metrics.netProfitMarginTTM        = revenue > 0 ? (netProfit / revenue) * 100 : 0;
+    metrics.netInterestCoverageAnnual = financeCosts > 0 ? opProfit / financeCosts : 0;
+    metrics.epsBasic    = eps;
+    metrics.revenueTotal = revenue;
+    metrics.netIncome   = netProfit;
+  }
+
+  // — resultado_acumulado (prior year → revenue growth) —
+  if (rawPrev && rawPrev.resultado_acumulado) {
+    let pk = Object.keys(rawPrev.resultado_acumulado)[0];
+    let d  = rawPrev.resultado_acumulado[pk] || {};
+    function vp(f) { return Array.isArray(d[f]) ? (d[f][1] || 0) : 0; }
+    let prevRevenue = vp('revenue');
+    if (prevRevenue > 0 && metrics.revenueTotal > 0) {
+      metrics.revenueGrowthTTMYoy = ((metrics.revenueTotal - prevRevenue) / prevRevenue) * 100;
+    }
+  }
+
+  // — posicion (balance general) —
+  if (rawPosition && rawPosition.posicion) {
+    let pk = Object.keys(rawPosition.posicion)[0];
+    let d  = rawPosition.posicion[pk] || {};
+    function vb(f) { return Array.isArray(d[f]) ? (d[f][1] || 0) : 0; }
+    let equity             = vb('equity');
+    let currentAssets      = vb('currentassets');
+    let currentLiabilities = vb('currentliabilities');
+    let totalLiabilities   = vb('liabilities');
+    metrics.roeAnnual                  = equity > 0 ? (metrics.netIncome / equity) * 100 : 0;
+    metrics.currentRatioAnnual         = currentLiabilities > 0 ? currentAssets / currentLiabilities : 0;
+    metrics['totalDebt/totalEquityAnnual'] = equity > 0 ? totalLiabilities / equity : 0;
+  }
+
+  return metrics;
+}
+
+// Calculate beta from two price series (weekly returns)
+function calculateMXBeta(stockBars, ipcBars) {
+  if (stockBars.length < 20 || ipcBars.length < 20) return 0;
+  // Build weekly close map for IPC keyed by approx week
+  let ipcMap = {};
+  ipcBars.forEach(function(b) { ipcMap[Math.round(b.t / 604800000)] = b.c; });
+  // Align stock and IPC weekly, compute returns
+  let sReturns = [], mReturns = [];
+  let prevS = null, prevM = null;
+  stockBars.forEach(function(b) {
+    let wk = Math.round(b.t / 604800000);
+    let mc = ipcMap[wk] || ipcMap[wk - 1] || ipcMap[wk + 1];
+    if (!mc) return;
+    if (prevS !== null && prevM !== null) {
+      sReturns.push((b.c - prevS) / prevS);
+      mReturns.push((mc - prevM) / prevM);
+    }
+    prevS = b.c; prevM = mc;
+  });
+  if (sReturns.length < 10) return 0;
+  let n = sReturns.length;
+  let avgS = sReturns.reduce(function(a, b) { return a + b; }, 0) / n;
+  let avgM = mReturns.reduce(function(a, b) { return a + b; }, 0) / n;
+  let cov = 0, varM = 0;
+  for (let i = 0; i < n; i++) {
+    cov  += (sReturns[i] - avgS) * (mReturns[i] - avgM);
+    varM += (mReturns[i] - avgM) * (mReturns[i] - avgM);
+  }
+  return varM > 0 ? cov / varM : 0;
 }
 
 function adaptMXHistorical(raw) {
@@ -589,8 +673,9 @@ function searchStock() {
 function _searchStockMX(query) {
   let today = new Date();
   let toDate = today.toISOString().split("T")[0];
-  let from90 = new Date(today); from90.setDate(today.getDate() - 90);
-  let from90Str = from90.toISOString().split("T")[0];
+  // 1 year of history for 52wk high/low and beta calculation
+  let from365 = new Date(today); from365.setDate(today.getDate() - 365);
+  let from365Str = from365.toISOString().split("T")[0];
 
   // Look up the base emisora (without serie) for financieros, and get profile info from cache
   // e.g. query="WALMEX*" → baseEmisora="WALMEX"; query="CEMEXCPO" → baseEmisora="CEMEX"
@@ -603,21 +688,43 @@ function _searchStockMX(query) {
     mxQuote(query).catch(function() { return {}; }),
     mxNoticias().catch(function() { return []; }),
     mxFinancials(baseEmisora).catch(function() { return {}; }),
-    mxHistorical(query, from90Str, toDate).catch(function() { return {}; })
+    mxFinancialsPrev(baseEmisora).catch(function() { return {}; }),
+    mxPosition(baseEmisora).catch(function() { return {}; }),
+    mxHistorical(query, from365Str, toDate).catch(function() { return {}; }),
+    mxHistorical('IPC', from365Str, toDate).catch(function() { return {}; })  // for beta
   ]).then(function(results) {
-    let rawQuote      = results[0];
-    let rawNoticias   = results[1];
-    let rawFinancials = results[2];
-    let rawHistorical = results[3];
+    let rawQuote         = results[0];
+    let rawNoticias      = results[1];
+    let rawFinancials    = results[2];
+    let rawFinancialsPrev = results[3];
+    let rawPosition      = results[4];
+    let rawHistorical    = results[5];
+    let rawIPC           = results[6];
 
-    // Use profile from emisoras cache if available; fall back to minimal info
     let emisInfo = emisInfoFromCache;
 
     let quote   = adaptMXQuote(rawQuote);
     let profile = adaptMXProfile(emisInfo, query);
     let news    = adaptMXNews(rawNoticias);
-    let metrics = adaptMXMetrics(rawFinancials);
+    let metrics = adaptMXMetrics(rawFinancials, rawFinancialsPrev, rawPosition);
     let bars    = adaptMXHistorical(rawHistorical);
+    let ipcBars = adaptMXHistorical(rawIPC);
+
+    // Calculate P/U from price / EPS
+    if (metrics.epsBasic > 0 && quote.c > 0) {
+      metrics.peBasicExclExtraTTM = quote.c / metrics.epsBasic;
+    }
+
+    // Calculate beta from 1-year weekly returns vs IPC
+    let beta = calculateMXBeta(bars, ipcBars);
+    if (beta > 0) metrics.beta = parseFloat(beta.toFixed(2));
+
+    // 52-week high and low from historical
+    if (bars.length > 0) {
+      let closes = bars.map(function(b) { return b.c; });
+      metrics['52WeekHigh'] = Math.max.apply(null, closes);
+      metrics['52WeekLow']  = Math.min.apply(null, closes);
+    }
 
     if (!quote.c) {
       document.getElementById("loading").style.display = "none";
@@ -629,10 +736,10 @@ function _searchStockMX(query) {
     cache[query] = data;
     displayData(data);
 
-    // Render chart from historical data
+    // Chart: show last 90 days by default, store full year
     if (bars.length > 0) {
-      let prices = bars.map(function(b) { return b.c; });
-      let dates  = bars.map(function(b) { return new Date(b.t).toISOString().split("T")[0]; });
+      let prices  = bars.map(function(b) { return b.c; });
+      let dates   = bars.map(function(b) { return new Date(b.t).toISOString().split("T")[0]; });
       let volumes = bars.map(function(b) { return b.v || 0; });
       cache[query].prices  = prices;
       cache[query].dates   = dates;
