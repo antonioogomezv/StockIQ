@@ -181,17 +181,18 @@ function adaptMXQuote(raw) {
 }
 
 function adaptMXProfile(raw, ticker) {
-  // raw is a flat item from getMXEmisoras: { emisoraSerie, emisora, serie, razon_social, bolsa }
-  if (!raw) return { name: ticker, ticker: ticker, exchange: 'BMV', finnhubIndustry: '', country: 'Mexico' };
+  // raw is a flat item from getMXEmisoras: { emisoraSerie, emisora, serie, razon_social, bolsa, acciones_en_circulacion }
+  if (!raw) return { name: ticker, ticker: ticker, exchange: 'BMV', finnhubIndustry: '', country: 'Mexico', sharesOutstanding: 0 };
   return {
-    name:            raw.razon_social || ticker,
-    ticker:          ticker,
-    exchange:        raw.bolsa || 'BMV',
-    finnhubIndustry: '',
-    country:         'Mexico',
-    weburl:          '',
-    logo:            '',
-    description:     ''
+    name:              raw.razon_social || ticker,
+    ticker:            ticker,
+    exchange:          raw.bolsa || 'BMV',
+    finnhubIndustry:   '',
+    country:           'Mexico',
+    weburl:            '',
+    logo:              '',
+    description:       '',
+    sharesOutstanding: raw.acciones_en_circulacion || 0
   };
 }
 
@@ -300,11 +301,12 @@ function getMXEmisoras(callback) {
           let info = seriesObj[serie] || {};
           if (info.estatus === 'SUSPENDIDA') return;
           list.push({
-            emisoraSerie: emisora + serie,   // e.g. "WALMEX*" or "CEMEXCPO"
-            emisora:      emisora,
-            serie:        serie,
-            razon_social: info.razon_social || emisora,
-            bolsa:        info.bolsa || 'BMV'
+            emisoraSerie:          emisora + serie,   // e.g. "WALMEX*" or "CEMEXCPO"
+            emisora:               emisora,
+            serie:                 serie,
+            razon_social:          info.razon_social || emisora,
+            bolsa:                 info.bolsa || 'BMV',
+            acciones_en_circulacion: info.acciones_en_circulacion || 0
           });
         });
       });
@@ -928,8 +930,10 @@ function displayData(data) {
     });
     let articles = relevant.length > 0 ? relevant : news;
     topHeadline = articles[0].headline;
-    let pos = ["beat","growth","record","profit","strong","up","gains","rise","boost","high"];
-    let neg = ["miss","loss","down","fall","cut","weak","drop","layoff","debt","crash"];
+    let pos = ["beat","growth","record","profit","strong","up","gains","rise","boost","high",
+               "crecimiento","récord","utilidad","sólido","alza","ganancias","positivo","expansión","superó","incremento"];
+    let neg = ["miss","loss","down","fall","cut","weak","drop","layoff","debt","crash",
+               "pérdida","baja","caída","débil","recorte","deuda","riesgo","crisis","contracción","incumplimiento"];
     let s = 0;
     articles.slice(0, 10).forEach(function(a) {
       let tx = a.headline.toLowerCase();
@@ -984,7 +988,9 @@ function displayData(data) {
     "</div>";
 
   let scoreColor = totalScore >= 65 ? "#16a34a" : totalScore >= 50 ? "#d97706" : "#dc2626";
-  let scoreLabel = totalScore >= 65 ? "Strong" : totalScore >= 50 ? "Watch" : "Risky";
+  let scoreLabel = isMX
+    ? (totalScore >= 65 ? "Sólida" : totalScore >= 50 ? "Vigilar" : "Riesgo")
+    : (totalScore >= 65 ? "Strong" : totalScore >= 50 ? "Watch" : "Risky");
   document.getElementById("health-score").innerHTML =
     "<div class='score-badge' style='border-color:" + scoreColor + ";'>" +
       "<div class='score-badge-num' style='color:" + scoreColor + ";'>" + totalScore + "</div>" +
@@ -995,17 +1001,17 @@ function displayData(data) {
 
   let signalEl = document.getElementById("signal");
   if (totalScore >= 65) {
-    signalEl.textContent = "Strong Opportunity — fundamentals look solid";
+    signalEl.textContent = isMX ? "Oportunidad Sólida — fundamentales favorables" : "Strong Opportunity — fundamentals look solid";
     signalEl.style.color = "#16a34a";
     signalEl.style.background = "rgba(22,163,74,0.1)";
     signalEl.style.border = "1px solid rgba(22,163,74,0.2)";
   } else if (totalScore >= 50) {
-    signalEl.textContent = "Watch & Wait — some positives, some risks";
+    signalEl.textContent = isMX ? "Observar — hay positivos pero también riesgos" : "Watch & Wait — some positives, some risks";
     signalEl.style.color = "#d97706";
     signalEl.style.background = "rgba(217,119,6,0.1)";
     signalEl.style.border = "1px solid rgba(217,119,6,0.2)";
   } else {
-    signalEl.textContent = "High Risk — proceed with caution";
+    signalEl.textContent = isMX ? "Alto Riesgo — procede con precaución" : "High Risk — proceed with caution";
     signalEl.style.color = "#dc2626";
     signalEl.style.background = "rgba(220,38,38,0.1)";
     signalEl.style.border = "1px solid rgba(220,38,38,0.2)";
@@ -1041,9 +1047,23 @@ function displayData(data) {
   document.getElementById("show-details-btn").textContent = "Show Full Analysis";
 
   document.getElementById("explanation").innerHTML =
-    "<strong>Score Breakdown (13 Factors):</strong>" +
+    (isMX ? "<strong>Análisis (13 Factores):</strong>" : "<strong>Score Breakdown (13 Factors):</strong>") +
 (function() {
-  let factors = [
+  let factors = isMX ? [
+    { label: "Movimiento", score: breakdown.price, what: "Hoy " + (changePct >= 0 ? "+" : "") + changePct.toFixed(2) + "% de cambio. " + (changePct > 1 ? "Subir más de 1% en un día es señal positiva de momentum." : changePct < -1 ? "Caer más de 1% indica presión vendedora." : "Menos de 1% de movimiento — día de baja actividad."), verdict: changePct > 1 ? "Sube hoy" : changePct < -1 ? "Cae hoy" : "Sin movimiento significativo" },
+    { label: "Posición 52s", score: breakdown.position, what: pctFrom52High !== null ? "La acción está " + Math.abs(pctFrom52High) + "% " + (parseFloat(pctFrom52High) < 0 ? "por debajo de" : "cerca de") + " su máximo anual (MX$" + week52High.toFixed(2) + "). " + (breakdown.position >= 7 ? "Estar cerca del máximo anual es señal de fuerte momentum." : breakdown.position >= 4 ? "Se alejó del máximo pero sigue en rango normal." : "Lejos del máximo anual — puede ser oportunidad o señal de alerta.") : "Sin dato de máximo anual.", verdict: breakdown.position >= 7 ? "Cerca del máximo anual" : breakdown.position >= 4 ? "Retroceso desde el máximo" : "Lejos del máximo anual" },
+    { label: "Razón P/U", score: breakdown.pe, what: pe > 0 ? "Pagas MX$" + pe.toFixed(1) + " por cada MX$1 que gana la empresa. " + (pe < 20 ? "P/U bajo — la acción está barata respecto a sus ganancias." : pe < 35 ? "P/U razonable para una empresa de calidad." : "P/U alto — los inversionistas esperan mucho crecimiento futuro.") : "Sin datos de P/U.", verdict: pe > 0 && pe < 20 ? "Precio atractivo vs ganancias" : pe > 0 && pe < 35 ? "Precio justo" : pe > 35 ? "Precio elevado — expectativas altas" : "Sin datos" },
+    { label: "Riesgo (Beta)", score: breakdown.beta, what: beta > 0 ? "Beta " + beta.toFixed(2) + " — si el mercado sube o baja 10%, esta acción típicamente se mueve " + (beta * 10).toFixed(1) + "%. " + (beta < 1 ? "Menos volátil que el mercado." : beta < 1.5 ? "Volatilidad similar al mercado." : "Más volátil que el mercado.") : "Sin dato de Beta.", verdict: beta < 1 ? "Menos riesgosa que el mercado" : beta < 1.5 ? "Riesgo similar al mercado" : "Más riesgosa que el mercado" },
+    { label: "Margen Neto", score: breakdown.margin, what: margin !== 0 ? "La empresa conserva el " + margin.toFixed(1) + "% de sus ingresos como utilidad neta. " + (margin > 25 ? "Excepcional — muy pocas empresas logran esto." : margin > 10 ? "Margen saludable. La empresa es eficiente y rentable." : margin > 0 ? "Margen delgado — vulnerable a costos imprevistos." : "La empresa está perdiendo dinero.") : "Sin dato de margen.", verdict: margin > 25 ? "Rentabilidad excepcional" : margin > 10 ? "Margen saludable" : margin > 0 ? "Margen delgado" : "Pérdidas actuales" },
+    { label: "Crecimiento", score: breakdown.growth, what: growth !== 0 ? "Los ingresos crecieron " + growth.toFixed(1) + "% vs el año anterior. " + (growth > 15 ? "Crecimiento acelerado — la empresa se expande rápido." : growth > 0 ? "Crecimiento estable. La empresa sigue expandiéndose." : "Los ingresos caen — señal de alerta importante.") : "Sin datos de crecimiento.", verdict: growth > 15 ? "Crecimiento acelerado" : growth > 0 ? "Crecimiento estable" : "Ingresos en caída" },
+    { label: "Nivel de Deuda", score: breakdown.debt, what: "Mide cuánta deuda tiene la empresa respecto a sus activos. " + (breakdown.debt >= 7 ? "Deuda baja — empresa financieramente sólida." : breakdown.debt >= 4 ? "Deuda manejable." : "Deuda alta — puede ser problema si suben las tasas de interés."), verdict: breakdown.debt >= 7 ? "Deuda baja — empresa sólida" : breakdown.debt >= 4 ? "Deuda manejable" : "Deuda alta — precaución" },
+    { label: "RSI", score: breakdown.rsi, what: rsi !== null ? "RSI " + rsi + "/100. " + (rsi < 30 ? "Zona de sobreventa — la acción ha caído mucho y podría rebotar." : rsi > 70 ? "Zona de sobrecompra — la acción ha subido mucho y podría corregir." : "Zona neutral — sin señal extrema.") : "Datos insuficientes.", verdict: rsi !== null && rsi < 30 ? "Sobrevendida — posible rebote" : rsi !== null && rsi > 70 ? "Sobrecomprada — posible corrección" : "Zona neutral" },
+    { label: "Media Móvil", score: breakdown.ma, what: ma50 !== null ? "Promedio 50 días MX$" + ma50.toFixed(2) + ", precio actual MX$" + price.toFixed(2) + ". " + (price > ma50 ? "Por encima del promedio — tendencia alcista." : "Por debajo del promedio — tendencia bajista. Precaución.") : "Datos insuficientes.", verdict: (ma50 !== null && price > ma50) || (ma20 !== null && price > ma20) ? "Tendencia alcista" : "Tendencia bajista" },
+    { label: "Noticias", score: breakdown.news, what: "Análisis de titulares recientes. " + (breakdown.news >= 7 ? "Mayoría de noticias positivas." : breakdown.news >= 4 ? "Noticias mixtas — normal para la mayoría de empresas." : "Noticias negativas recientes — puede estar afectando el precio."), verdict: breakdown.news >= 7 ? "Noticias positivas" : breakdown.news >= 4 ? "Noticias mixtas" : "Noticias negativas" },
+    { label: "ROE", score: breakdown.roe, what: roe !== 0 ? "Retorno sobre Capital: " + roe.toFixed(1) + "%. Por cada MX$100 que invirtieron los accionistas, la empresa genera MX$" + roe.toFixed(1) + " de utilidad. " + (roe > 15 ? "Excelente — administración generando retornos sólidos." : roe > 10 ? "Saludable — buen uso del capital." : roe > 0 ? "Por debajo del promedio — margen de mejora." : "Negativo — destruyendo capital.") : "Sin dato de ROE.", verdict: roe > 15 ? "Excelentes retornos sobre capital" : roe > 10 ? "Retornos saludables" : roe > 0 ? "Retornos por debajo del promedio" : "Retornos negativos" },
+    { label: "Razón Corriente", score: breakdown.currentRatio, what: currentRatio !== 0 ? "Razón corriente de " + currentRatio.toFixed(2) + ". " + (currentRatio > 2 ? "Muy saludable — cubre fácilmente obligaciones a corto plazo." : currentRatio > 1 ? "Adecuada — puede cubrir sus deudas actuales." : "Advertencia — puede tener problemas para pagar a corto plazo.") : "Sin dato de razón corriente.", verdict: currentRatio > 2 ? "Muy saludable — cubre sus compromisos" : currentRatio > 1 ? "Adecuada — cubre deudas actuales" : "Advertencia — riesgo de liquidez" },
+    { label: "Cobertura Int.", score: breakdown.interest, what: interestCoverage !== 0 ? "Cubre intereses " + interestCoverage.toFixed(1) + "x. " + (interestCoverage > 5 ? "Muy seguro — las ganancias superan ampliamente los pagos de deuda." : interestCoverage > 3 ? "Adecuado — puede cubrir los pagos de intereses." : interestCoverage > 1 ? "Ajustado — apenas cubre intereses. Riesgoso si caen ingresos." : "Peligro — no puede cubrir los pagos de intereses.") : "Sin dato de cobertura.", verdict: interestCoverage > 5 ? "Muy seguro — ganancias superan deuda" : interestCoverage > 3 ? "Adecuado — cubre intereses" : "Ajustado o peligroso — riesgo de deuda" },
+  ] : [
     { label: "Price Movement", score: breakdown.price, what: "Today " + (changePct >= 0 ? "+" : "") + changePct.toFixed(2) + "% change. " + (changePct > 1 ? "Moving up more than 1% today is a positive momentum signal." : changePct < -1 ? "Dropping more than 1% today indicates selling pressure." : "Less than 1% movement means low activity today."), verdict: changePct > 1 ? "Moving up today" : changePct < -1 ? "Dropping today" : "No significant movement" },
     { label: "52wk Position", score: breakdown.position, what: pctFrom52High !== null ? "Stock is " + Math.abs(pctFrom52High) + "% " + (parseFloat(pctFrom52High) < 0 ? "below" : "near") + " its yearly high ($" + week52High.toFixed(2) + "). " + (breakdown.position >= 7 ? "Being near the yearly high indicates strong momentum." : breakdown.position >= 4 ? "Pulled back from high but still in normal range." : "Far from yearly high — could be opportunity or warning sign.") : "No yearly high data.", verdict: breakdown.position >= 7 ? "Near yearly high" : breakdown.position >= 4 ? "Pullback from high" : "Far from yearly high" },
     { label: "P/E Ratio", score: breakdown.pe, what: pe > 0 ? "You pay $" + pe.toFixed(1) + " for every $1 the company earns. " + (pe < 20 ? "A low P/E means the stock is cheap relative to earnings." : pe < 35 ? "Reasonable P/E for a quality company." : "High P/E means investors expect a lot of future growth.") : "No P/E data available.", verdict: pe > 0 && pe < 20 ? "Attractive price vs earnings" : pe > 0 && pe < 35 ? "Fair price" : pe > 35 ? "High price — elevated expectations" : "No data" },
@@ -1066,19 +1086,24 @@ function displayData(data) {
 
 
     getScoreHistoryHtml(ticker, totalScore) +
-    getSectorContext(industry, pe, margin, growth, beta);
+    getSectorContext(industry, pe, margin, growth, beta, isMX);
 
-  initStockChat(ticker, companyName, totalScore, changePct, pe, margin, growth, beta, rsi, price);
+  initStockChat(ticker, companyName, totalScore, changePct, pe, margin, growth, beta, rsi, price, isMX);
   let chatEl = document.getElementById('ai-chat');
   if (chatEl) { chatEl.style.display = 'none'; document.getElementById('ai-chat-messages').innerHTML = ''; document.getElementById('ai-chat-suggestions').style.display = 'flex'; }
-  getAIExplanation(ticker, companyName, totalScore, changePct, pe, margin, growth, beta, rsi, ma50, price, topHeadline, roe, currentRatio, interestCoverage);
+  getAIExplanation(ticker, companyName, totalScore, changePct, pe, margin, growth, beta, rsi, ma50, price, topHeadline, roe, currentRatio, interestCoverage, isMX);
   loadChart(prices, dates, volumes || [], prevClose, dayHigh, dayLow, week52High);
-  renderCompanyAbout(profile, metrics['dividendYieldIndicatedAnnual'] || 0);
-  renderFundamentals({ price, changePct, prevClose, dayHigh, dayLow, week52High, week52Low, pe, beta, margin, growth, roe, marketCap: profile.marketCapitalization, dividend: metrics['dividendYieldIndicatedAnnual'], nextEarningsDate, lastEarnings });
+  renderCompanyAbout(profile, metrics['dividendYieldIndicatedAnnual'] || 0, isMX);
+  // For MX: calculate market cap from shares × price (shares in units, price in MXN)
+  let mxMarketCap = 0;
+  if (isMX && profile.sharesOutstanding && price > 0) {
+    mxMarketCap = (profile.sharesOutstanding * price) / 1e9; // in billions MXN
+  }
+  renderFundamentals({ price, changePct, prevClose, dayHigh, dayLow, week52High, week52Low, pe, beta, margin, growth, roe, marketCap: isMX ? mxMarketCap : profile.marketCapitalization, dividend: metrics['dividendYieldIndicatedAnnual'], nextEarningsDate, lastEarnings, isMX, epsBasic: metrics.epsBasic || 0 });
   renderNewsSection(news, ticker, companyName);
 }
 
-function renderCompanyAbout(profile, dividend) {
+function renderCompanyAbout(profile, dividend, isMX) {
   let el = document.getElementById('company-about');
   if (!el) return;
   let industry = profile.finnhubIndustry || '';
@@ -1086,18 +1111,23 @@ function renderCompanyAbout(profile, dividend) {
   let website = profile.weburl || '';
   let ipo = profile.ipo ? profile.ipo.split('-')[0] : '';
   let mktCap = profile.marketCapitalization;
-  let capSize = mktCap >= 200000 ? 'Mega Cap' : mktCap >= 10000 ? 'Large Cap' : mktCap >= 2000 ? 'Mid Cap' : mktCap >= 300 ? 'Small Cap' : 'Micro Cap';
-  let capDesc = mktCap >= 10000 ? 'Large, established company' : mktCap >= 2000 ? 'Mid-size company' : 'Smaller, higher-risk company';
 
   let items = [];
-  if (industry) items.push({ label: 'Industry', value: escHtml(industry) });
-  if (country) items.push({ label: 'Country', value: escHtml(country) });
-  if (ipo) items.push({ label: 'Public Since', value: escHtml(ipo) });
-  if (mktCap > 0) items.push({ label: 'Size', value: capSize + ' — ' + capDesc });
-  let divValue = dividend > 0 ? dividend.toFixed(2) + '% per year' : 'No dividend';
-  let divColor = dividend > 0 ? 'var(--text)' : 'var(--text-muted)';
-  items.push({ label: 'Dividend', value: "<span style='color:" + divColor + ";'>" + divValue + "</span>" });
-  if (website) items.push({ label: 'Website', value: "<a href='" + escHtml(website) + "' target='_blank' rel='noopener' style='color:var(--accent-blue);text-decoration:none;'>" + escHtml(website.replace(/^https?:\/\//, '').replace(/\/$/, '')) + "</a>" });
+  if (industry) items.push({ label: isMX ? 'Sector' : 'Industry', value: escHtml(industry) });
+  if (country) items.push({ label: isMX ? 'País' : 'Country', value: escHtml(country) });
+  if (profile.exchange) items.push({ label: isMX ? 'Bolsa' : 'Exchange', value: escHtml(profile.exchange) });
+  if (!isMX) {
+    if (ipo) items.push({ label: 'Public Since', value: escHtml(ipo) });
+    if (mktCap > 0) {
+      let capSize = mktCap >= 200000 ? 'Mega Cap' : mktCap >= 10000 ? 'Large Cap' : mktCap >= 2000 ? 'Mid Cap' : mktCap >= 300 ? 'Small Cap' : 'Micro Cap';
+      let capDesc = mktCap >= 10000 ? 'Large, established company' : mktCap >= 2000 ? 'Mid-size company' : 'Smaller, higher-risk company';
+      items.push({ label: 'Size', value: capSize + ' — ' + capDesc });
+    }
+    let divValue = dividend > 0 ? dividend.toFixed(2) + '% per year' : 'No dividend';
+    let divColor = dividend > 0 ? 'var(--text)' : 'var(--text-muted)';
+    items.push({ label: 'Dividend', value: "<span style='color:" + divColor + ";'>" + divValue + "</span>" });
+  }
+  if (website) items.push({ label: isMX ? 'Sitio Web' : 'Website', value: "<a href='" + escHtml(website) + "' target='_blank' rel='noopener' style='color:var(--accent-blue);text-decoration:none;'>" + escHtml(website.replace(/^https?:\/\//, '').replace(/\/$/, '')) + "</a>" });
 
   if (items.length === 0) { el.style.display = 'none'; return; }
 
@@ -1106,7 +1136,7 @@ function renderCompanyAbout(profile, dividend) {
     descHtml = '<p class="company-description">' + escHtml(profile.description) + '</p>';
   }
 
-  el.innerHTML = '<h2>ABOUT</h2>' + descHtml + '<div class="about-grid">' +
+  el.innerHTML = '<h2>' + (isMX ? 'ACERCA DE' : 'ABOUT') + '</h2>' + descHtml + '<div class="about-grid">' +
     items.map(function(i) {
       return "<div class='about-item'><div class='about-label'>" + i.label + "</div><div class='about-value'>" + i.value + "</div></div>";
     }).join('') + '</div>';
@@ -1116,24 +1146,42 @@ function renderCompanyAbout(profile, dividend) {
 function renderFundamentals(f) {
   let el = document.getElementById('fundamentals-card');
   if (!el) return;
-  let mktCap = f.marketCap > 0 ? (f.marketCap >= 1000 ? '$' + (f.marketCap / 1000).toFixed(2) + 'T' : '$' + f.marketCap.toFixed(1) + 'B') : '—';
-  let divYield = f.dividend > 0 ? f.dividend.toFixed(2) + '%' : 'None';
+  let isMX = f.isMX || false;
+  let mktCap;
+  if (f.marketCap > 0) {
+    if (isMX) {
+      mktCap = f.marketCap >= 1000 ? 'MX$' + (f.marketCap / 1000).toFixed(2) + 'B' : 'MX$' + f.marketCap.toFixed(1) + 'MM';
+    } else {
+      mktCap = f.marketCap >= 1000 ? '$' + (f.marketCap / 1000).toFixed(2) + 'T' : '$' + f.marketCap.toFixed(1) + 'B';
+    }
+  } else {
+    mktCap = '—';
+  }
+  let divYield = f.dividend > 0 ? f.dividend.toFixed(2) + '%' : (isMX ? 'Sin dividendo' : 'None');
 
-  // Earnings values
+  // Earnings values (MX: no earnings calendar, show EPS from financieros if available)
   let nextEarningsVal = '—';
-  if (f.nextEarningsDate) {
+  if (!isMX && f.nextEarningsDate) {
     let d = new Date(f.nextEarningsDate + "T12:00:00");
-    nextEarningsVal = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    nextEarningsVal = d.toLocaleDateString("es-MX", { month: "short", day: "numeric", year: "numeric" });
   }
   let lastEarningsVal = '—';
-  if (f.lastEarnings && f.lastEarnings.actual != null) {
-    let beat = f.lastEarnings.estimate != null ? (f.lastEarnings.actual >= f.lastEarnings.estimate ? "Beat" : "Missed") : null;
-    let beatColor = beat === "Beat" ? "#16a34a" : "#dc2626";
+  if (!isMX && f.lastEarnings && f.lastEarnings.actual != null) {
+    let beat = f.lastEarnings.estimate != null ? (f.lastEarnings.actual >= f.lastEarnings.estimate ? "Superó" : "Debajo") : null;
+    let beatColor = beat === "Superó" ? "#16a34a" : "#dc2626";
     lastEarningsVal = "$" + f.lastEarnings.actual.toFixed(2) +
       (beat ? " <span style='color:" + beatColor + ";font-weight:700;font-size:11px;'>" + beat + "</span>" : "");
   }
 
-  let fundTips = {
+  let fundTips = isMX ? {
+    'Cap. Mercado':    'Valor total de todas las acciones en circulación. Mayor = empresa más establecida.',
+    'Razón P/U':       'Precio entre utilidad. Alta = se espera mucho crecimiento; baja = puede estar barata.',
+    'Dividendo':       'Efectivo que paga la empresa a accionistas como % del precio. 0% = sin dividendo.',
+    'Beta':            'Volatilidad vs el mercado. >1 = más movimiento; <1 = más estable.',
+    'Margen Neto':     '% de ingresos que se convierte en utilidad después de todos los costos.',
+    'Crec. Ingresos':  'Qué tan rápido crecieron las ventas vs el año anterior.',
+    'Últ. UPA':        'Utilidad por Acción del último período reportado.'
+  } : {
     'Market Cap':     'Total value of all shares. Larger = more established & stable.',
     'P/E Ratio':      'Price ÷ earnings. High = growth expected, low = cheap or struggling.',
     'Dividend Yield': 'Annual cash paid to shareholders as % of price. 0% = no dividend.',
@@ -1143,7 +1191,15 @@ function renderFundamentals(f) {
     'Next Earnings':  'Date the company reports quarterly results — often causes big price moves.',
     'Last EPS':       'Earnings per share last quarter. "Beat" = did better than analysts expected.'
   };
-  let items = [
+  let items = isMX ? [
+    { label: 'Cap. Mercado',   value: mktCap },
+    { label: 'Razón P/U',      value: f.pe > 0 ? f.pe.toFixed(1) : '—' },
+    { label: 'Dividendo',      value: divYield },
+    { label: 'Beta',           value: f.beta > 0 ? f.beta.toFixed(2) : '—' },
+    { label: 'Margen Neto',    value: f.margin !== 0 ? f.margin.toFixed(1) + '%' : '—' },
+    { label: 'Crec. Ingresos', value: f.growth !== 0 ? (f.growth > 0 ? '+' : '') + f.growth.toFixed(1) + '%' : '—' },
+    { label: 'Últ. UPA',       value: f.epsBasic > 0 ? 'MX$' + f.epsBasic.toFixed(2) : '—' },
+  ] : [
     { label: 'Market Cap',     value: mktCap },
     { label: 'P/E Ratio',      value: f.pe > 0 ? f.pe.toFixed(1) : '—' },
     { label: 'Dividend Yield', value: divYield },
@@ -1154,7 +1210,7 @@ function renderFundamentals(f) {
     { label: 'Last EPS',       value: lastEarningsVal },
   ];
   let tipId = 0;
-  el.innerHTML = '<h2>KEY STATS</h2><div class="fundamentals-grid">' +
+  el.innerHTML = '<h2>' + (isMX ? 'DATOS CLAVE' : 'KEY STATS') + '</h2><div class="fundamentals-grid">' +
     items.map(function(i) {
       let tid = 'fund-tip-' + (tipId++);
       let tip = fundTips[i.label] ? "<button class='fund-tip-btn' onclick=\"var e=document.getElementById('" + tid + "');e.style.display=e.style.display==='none'?'block':'none';\">?</button><div class='fund-tip' id='" + tid + "' style='display:none;'>" + fundTips[i.label] + "</div>" : '';
@@ -1427,28 +1483,37 @@ function renderPriceChart(prices, dates, volumes) {
   });
 }
 
-function getAIExplanation(ticker, companyName, totalScore, changePct, pe, margin, growth, beta, rsi, ma50, price, topHeadline, roe, currentRatio, interestCoverage) {
+function getAIExplanation(ticker, companyName, totalScore, changePct, pe, margin, growth, beta, rsi, ma50, price, topHeadline, roe, currentRatio, interestCoverage, isMX) {
   let aiBox = document.getElementById("ai-explanation");
   let aiText = document.getElementById("ai-text");
   if (!aiBox || !aiText) return;
   aiBox.style.display = "block";
-  aiText.textContent = "Analyzing " + companyName + "...";
+  aiText.textContent = isMX ? "Analizando " + companyName + "..." : "Analyzing " + companyName + "...";
 
-  let profileContext = userProfile ? "The reader is a " + userProfile.type + " investor with a " + userProfile.horizon + " time horizon and a goal to " + userProfile.goal + ". Tailor your explanation to their level. " : "";
+  let profileContext = userProfile ? (isMX
+    ? "El usuario es un inversionista " + userProfile.type + " con horizonte " + userProfile.horizon + " y meta de " + userProfile.goal + ". Adapta tu explicación a su nivel. "
+    : "The reader is a " + userProfile.type + " investor with a " + userProfile.horizon + " time horizon and a goal to " + userProfile.goal + ". Tailor your explanation to their level. ") : "";
 
-  let prompt = "You are StockIQ, a plain-English financial education tool. Your job is to help beginners genuinely understand what this company's data means — not just list numbers, but connect the dots between them. Write 4-5 sentences. Do the following: (1) Summarize what the score and overall picture says about the company's health. (2) Point out 1-2 interesting patterns or tensions in the data — for example if growth is high but margins are thin, or if the stock is volatile but fundamentals are strong. (3) Explain what the most recent news might mean for the company's story. (4) Mention one thing a beginner should pay attention to going forward. Write in a warm, curious tone — like a knowledgeable friend, not a textbook. Never use the words buy, sell, invest, or recommend. Never give financial advice. Focus entirely on helping the user understand and learn. " +
-    profileContext +
-    "Data — Company: " + companyName + " (" + ticker + "). Score: " + totalScore + "/100. Today: " + (changePct >= 0 ? "+" : "") + changePct.toFixed(2) + "%. Price: $" + price.toFixed(2) + ". " +
-    (pe > 0 ? "P/E: " + pe.toFixed(1) + ". " : "") +
-    (margin !== 0 ? "Profit margin: " + margin.toFixed(1) + "%. " : "") +
-    (growth !== 0 ? "Revenue growth: " + growth.toFixed(1) + "%. " : "") +
+  let prompt = isMX
+    ? "Eres StockIQ, una herramienta de educación financiera. Tu misión es ayudar al usuario a entender genuinamente lo que dicen los datos de esta empresa en la Bolsa Mexicana de Valores (BMV). Escribe 4-5 oraciones en español. Haz lo siguiente: (1) Resume qué dice el score y la imagen general sobre la salud de la empresa. (2) Señala 1-2 patrones o tensiones interesantes en los datos — por ejemplo si el crecimiento es alto pero el margen es delgado. (3) Explica qué podría significar el titular más reciente para la historia de la empresa. (4) Menciona una cosa a la que un principiante debería poner atención. Escribe en tono cálido y cercano — como un amigo con conocimiento, no un libro de texto. Nunca uses las palabras comprar, vender, invertir o recomendar. Nunca des consejos financieros. Todo en español. "
+    : "You are StockIQ, a plain-English financial education tool. Your job is to help beginners genuinely understand what this company's data means — not just list numbers, but connect the dots between them. Write 4-5 sentences. Do the following: (1) Summarize what the score and overall picture says about the company's health. (2) Point out 1-2 interesting patterns or tensions in the data — for example if growth is high but margins are thin, or if the stock is volatile but fundamentals are strong. (3) Explain what the most recent news might mean for the company's story. (4) Mention one thing a beginner should pay attention to going forward. Write in a warm, curious tone — like a knowledgeable friend, not a textbook. Never use the words buy, sell, invest, or recommend. Never give financial advice. Focus entirely on helping the user understand and learn. ";
+
+  prompt += profileContext;
+  prompt += (isMX ? "Datos — Empresa: " : "Data — Company: ") + companyName + " (" + ticker + "). Score: " + totalScore + "/100. " +
+    (isMX ? "Hoy: " : "Today: ") + (changePct >= 0 ? "+" : "") + changePct.toFixed(2) + "%. " +
+    (isMX ? "Precio: MX$" : "Price: $") + price.toFixed(2) + ". " +
+    (isMX ? "Bolsa: BMV/BIVA. Moneda: MXN. " : "") +
+    (pe > 0 ? (isMX ? "P/U: " : "P/E: ") + pe.toFixed(1) + ". " : "") +
+    (margin !== 0 ? (isMX ? "Margen neto: " : "Profit margin: ") + margin.toFixed(1) + "%. " : "") +
+    (growth !== 0 ? (isMX ? "Crec. ingresos: " : "Revenue growth: ") + growth.toFixed(1) + "%. " : "") +
     (beta > 0 ? "Beta: " + beta.toFixed(2) + ". " : "") +
     (roe !== 0 ? "ROE: " + roe.toFixed(1) + "%. " : "") +
-    (currentRatio !== 0 ? "Current ratio: " + currentRatio.toFixed(2) + ". " : "") +
-    (interestCoverage !== 0 ? "Interest coverage: " + interestCoverage.toFixed(1) + "x. " : "") +
+    (currentRatio !== 0 ? (isMX ? "Razón corriente: " : "Current ratio: ") + currentRatio.toFixed(2) + ". " : "") +
+    (interestCoverage !== 0 ? (isMX ? "Cobertura int.: " : "Interest coverage: ") + interestCoverage.toFixed(1) + "x. " : "") +
     (rsi !== null ? "RSI: " + rsi + ". " : "") +
-    (ma50 !== null ? "50-day MA: $" + ma50.toFixed(2) + ". " : "") +
-    "Latest headline: \"" + topHeadline + "\". Overall signal: " + (totalScore >= 65 ? "Strong" : totalScore >= 50 ? "Watch" : "Risky") + ".";
+    (ma50 !== null ? (isMX ? "MA 50 días: MX$" : "50-day MA: $") + ma50.toFixed(2) + ". " : "") +
+    (isMX ? "Titular reciente: \"" : "Latest headline: \"") + topHeadline + "\". " +
+    (isMX ? "Señal general: " : "Overall signal: ") + (totalScore >= 65 ? (isMX ? "Sólida" : "Strong") : totalScore >= 50 ? (isMX ? "Vigilar" : "Watch") : (isMX ? "Alto Riesgo" : "Risky")) + ".";
 
   fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -1477,9 +1542,10 @@ function getAIExplanation(ticker, companyName, totalScore, changePct, pe, margin
   .catch(function() { aiText.textContent = "Analysis unavailable right now."; });
 }
 
-function getSectorContext(industry, pe, margin, growth, beta) {
+function getSectorContext(industry, pe, margin, growth, beta, isMX) {
+  let avgs = isMX ? mxSectorAverages : sectorAverages;
   let sector = null;
-  let keys = Object.keys(sectorAverages);
+  let keys = Object.keys(avgs);
   for (let i = 0; i < keys.length; i++) {
     if (industry.toLowerCase().includes(keys[i].toLowerCase()) ||
         keys[i].toLowerCase().includes(industry.toLowerCase())) {
@@ -1488,31 +1554,31 @@ function getSectorContext(industry, pe, margin, growth, beta) {
     }
   }
   if (!sector) return "";
-  let avg = sectorAverages[sector];
+  let avg = avgs[sector];
   let rows = "";
 
   if (pe > 0 && avg.pe) {
     let diff = (((pe - avg.pe) / avg.pe) * 100).toFixed(0);
     let color = diff > 20 ? "#dc2626" : diff > 0 ? "#d97706" : "#16a34a";
-    rows += "<div class='sector-row'><span class='sector-label'>P/E Ratio</span><span class='sector-val'>" + pe.toFixed(1) + "</span><span class='sector-vs'>vs avg " + avg.pe + "</span><span class='sector-verdict' style='color:" + color + ";'>" + Math.abs(diff) + "% " + (diff > 0 ? "more expensive" : "cheaper") + " than peers</span></div>";
+    rows += "<div class='sector-row'><span class='sector-label'>" + (isMX ? "Razón P/U" : "P/E Ratio") + "</span><span class='sector-val'>" + pe.toFixed(1) + "</span><span class='sector-vs'>vs " + (isMX ? "prom " : "avg ") + avg.pe + "</span><span class='sector-verdict' style='color:" + color + ";'>" + Math.abs(diff) + "% " + (isMX ? (diff > 0 ? "más caro" : "más barato") + " que el sector" : (diff > 0 ? "more expensive" : "cheaper") + " than peers") + "</span></div>";
   }
   if (margin !== 0 && avg.margin) {
     let diff = (margin - avg.margin).toFixed(1);
     let color = diff >= 0 ? "#16a34a" : "#dc2626";
-    rows += "<div class='sector-row'><span class='sector-label'>Profit Margin</span><span class='sector-val'>" + margin.toFixed(1) + "%</span><span class='sector-vs'>vs avg " + avg.margin + "%</span><span class='sector-verdict' style='color:" + color + ";'>" + Math.abs(diff) + "% " + (diff >= 0 ? "above" : "below") + " average</span></div>";
+    rows += "<div class='sector-row'><span class='sector-label'>" + (isMX ? "Margen Neto" : "Profit Margin") + "</span><span class='sector-val'>" + margin.toFixed(1) + "%</span><span class='sector-vs'>vs " + (isMX ? "prom " : "avg ") + avg.margin + "%</span><span class='sector-verdict' style='color:" + color + ";'>" + Math.abs(diff) + "% " + (isMX ? (diff >= 0 ? "arriba del" : "abajo del") + " promedio" : (diff >= 0 ? "above" : "below") + " average") + "</span></div>";
   }
   if (growth !== 0 && avg.growth) {
     let diff = (growth - avg.growth).toFixed(1);
     let color = diff >= 0 ? "#16a34a" : "#dc2626";
-    rows += "<div class='sector-row'><span class='sector-label'>Revenue Growth</span><span class='sector-val'>" + growth.toFixed(1) + "%</span><span class='sector-vs'>vs avg " + avg.growth + "%</span><span class='sector-verdict' style='color:" + color + ";'>Growing " + Math.abs(diff) + "% " + (diff >= 0 ? "faster than" : "slower than") + " peers</span></div>";
+    rows += "<div class='sector-row'><span class='sector-label'>" + (isMX ? "Crecimiento" : "Revenue Growth") + "</span><span class='sector-val'>" + growth.toFixed(1) + "%</span><span class='sector-vs'>vs " + (isMX ? "prom " : "avg ") + avg.growth + "%</span><span class='sector-verdict' style='color:" + color + ";'>" + (isMX ? "Crece " + Math.abs(diff) + "% " + (diff >= 0 ? "más rápido que" : "más lento que") + " el sector" : "Growing " + Math.abs(diff) + "% " + (diff >= 0 ? "faster than" : "slower than") + " peers") + "</span></div>";
   }
   if (beta > 0 && avg.beta) {
     let diff = (beta - avg.beta).toFixed(2);
     let color = diff <= 0 ? "#16a34a" : "#d97706";
-    rows += "<div class='sector-row'><span class='sector-label'>Risk (Beta)</span><span class='sector-val'>" + beta.toFixed(2) + "</span><span class='sector-vs'>vs avg " + avg.beta + "</span><span class='sector-verdict' style='color:" + color + ";'>" + Math.abs(diff) + " " + (diff <= 0 ? "less volatile" : "more volatile") + " than peers</span></div>";
+    rows += "<div class='sector-row'><span class='sector-label'>" + (isMX ? "Riesgo (Beta)" : "Risk (Beta)") + "</span><span class='sector-val'>" + beta.toFixed(2) + "</span><span class='sector-vs'>vs " + (isMX ? "prom " : "avg ") + avg.beta + "</span><span class='sector-verdict' style='color:" + color + ";'>" + Math.abs(diff) + " " + (isMX ? (diff <= 0 ? "menos volátil" : "más volátil") + " que el sector" : (diff <= 0 ? "less volatile" : "more volatile") + " than peers") + "</span></div>";
   }
   if (!rows) return "";
-  return "<br><details class='sector-details'><summary class='sector-summary'>Compare to " + sector + " sector ▾</summary><div class='sector-rows'>" + rows + "</div></details>";
+  return "<br><details class='sector-details'><summary class='sector-summary'>" + (isMX ? "Comparar con sector " + sector + " ▾" : "Compare to " + sector + " sector ▾") + "</summary><div class='sector-rows'>" + rows + "</div></details>";
 }
 
 function getRiskProfileWarning(beta, totalScore) {
@@ -3516,19 +3582,25 @@ function renderProfile() {
 let stockChatHistory = [];
 let stockChatContext = '';
 
-function initStockChat(ticker, companyName, totalScore, changePct, pe, margin, growth, beta, rsi, price) {
+function initStockChat(ticker, companyName, totalScore, changePct, pe, margin, growth, beta, rsi, price, isMX) {
   stockChatHistory = [];
-  let profileCtx = userProfile ? 'The user is a ' + userProfile.type + ' investor with a ' + userProfile.horizon + ' horizon and goal to ' + userProfile.goal + '. Tailor explanations to their level. ' : '';
-  stockChatContext = 'You are StockIQ, a financial education assistant. Help the user genuinely understand this company and its data — not just define terms, but make real connections and give meaningful insight. Keep answers to 3-4 sentences. Write like a knowledgeable friend: warm, clear, specific. Use the actual numbers when relevant. Never say buy, sell, invest, or recommend. If asked for a direct recommendation, redirect to explaining what the data means and what factors matter. ' +
+  let profileCtx = userProfile ? (isMX
+    ? 'El usuario es inversionista ' + userProfile.type + ' con horizonte ' + userProfile.horizon + ' y meta de ' + userProfile.goal + '. Adapta tu nivel. '
+    : 'The user is a ' + userProfile.type + ' investor with a ' + userProfile.horizon + ' horizon and goal to ' + userProfile.goal + '. Tailor explanations to their level. ') : '';
+  stockChatContext = isMX
+    ? 'Eres StockIQ, un asistente de educación financiera. Ayuda al usuario a entender genuinamente esta empresa de la Bolsa Mexicana de Valores (BMV). No solo definas términos — haz conexiones reales y da perspectiva significativa. Responde en 3-4 oraciones en español. Escribe como un amigo con conocimiento: cálido, claro, específico. Usa los números reales cuando sea relevante. Nunca digas comprar, vender, invertir o recomendar. Si piden una recomendación directa, redirige a explicar qué significan los datos. '
+    : 'You are StockIQ, a financial education assistant. Help the user genuinely understand this company and its data — not just define terms, but make real connections and give meaningful insight. Keep answers to 3-4 sentences. Write like a knowledgeable friend: warm, clear, specific. Use the actual numbers when relevant. Never say buy, sell, invest, or recommend. If asked for a direct recommendation, redirect to explaining what the data means and what factors matter. ';
+  stockChatContext +=
     profileCtx +
-    'Stock: ' + companyName + ' (' + ticker + '), score ' + totalScore + '/100, ' +
-    'today ' + (changePct >= 0 ? '+' : '') + changePct.toFixed(2) + '%, price $' + price.toFixed(2) + ', ' +
-    (pe > 0 ? 'P/E ' + pe.toFixed(1) + ', ' : '') +
-    (margin !== 0 ? 'profit margin ' + margin.toFixed(1) + '%, ' : '') +
-    (growth !== 0 ? 'revenue growth ' + growth.toFixed(1) + '%, ' : '') +
+    (isMX ? 'Acción: ' : 'Stock: ') + companyName + ' (' + ticker + '), score ' + totalScore + '/100, ' +
+    (isMX ? 'hoy ' : 'today ') + (changePct >= 0 ? '+' : '') + changePct.toFixed(2) + '%, ' +
+    (isMX ? 'precio MX$' : 'price $') + price.toFixed(2) + (isMX ? ' MXN, bolsa BMV/BIVA, ' : ', ') +
+    (pe > 0 ? (isMX ? 'P/U ' : 'P/E ') + pe.toFixed(1) + ', ' : '') +
+    (margin !== 0 ? (isMX ? 'margen neto ' : 'profit margin ') + margin.toFixed(1) + '%, ' : '') +
+    (growth !== 0 ? (isMX ? 'crec. ingresos ' : 'revenue growth ') + growth.toFixed(1) + '%, ' : '') +
     (beta > 0 ? 'beta ' + beta.toFixed(2) + ', ' : '') +
     (rsi !== null ? 'RSI ' + rsi + ', ' : '') +
-    'signal: ' + (totalScore >= 65 ? 'Strong' : totalScore >= 50 ? 'Watch' : 'Risky') + '.';
+    (isMX ? 'señal: ' : 'signal: ') + (totalScore >= 65 ? (isMX ? 'Sólida' : 'Strong') : totalScore >= 50 ? (isMX ? 'Vigilar' : 'Watch') : (isMX ? 'Alto Riesgo' : 'Risky')) + '.';
 }
 
 function askStockQuestion(question) {
