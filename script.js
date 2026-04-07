@@ -859,6 +859,18 @@ function updateTechnicalFactors(prices, price) {
 
   let maEl = explanation.querySelector("[data-factor='Moving Average']");
   if (maEl) maEl.outerHTML = scoreBar("Moving Average", maScore, { what: maWhat, verdict: maVerdict });
+
+  // Re-sort all factor cards by score (best → worst) after updating RSI/MA in DOM
+  let items = Array.from(explanation.querySelectorAll(".score-item"));
+  if (items.length > 1) {
+    let parent = items[0].parentNode;
+    items.sort(function(a, b) {
+      let aScore = parseFloat((a.querySelector(".score-item-num") || {}).textContent) || 0;
+      let bScore = parseFloat((b.querySelector(".score-item-num") || {}).textContent) || 0;
+      return bScore - aScore;
+    });
+    items.forEach(function(el) { parent.appendChild(el); });
+  }
 }
 
 function loadChart(prices, dates, volumes, prevClose, dayHigh, dayLow, week52High) {
