@@ -49,9 +49,11 @@ function parseMarkdown(text) {
     .replace(/\n/g, "<br>");
 }
 
-let finnhubKey   = window.FINNHUB_KEY;
-let polygonKey   = window.POLYGON_KEY;
-let anthropicKey = window.ANTHROPIC_KEY;
+let finnhubKey      = window.FINNHUB_KEY;
+let polygonKey      = window.POLYGON_KEY;
+let anthropicKey    = window.ANTHROPIC_KEY;
+let databursatilKey = window.DATABURSATIL_KEY;
+let activeMarket    = localStorage.getItem('activeMarket') || 'MX';
 let cache = {};
 let chartInstance = null;
 let currentTicker = null;
@@ -69,6 +71,7 @@ let chartDayHigh = 0;
 let chartDayLow = 0;
 let chartWeek52High = 0;
 let wlSort = 'score'; // 'score' | 'change' | 'ticker'
+let _portCurrSym = '$'; // updated by renderPortfolio() based on active portfolio market
 let _spyBenchmark = null; // null=unfetched, false=unavailable, object=cached result
 
 let sectorAverages = {
@@ -85,6 +88,137 @@ let sectorAverages = {
   "Basic Materials": { pe: 15, margin: 10, growth: 6, beta: 1.0, debt: 0.7 }
 };
 
+// MX (BMV/BIVA) sector benchmarks
+let mxSectorAverages = {
+  "Consumo": { pe: 18, margin: 7, growth: 6, beta: 0.8, debt: 0.9 },
+  "Financiero": { pe: 12, margin: 22, growth: 7, beta: 0.9, debt: 2.0 },
+  "Industrial": { pe: 16, margin: 8, growth: 5, beta: 0.9, debt: 0.8 },
+  "Materiales": { pe: 13, margin: 10, growth: 4, beta: 1.0, debt: 0.7 },
+  "Telecomunicaciones": { pe: 14, margin: 18, growth: 3, beta: 0.7, debt: 1.2 },
+  "Energía": { pe: 10, margin: 9, growth: 2, beta: 0.8, debt: 1.0 },
+  "Salud": { pe: 20, margin: 10, growth: 8, beta: 0.7, debt: 0.6 },
+  "Inmobiliario": { pe: 22, margin: 30, growth: 5, beta: 0.7, debt: 1.8 }
+};
+
+// ── DataBursatil MX Market API ────────────────────────────────
+const DB_BASE = 'https://api.databursatil.com/v2';
+
+function dbFetch(endpoint, params) {
+  let qs = Object.keys(params).map(function(k) { return k + '=' + encodeURIComponent(params[k]); }).join('&');
+  let url = DB_BASE + '/' + endpoint + '?token=' + databursatilKey + (qs ? '&' + qs : '');
+  return fetch(url).then(function(r) { return r.json(); });
+}
+
+function mxQuote(emisoraSerie) {
+  return dbFetch('cotizaciones', { emisora_serie: emisoraSerie, bolsa: 'BMV,BIVA', concepto: 'U,P,A,X,N,C,M,V,O,J' });
+}
+
+function mxHistorical(emisoraSerie, inicio, final) {
+  return dbFetch('historicos', { emisora_serie: emisoraSerie, inicio: inicio, final: final });
+}
+
+function mxFinancials(emisora) {
+  return dbFetch('financieros', { emisora: emisora, financiero: 'resultado_acumulado' });
+}
+
+function mxEmisoras() {
+  return dbFetch('emisoras', { bolsa: 'BMV,BIVA' });
+}
+
+function mxTop() {
+  return dbFetch('top', { variables: 'suben,bajan', bolsa: 'BMV', cantidad: '8', mercado: 'local' });
+}
+
+function mxIndices() {
+  return dbFetch('indices', {});
+}
+
+function mxNoticias() {
+  return dbFetch('noticias', {});
+}
+
+function mxDivisas() {
+  return dbFetch('divisas', {});
+}
+
+// ── DataBursatil response adapters ───────────────────────────
+// These map DataBursatil field names to the internal format used by displayData().
+// Field names marked with comments may need adjustment once tested against live API responses.
+
+function adaptMXQuote(raw) {
+  let item = Array.isArray(raw) ? raw[0] : raw;
+  if (!item) return {};
+  return {
+    c:  item.ultimo  || item.precio   || item.p    || item.cierre  || 0,  // current price
+    d:  item.cambio  || item.variacion || item.dif  || 0,                  // change amount
+    dp: item.porcentaje || item.var_pct || item.pct || 0,                  // change %
+    h:  item.maximo  || item.alto     || item.max  || 0,                   // day high
+    l:  item.minimo  || item.bajo     || item.min  || 0,                   // day low
+    o:  item.apertura || item.open    || 0,                                 // open
+    pc: item.anterior || item.cierre_ant || item.prev || 0                  // prev close
+  };
+}
+
+function adaptMXProfile(raw, ticker) {
+  let item = Array.isArray(raw) ? raw[0] : raw;
+  if (!item) return { name: ticker, ticker: ticker, exchange: 'BMV', finnhubIndustry: '', country: 'Mexico' };
+  return {
+    name:            item.nombre      || item.name        || item.razon_social || ticker,
+    ticker:          ticker,
+    exchange:        item.bolsa       || 'BMV',
+    finnhubIndustry: item.sector      || item.giro        || item.industria    || '',
+    country:         'Mexico',
+    weburl:          item.url         || item.pagina      || '',
+    logo:            item.logo        || item.imagen      || '',
+    description:     item.descripcion || item.description || ''
+  };
+}
+
+function adaptMXMetrics(raw) {
+  // DataBursatil /financieros may return multiple periods; pick first
+  let item = Array.isArray(raw) ? raw[0] : raw;
+  if (!item) return {};
+  return {
+    peBasicExclExtraTTM:        item.pe              || item.precio_utilidad     || 0,
+    netProfitMarginTTM:         item.margen_neto     || item.margen              || 0,
+    revenueGrowthTTMYoy:        item.crecimiento     || item.crec_ventas         || 0,
+    beta:                       item.beta            || 1,
+    roeAnnual:                  item.roe             || 0,
+    'totalDebt/totalEquityAnnual': item.deuda_capital || item.dt_capital         || 0,
+    currentRatioAnnual:         item.razon_corriente || item.current_ratio       || 0,
+    netInterestCoverageAnnual:  item.cobertura_int   || item.interest_coverage   || 0,
+    '52WeekHigh':               item.max_52s         || item.maximo_52           || 0,
+    '52WeekLow':                item.min_52s         || item.minimo_52           || 0
+  };
+}
+
+function adaptMXHistorical(raw) {
+  // Returns array in Polygon-like format: [{ t (ms), c (close), v (volume) }]
+  let items = Array.isArray(raw) ? raw : (raw && raw.datos ? raw.datos : []);
+  return items.map(function(d) {
+    let dateStr = d.fecha || d.date || d.dia || '';
+    return {
+      t: dateStr ? new Date(dateStr).getTime() : 0,
+      c: d.cierre || d.close || d.precio || d.ultimo || 0,
+      v: d.volumen || d.volume || d.vol   || 0
+    };
+  }).filter(function(d) { return d.t > 0 && d.c > 0; });
+}
+
+function adaptMXNews(raw) {
+  let items = Array.isArray(raw) ? raw : (raw && raw.noticias ? raw.noticias : []);
+  return items.slice(0, 20).map(function(n) {
+    return {
+      headline: n.titulo    || n.title    || n.headline || '',
+      summary:  n.resumen   || n.summary  || n.cuerpo   || '',
+      url:      n.url       || n.link     || '',
+      datetime: n.fecha ? new Date(n.fecha).getTime() / 1000 : 0,
+      source:   n.fuente    || n.source   || 'DataBursatil'
+    };
+  }).filter(function(n) { return n.headline; });
+}
+// ── END DataBursatil ──────────────────────────────────────────
+
 function showTab(name) {
   document.querySelectorAll('.tab-content').forEach(function(t) { t.classList.remove('active'); });
   document.querySelectorAll('.nav-tab').forEach(function(t) { t.classList.remove('active'); });
@@ -95,6 +229,39 @@ function showTab(name) {
   if (name === 'watchlist') renderWatchlist();
 }
 
+// ── Market switcher ───────────────────────────────────────────
+let _mxEmisorasCache = null; // cached list of BMV/BIVA stocks for autocomplete
+
+function switchMarket(market) {
+  activeMarket = market;
+  localStorage.setItem('activeMarket', market);
+  document.querySelectorAll('.market-switch-btn').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.market === market);
+  });
+  let input = document.getElementById('stock-input');
+  if (input) input.placeholder = market === 'MX' ? 'Buscar emisora (ej. WALMEX, CEMEX…)' : 'Search ticker (e.g. AAPL, NVDA…)';
+  // Clear caches so fresh market data loads
+  localStorage.removeItem('trending-cache');
+  localStorage.removeItem('sectors-cache');
+  cache = {};
+  loadMarketOverview();
+  loadTrendingTickers(true);
+  loadSectors();
+  renderWatchlist();
+  renderPortfolioTabs();
+  renderPortfolio();
+}
+
+function getMXEmisoras(callback) {
+  if (_mxEmisorasCache) { callback(_mxEmisorasCache); return; }
+  mxEmisoras().then(function(data) {
+    let list = Array.isArray(data) ? data : (data && data.datos ? data.datos : []);
+    _mxEmisorasCache = list;
+    callback(list);
+  }).catch(function() { callback([]); });
+}
+// ── END market switcher ───────────────────────────────────────
+
 let _autocompleteTimer = null;
 
 function onSearchInput() {
@@ -102,23 +269,47 @@ function onSearchInput() {
   let dropdown = document.getElementById('search-dropdown');
   clearTimeout(_autocompleteTimer);
   if (query.length < 2) { dropdown.style.display = 'none'; return; }
-  _autocompleteTimer = setTimeout(function() {
-    fetch('https://finnhub.io/api/v1/search?q=' + encodeURIComponent(query) + '&token=' + finnhubKey)
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        if (!data.result || data.result.length === 0) { dropdown.style.display = 'none'; return; }
-        let items = data.result.filter(function(r) { return r.type === 'Common Stock'; }).slice(0, 5);
-        if (items.length === 0) { dropdown.style.display = 'none'; return; }
-        dropdown.innerHTML = items.map(function(item) {
-          return "<div class='autocomplete-item' onmousedown='selectAutocomplete(\"" + item.symbol + "\")'>" +
-            "<span class='autocomplete-ticker'>" + escHtml(item.symbol) + "</span>" +
-            "<span class='autocomplete-name'>" + escHtml(item.description) + "</span>" +
+
+  if (activeMarket === 'MX') {
+    _autocompleteTimer = setTimeout(function() {
+      let q = query.toUpperCase();
+      getMXEmisoras(function(list) {
+        let matches = list.filter(function(e) {
+          let sym  = (e.emisora || e.ticker || e.simbolo || '').toUpperCase();
+          let name = (e.nombre  || e.name   || '').toUpperCase();
+          return sym.includes(q) || name.includes(q);
+        }).slice(0, 5);
+        if (matches.length === 0) { dropdown.style.display = 'none'; return; }
+        dropdown.innerHTML = matches.map(function(e) {
+          let sym  = escHtml(e.emisora || e.ticker || e.simbolo || '');
+          let name = escHtml(e.nombre  || e.name   || '');
+          return "<div class='autocomplete-item' onmousedown='selectAutocomplete(\"" + sym + "\")'>" +
+            "<span class='autocomplete-ticker'>" + sym + "</span>" +
+            "<span class='autocomplete-name'>" + name + "</span>" +
             "</div>";
         }).join('');
         dropdown.style.display = 'block';
-      })
-      .catch(function() { dropdown.style.display = 'none'; });
-  }, 300);
+      });
+    }, 200);
+  } else {
+    _autocompleteTimer = setTimeout(function() {
+      fetch('https://finnhub.io/api/v1/search?q=' + encodeURIComponent(query) + '&token=' + finnhubKey)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (!data.result || data.result.length === 0) { dropdown.style.display = 'none'; return; }
+          let items = data.result.filter(function(r) { return r.type === 'Common Stock'; }).slice(0, 5);
+          if (items.length === 0) { dropdown.style.display = 'none'; return; }
+          dropdown.innerHTML = items.map(function(item) {
+            return "<div class='autocomplete-item' onmousedown='selectAutocomplete(\"" + item.symbol + "\")'>" +
+              "<span class='autocomplete-ticker'>" + escHtml(item.symbol) + "</span>" +
+              "<span class='autocomplete-name'>" + escHtml(item.description) + "</span>" +
+              "</div>";
+          }).join('');
+          dropdown.style.display = 'block';
+        })
+        .catch(function() { dropdown.style.display = 'none'; });
+    }, 300);
+  }
 }
 
 function selectAutocomplete(ticker) {
@@ -138,23 +329,51 @@ function onPortTickerInput() {
   let dropdown = document.getElementById('port-ticker-dropdown');
   clearTimeout(_portAutocompleteTimer);
   if (query.length < 2) { dropdown.style.display = 'none'; return; }
-  _portAutocompleteTimer = setTimeout(function() {
-    fetch('https://finnhub.io/api/v1/search?q=' + encodeURIComponent(query) + '&token=' + finnhubKey)
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        if (!data.result || data.result.length === 0) { dropdown.style.display = 'none'; return; }
-        let items = data.result.filter(function(r) { return r.type === 'Common Stock'; }).slice(0, 5);
-        if (items.length === 0) { dropdown.style.display = 'none'; return; }
-        dropdown.innerHTML = items.map(function(item) {
-          return "<div class='autocomplete-item' onmousedown='selectPortAutocomplete(\"" + item.symbol + "\")'>" +
-            "<span class='autocomplete-ticker'>" + escHtml(item.symbol) + "</span>" +
-            "<span class='autocomplete-name'>" + escHtml(item.description) + "</span>" +
+
+  // Determine market from the active portfolio (if set), else fall back to activeMarket
+  let activePort = getActivePortfolio();
+  let portMarket = activePort ? (activePort.market || 'US') : activeMarket;
+
+  if (portMarket === 'MX') {
+    _portAutocompleteTimer = setTimeout(function() {
+      let q = query.toUpperCase();
+      getMXEmisoras(function(list) {
+        let matches = list.filter(function(e) {
+          let sym  = (e.emisora || e.ticker || e.simbolo || '').toUpperCase();
+          let name = (e.nombre  || e.name   || '').toUpperCase();
+          return sym.includes(q) || name.includes(q);
+        }).slice(0, 5);
+        if (matches.length === 0) { dropdown.style.display = 'none'; return; }
+        dropdown.innerHTML = matches.map(function(e) {
+          let sym  = escHtml(e.emisora || e.ticker || e.simbolo || '');
+          let name = escHtml(e.nombre  || e.name   || '');
+          return "<div class='autocomplete-item' onmousedown='selectPortAutocomplete(\"" + sym + "\")'>" +
+            "<span class='autocomplete-ticker'>" + sym + "</span>" +
+            "<span class='autocomplete-name'>" + name + "</span>" +
             "</div>";
         }).join('');
         dropdown.style.display = 'block';
-      })
-      .catch(function() { dropdown.style.display = 'none'; });
-  }, 300);
+      });
+    }, 200);
+  } else {
+    _portAutocompleteTimer = setTimeout(function() {
+      fetch('https://finnhub.io/api/v1/search?q=' + encodeURIComponent(query) + '&token=' + finnhubKey)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (!data.result || data.result.length === 0) { dropdown.style.display = 'none'; return; }
+          let items = data.result.filter(function(r) { return r.type === 'Common Stock'; }).slice(0, 5);
+          if (items.length === 0) { dropdown.style.display = 'none'; return; }
+          dropdown.innerHTML = items.map(function(item) {
+            return "<div class='autocomplete-item' onmousedown='selectPortAutocomplete(\"" + item.symbol + "\")'>" +
+              "<span class='autocomplete-ticker'>" + escHtml(item.symbol) + "</span>" +
+              "<span class='autocomplete-name'>" + escHtml(item.description) + "</span>" +
+              "</div>";
+          }).join('');
+          dropdown.style.display = 'block';
+        })
+        .catch(function() { dropdown.style.display = 'none'; });
+    }, 300);
+  }
 }
 
 function onPortDateChange() {
@@ -162,41 +381,60 @@ function onPortDateChange() {
   let dateVal = document.getElementById('port-date').value;
   if (!ticker || !dateVal) return;
 
-  // Don't overwrite if user already typed a price
   let priceEl = document.getElementById('port-price');
   let loadingEl = document.getElementById('port-price-loading');
 
-  // Check it's a past date
   let selected = new Date(dateVal);
   let today = new Date();
   today.setHours(0, 0, 0, 0);
-  if (selected >= today) return; // today or future — use live price
+  if (selected >= today) return;
 
   priceEl.value = '';
   if (loadingEl) { loadingEl.style.display = 'inline'; loadingEl.textContent = '...'; }
 
-  // Try the selected date first, then fall back up to 5 days for weekends/holidays
-  function tryDate(dateStr, triesLeft) {
-    fetch('https://api.polygon.io/v1/open-close/' + ticker + '/' + dateStr + '?adjusted=true&apiKey=' + polygonKey)
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        if (data.close) {
-          priceEl.value = data.close.toFixed(2);
-          if (loadingEl) { loadingEl.style.display = 'inline'; loadingEl.textContent = dateStr !== dateVal ? 'Used ' + dateStr : ''; setTimeout(function() { if (loadingEl) loadingEl.style.display = 'none'; }, 2000); }
-        } else if (triesLeft > 0) {
-          // Move back one day (weekend/holiday)
-          let d = new Date(dateStr + 'T00:00:00');
-          d.setDate(d.getDate() - 1);
-          let prev = d.toISOString().split('T')[0];
-          tryDate(prev, triesLeft - 1);
-        } else {
-          if (loadingEl) loadingEl.style.display = 'none';
-        }
-      })
-      .catch(function() { if (loadingEl) loadingEl.style.display = 'none'; });
-  }
+  let activePort = getActivePortfolio();
+  let portMarket = activePort ? (activePort.market || 'US') : activeMarket;
 
-  tryDate(dateVal, 5);
+  if (portMarket === 'MX') {
+    // Use DataBursatil /historicos — fetch a small window around the target date
+    let dayBefore = new Date(dateVal + 'T00:00:00');
+    dayBefore.setDate(dayBefore.getDate() - 5);
+    let inicio = dayBefore.toISOString().split('T')[0];
+    mxHistorical(ticker, inicio, dateVal).then(function(raw) {
+      let bars = adaptMXHistorical(raw);
+      // Find closest date on or before dateVal
+      let target = new Date(dateVal).getTime();
+      let best = bars.filter(function(b) { return b.t <= target; }).sort(function(a, b) { return b.t - a.t; })[0];
+      if (best && best.c) {
+        priceEl.value = best.c.toFixed(2);
+        let usedDate = new Date(best.t).toISOString().split('T')[0];
+        if (loadingEl) { loadingEl.style.display = 'inline'; loadingEl.textContent = usedDate !== dateVal ? 'Used ' + usedDate : ''; setTimeout(function() { if (loadingEl) loadingEl.style.display = 'none'; }, 2000); }
+      } else {
+        if (loadingEl) loadingEl.style.display = 'none';
+      }
+    }).catch(function() { if (loadingEl) loadingEl.style.display = 'none'; });
+  } else {
+    // Try the selected date first, then fall back up to 5 days for weekends/holidays
+    function tryDate(dateStr, triesLeft) {
+      fetch('https://api.polygon.io/v1/open-close/' + ticker + '/' + dateStr + '?adjusted=true&apiKey=' + polygonKey)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.close) {
+            priceEl.value = data.close.toFixed(2);
+            if (loadingEl) { loadingEl.style.display = 'inline'; loadingEl.textContent = dateStr !== dateVal ? 'Used ' + dateStr : ''; setTimeout(function() { if (loadingEl) loadingEl.style.display = 'none'; }, 2000); }
+          } else if (triesLeft > 0) {
+            let d = new Date(dateStr + 'T00:00:00');
+            d.setDate(d.getDate() - 1);
+            let prev = d.toISOString().split('T')[0];
+            tryDate(prev, triesLeft - 1);
+          } else {
+            if (loadingEl) loadingEl.style.display = 'none';
+          }
+        })
+        .catch(function() { if (loadingEl) loadingEl.style.display = 'none'; });
+    }
+    tryDate(dateVal, 5);
+  }
 }
 
 function hidePortDropdown() {
@@ -210,13 +448,25 @@ function selectPortAutocomplete(ticker) {
   let priceEl = document.getElementById('port-price');
   priceEl.value = '';
   if (loadingEl) loadingEl.style.display = 'inline';
-  fetch('https://finnhub.io/api/v1/quote?symbol=' + encodeURIComponent(ticker) + '&token=' + finnhubKey)
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
+
+  let activePort = getActivePortfolio();
+  let portMarket = activePort ? (activePort.market || 'US') : activeMarket;
+
+  if (portMarket === 'MX') {
+    mxQuote(ticker).then(function(raw) {
       if (loadingEl) loadingEl.style.display = 'none';
-      if (data && data.c) priceEl.value = data.c.toFixed(2);
-    })
-    .catch(function() { if (loadingEl) loadingEl.style.display = 'none'; });
+      let q = adaptMXQuote(raw);
+      if (q.c) priceEl.value = q.c.toFixed(2);
+    }).catch(function() { if (loadingEl) loadingEl.style.display = 'none'; });
+  } else {
+    fetch('https://finnhub.io/api/v1/quote?symbol=' + encodeURIComponent(ticker) + '&token=' + finnhubKey)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (loadingEl) loadingEl.style.display = 'none';
+        if (data && data.c) priceEl.value = data.c.toFixed(2);
+      })
+      .catch(function() { if (loadingEl) loadingEl.style.display = 'none'; });
+  }
 }
 
 function saveSearchHistory(ticker, name) {
@@ -246,10 +496,7 @@ function clearSearchHistory() {
   renderSearchHistory();
 }
 
-function searchStock() {
-  let query = document.getElementById("stock-input").value.trim().toUpperCase();
-  if (!query) { showToast("Please enter a company name or ticker!"); return; }
-
+function _resetSearchUI(query) {
   document.getElementById("loading").style.display = "block";
   let loadingTickerEl = document.getElementById("loading-ticker");
   if (loadingTickerEl) loadingTickerEl.textContent = query;
@@ -272,9 +519,81 @@ function searchStock() {
   if (fundCard) fundCard.style.display = 'none';
   let newsSection = document.getElementById('news-section');
   if (newsSection) newsSection.style.display = 'none';
+}
 
+function searchStock() {
+  let query = document.getElementById("stock-input").value.trim().toUpperCase();
+  if (!query) { showToast("Please enter a company name or ticker!"); return; }
+
+  _resetSearchUI(query);
   if (cache[query]) { displayData(cache[query]); return; }
 
+  if (activeMarket === 'MX') {
+    _searchStockMX(query);
+  } else {
+    _searchStockUS(query);
+  }
+}
+
+function _searchStockMX(query) {
+  let today = new Date();
+  let toDate = today.toISOString().split("T")[0];
+  let from90 = new Date(today); from90.setDate(today.getDate() - 90);
+  let from90Str = from90.toISOString().split("T")[0];
+
+  Promise.all([
+    mxQuote(query).catch(function() { return {}; }),
+    mxEmisoras().catch(function() { return []; }),
+    mxNoticias().catch(function() { return []; }),
+    mxFinancials(query).catch(function() { return {}; }),
+    mxHistorical(query, from90Str, toDate).catch(function() { return []; })
+  ]).then(function(results) {
+    let rawQuote     = results[0];
+    let rawEmisoras  = results[1];
+    let rawNoticias  = results[2];
+    let rawFinancials = results[3];
+    let rawHistorical = results[4];
+
+    // Find this emisora's info from the full list
+    let emisList = Array.isArray(rawEmisoras) ? rawEmisoras : (rawEmisoras && rawEmisoras.datos ? rawEmisoras.datos : []);
+    let emisInfo = emisList.find(function(e) {
+      return (e.emisora || e.ticker || e.simbolo || '').toUpperCase() === query;
+    }) || {};
+
+    let quote   = adaptMXQuote(rawQuote);
+    let profile = adaptMXProfile(emisInfo, query);
+    let news    = adaptMXNews(rawNoticias);
+    let metrics = adaptMXMetrics(rawFinancials);
+    let bars    = adaptMXHistorical(rawHistorical);
+
+    if (!quote.c && !profile.name) {
+      document.getElementById("loading").style.display = "none";
+      showToast("\"" + query + "\" no encontrado en BMV/BIVA. Verifica el ticker (ej. WALMEX, CEMEXCPO).");
+      return;
+    }
+
+    let data = { ticker: query, quote, profile, news, metrics, prices: [], dates: [], volumes: [], earningsData: {}, pastEarnings: [], market: 'MX' };
+    cache[query] = data;
+    displayData(data);
+
+    // Render chart from historical data
+    if (bars.length > 0) {
+      let prices = bars.map(function(b) { return b.c; });
+      let dates  = bars.map(function(b) { return new Date(b.t).toISOString().split("T")[0]; });
+      let volumes = bars.map(function(b) { return b.v || 0; });
+      cache[query].prices  = prices;
+      cache[query].dates   = dates;
+      cache[query].volumes = volumes;
+      loadChart(prices, dates, volumes, quote.pc || 0, quote.h || 0, quote.l || 0, metrics['52WeekHigh'] || 0);
+      updateTechnicalFactors(prices, quote.c || 0);
+    }
+  }).catch(function() {
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("explanation").textContent = "Error cargando datos. Intenta de nuevo.";
+  });
+}
+
+function _searchStockUS(query) {
   fetch("https://finnhub.io/api/v1/search?q=" + query + "&token=" + finnhubKey)
     .then(function(r) { return r.json(); })
     .then(function(searchData) {
@@ -299,7 +618,6 @@ function searchStock() {
       let earningsTo = new Date(today); earningsTo.setDate(today.getDate() + 90);
       let earningsToStr = earningsTo.toISOString().split("T")[0];
 
-      // Load core data first (no chart) — show results immediately
       Promise.all([
         fetch("https://finnhub.io/api/v1/quote?symbol=" + ticker + "&token=" + finnhubKey).then(function(r) { return r.json(); }),
         fetch("https://finnhub.io/api/v1/stock/profile2?symbol=" + ticker + "&token=" + finnhubKey).then(function(r) { return r.json(); }),
@@ -309,28 +627,25 @@ function searchStock() {
         fetch("https://finnhub.io/api/v1/stock/earnings?symbol=" + ticker + "&limit=1&token=" + finnhubKey).then(function(r) { return r.json(); }).catch(function() { return []; }),
         fetch("https://api.polygon.io/v3/reference/tickers/" + ticker + "?apiKey=" + polygonKey).then(function(r) { return r.json(); }).catch(function() { return {}; })
       ]).then(function(results) {
-        let quote      = results[0];
-        let profile    = results[1];
-        let news       = results[2];
-        let metrics    = results[3].metric || {};
+        let quote        = results[0];
+        let profile      = results[1];
+        let news         = results[2];
+        let metrics      = results[3].metric || {};
         let earningsData = results[4];
         let pastEarnings = results[5];
         let tickerDetails = results[6].results || {};
         if (tickerDetails.description) profile.description = tickerDetails.description;
 
-        // Unsupported ticker — no price and no company name means Finnhub doesn't cover it
         if (!quote.c && !profile.name) {
           document.getElementById("loading").style.display = "none";
-          let isMXq = ticker.endsWith('.MX');
-          showToast("\"" + ticker + "\" isn't supported." + (isMXq ? " Try the full ticker, e.g. AMXL.MX" : " StockIQ covers US-listed stocks and major Mexican tickers (.MX)."));
+          showToast("\"" + ticker + "\" isn't supported. StockIQ covers US-listed stocks.");
           return;
         }
 
-        let data = { ticker, quote, profile, news, metrics, prices: [], dates: [], volumes: [], earningsData, pastEarnings };
+        let data = { ticker, quote, profile, news, metrics, prices: [], dates: [], volumes: [], earningsData, pastEarnings, market: 'US' };
         cache[query] = data;
         displayData(data);
 
-        // Load chart separately — doesn't block the main results
         historyPromise.then(function(history) {
           let prices = [], dates = [], volumes = [];
           if (history.results && history.results.length > 0) {
@@ -537,7 +852,7 @@ function displayData(data) {
   let { ticker, quote, profile, news, metrics, prices, dates, volumes, earningsData, pastEarnings } = data;
   let price = quote.c, changePct = quote.dp, prevClose = quote.pc, dayHigh = quote.h, dayLow = quote.l;
   let companyName = profile.name || ticker;
-  let isMX = ticker.endsWith('.MX');
+  let isMX = data.market === 'MX' || ticker.endsWith('.MX');
   let currSym = isMX ? 'MX$' : '$';
   let industry = profile.finnhubIndustry || "";
   let week52High = metrics["52WeekHigh"] || 0;
@@ -1345,9 +1660,16 @@ function quickAddToPortfolio() {
   if (!currentTicker) return;
   showTab('portfolio');
   document.getElementById('port-ticker').value = currentTicker;
-  fetch('https://finnhub.io/api/v1/quote?symbol=' + encodeURIComponent(currentTicker) + '&token=' + finnhubKey)
-    .then(function(r) { return r.json(); })
-    .then(function(q) { if (q.c) document.getElementById('port-price').value = q.c.toFixed(2); });
+  if (activeMarket === 'MX') {
+    mxQuote(currentTicker).then(function(raw) {
+      let q = adaptMXQuote(raw);
+      if (q.c) document.getElementById('port-price').value = q.c.toFixed(2);
+    });
+  } else {
+    fetch('https://finnhub.io/api/v1/quote?symbol=' + encodeURIComponent(currentTicker) + '&token=' + finnhubKey)
+      .then(function(r) { return r.json(); })
+      .then(function(q) { if (q.c) document.getElementById('port-price').value = q.c.toFixed(2); });
+  }
   document.getElementById('port-shares').focus();
 }
 
@@ -1358,7 +1680,7 @@ function addToWatchlist() {
     showToast(currentTicker + " is already in your watchlist!");
     return;
   }
-  watchlist.push({ ticker: currentTicker, name: currentName, score: currentScore });
+  watchlist.push({ ticker: currentTicker, name: currentName, score: currentScore, market: activeMarket });
   localStorage.setItem("watchlist", JSON.stringify(watchlist));
   saveToFirestore({ watchlist: watchlist });
   let btn = document.getElementById("watchlist-btn");
@@ -1382,7 +1704,9 @@ function setWlSort(sort) {
 }
 
 function renderWatchlist() {
-  let watchlist = JSON.parse(localStorage.getItem("watchlist") || "[]");
+  let allWatchlist = JSON.parse(localStorage.getItem("watchlist") || "[]");
+  // Filter to items matching the active market (items without a market field default to 'US')
+  let watchlist = allWatchlist.filter(function(i) { return (i.market || 'US') === activeMarket; });
   let empty = document.getElementById("watchlist-empty");
   let items = document.getElementById("watchlist-items");
   if (watchlist.length === 0) { empty.style.display = "flex"; items.innerHTML = ""; return; }
@@ -1406,9 +1730,10 @@ function renderWatchlist() {
   function buildRow(item, price, changePct) {
     let scoreColor = item.score >= 65 ? "#16a34a" : item.score >= 50 ? "#d97706" : "#dc2626";
     let signal = item.score >= 65 ? "Strong" : item.score >= 50 ? "Watch" : "Risky";
+    let currSym = (item.market || 'US') === 'MX' ? 'MX$' : '$';
     let priceHtml = price == null
       ? "<span class='wl-price'>—</span>"
-      : "<span class='wl-price'>$" + price.toFixed(2) + "</span><span class='wl-change' style='color:" + (changePct >= 0 ? "#16a34a" : "#dc2626") + ";'>" + (changePct >= 0 ? "+" : "") + changePct.toFixed(2) + "%</span>";
+      : "<span class='wl-price'>" + currSym + price.toFixed(2) + "</span><span class='wl-change' style='color:" + (changePct >= 0 ? "#16a34a" : "#dc2626") + ";'>" + (changePct >= 0 ? "+" : "") + changePct.toFixed(2) + "%</span>";
     let hist = buildScoreHistoryBars(item.ticker, item.score);
     let histDrawer = hist.bars
       ? "<div class='wl-history-drawer' id='wl-hist-" + item.ticker + "' style='display:none;'>" +
@@ -1450,8 +1775,17 @@ function renderWatchlist() {
   else if (wlSort === 'ticker') initSorted.sort(function(a, b) { return a.ticker.localeCompare(b.ticker); });
   items.innerHTML = initSorted.map(function(item) { return buildRow(item, null, 0); }).join("");
 
-  // Fetch live quotes in parallel
+  // Fetch live quotes in parallel — route to correct API per market
   Promise.all(watchlist.map(function(item) {
+    let itemMarket = item.market || 'US';
+    if (itemMarket === 'MX') {
+      return mxQuote(item.ticker)
+        .then(function(raw) {
+          let q = adaptMXQuote(raw);
+          return { ticker: item.ticker, price: q.c || null, changePct: q.dp || 0, prevClose: q.pc || 0 };
+        })
+        .catch(function() { return { ticker: item.ticker, price: null, changePct: 0, prevClose: 0 }; });
+    }
     return fetch('https://finnhub.io/api/v1/quote?symbol=' + encodeURIComponent(item.ticker) + '&token=' + finnhubKey)
       .then(function(r) { return r.json(); })
       .then(function(q) { return { ticker: item.ticker, price: q.c || null, changePct: q.dp || 0, prevClose: q.pc || 0 }; })
@@ -1585,21 +1919,9 @@ function loadFromWatchlist(ticker) {
 }
 
 function loadTrendingTickers(forceRefresh) {
-  let tickers = [
-    { symbol: 'AAPL', name: 'Apple Inc.' },
-    { symbol: 'NVDA', name: 'NVIDIA Corp.' },
-    { symbol: 'TSLA', name: 'Tesla Inc.' },
-    { symbol: 'MSFT', name: 'Microsoft Corp.' },
-    { symbol: 'AMZN', name: 'Amazon.com Inc.' },
-    { symbol: 'GOOGL', name: 'Alphabet Inc.' },
-    { symbol: 'META', name: 'Meta Platforms' },
-    { symbol: 'JPM', name: 'JPMorgan Chase' },
-  ];
-
   let list = document.getElementById('trending-list');
   if (!list) return;
 
-  // Check cache (5 min TTL) — skip if forcing refresh
   if (!forceRefresh) {
     let cached = localStorage.getItem('trending-cache');
     if (cached) {
@@ -1610,31 +1932,61 @@ function loadTrendingTickers(forceRefresh) {
 
   list.innerHTML = '<div class="trending-loading">Fetching prices...</div>';
 
-  // Stagger requests 200ms apart to avoid rate limit
-  let delay = 0;
-  let promises = tickers.map(function(t) {
-    let d = delay;
-    delay += 200;
-    return new Promise(function(resolve) {
-      setTimeout(function() {
-        fetch('https://finnhub.io/api/v1/quote?symbol=' + t.symbol + '&token=' + finnhubKey)
-          .then(function(r) { return r.json(); })
-          .then(function(q) {
-            let price = q.c > 0 ? q.c : q.pc;
-            resolve({ symbol: t.symbol, name: t.name, price: price, change: q.d || 0, changePct: q.dp || 0 });
-          })
-          .catch(function() { resolve(null); });
-      }, d);
+  if (activeMarket === 'MX') {
+    mxTop().then(function(raw) {
+      let suben = raw.suben || raw.altas || [];
+      let bajan = raw.bajan || raw.bajas || [];
+      let combined = suben.concat(bajan).slice(0, 8);
+      let results = combined.map(function(e) {
+        return {
+          symbol:    e.emisora   || e.ticker    || e.simbolo || '',
+          name:      e.nombre    || e.name      || e.razon   || '',
+          price:     e.precio    || e.ultimo    || e.p       || 0,
+          change:    e.cambio    || e.variacion || 0,
+          changePct: e.porcentaje || e.pct      || e.var_pct || 0
+        };
+      }).filter(function(r) { return r.symbol && r.price > 0; });
+      localStorage.setItem('trending-cache', JSON.stringify({ ts: Date.now(), data: results }));
+      allTrendingData = results;
+      renderTrending(results);
+    }).catch(function() {
+      list.innerHTML = '<div class="trending-loading">No data available.</div>';
     });
-  });
-
-  Promise.all(promises).then(function(results) {
-    let valid = results.filter(function(r) { return r && r.price > 0; });
-    valid.sort(function(a, b) { return Math.abs(b.changePct) - Math.abs(a.changePct); });
-    localStorage.setItem('trending-cache', JSON.stringify({ ts: Date.now(), data: valid }));
-    allTrendingData = valid;
-    renderTrending(valid);
-  });
+  } else {
+    let tickers = [
+      { symbol: 'AAPL', name: 'Apple Inc.' },
+      { symbol: 'NVDA', name: 'NVIDIA Corp.' },
+      { symbol: 'TSLA', name: 'Tesla Inc.' },
+      { symbol: 'MSFT', name: 'Microsoft Corp.' },
+      { symbol: 'AMZN', name: 'Amazon.com Inc.' },
+      { symbol: 'GOOGL', name: 'Alphabet Inc.' },
+      { symbol: 'META', name: 'Meta Platforms' },
+      { symbol: 'JPM', name: 'JPMorgan Chase' },
+    ];
+    let delay = 0;
+    let promises = tickers.map(function(t) {
+      let d = delay;
+      delay += 200;
+      return new Promise(function(resolve) {
+        setTimeout(function() {
+          fetch('https://finnhub.io/api/v1/quote?symbol=' + t.symbol + '&token=' + finnhubKey)
+            .then(function(r) { return r.json(); })
+            .then(function(q) {
+              let price = q.c > 0 ? q.c : q.pc;
+              resolve({ symbol: t.symbol, name: t.name, price: price, change: q.d || 0, changePct: q.dp || 0 });
+            })
+            .catch(function() { resolve(null); });
+        }, d);
+      });
+    });
+    Promise.all(promises).then(function(results) {
+      let valid = results.filter(function(r) { return r && r.price > 0; });
+      valid.sort(function(a, b) { return Math.abs(b.changePct) - Math.abs(a.changePct); });
+      localStorage.setItem('trending-cache', JSON.stringify({ ts: Date.now(), data: valid }));
+      allTrendingData = valid;
+      renderTrending(valid);
+    });
+  }
 }
 
 let currentTrendingFilter = 'all';
@@ -1667,7 +2019,7 @@ function renderTrending(data) {
         "<div class='trending-name'>" + escHtml(r.name) + "</div>" +
       "</div>" +
       "<div class='trending-right'>" +
-        "<div class='trending-price'>$" + r.price.toFixed(2) + "</div>" +
+        "<div class='trending-price'>" + (activeMarket === 'MX' ? 'MX$' : '$') + r.price.toFixed(2) + "</div>" +
         "<div class='trending-change' style='color:" + color + ";'>" + sign + r.changePct.toFixed(2) + "%</div>" +
       "</div>" +
     "</div>";
@@ -1694,94 +2046,217 @@ function _rebuildTickerClone() {
 }
 
 function loadMarketOverview() {
-  let indices = [
-    { ticker: "SPY", priceKey: "sp500-price", changeKey: "sp500-change" },
-    { ticker: "QQQ", priceKey: "nasdaq-price", changeKey: "nasdaq-change" },
-    { ticker: "DIA", priceKey: "dow-price", changeKey: "dow-change" },
-    { ticker: "GLD", priceKey: "btc-price", changeKey: "btc-change" }
-  ];
-
-  // Inject watchlist items into the original content div first
-  let watchlist = JSON.parse(localStorage.getItem("watchlist") || "[]");
+  let allWatchlist = JSON.parse(localStorage.getItem("watchlist") || "[]");
+  // Only show watchlist items matching the active market in the bar
+  let watchlist = allWatchlist.filter(function(i) { return (i.market || 'US') === activeMarket; });
   let tickerContent = document.getElementById("ticker-content");
-  if (tickerContent) {
-    tickerContent.querySelectorAll(".wl-bar-item, .wl-bar-divider").forEach(function(el) { el.remove(); });
-    watchlist.forEach(function(item) {
-      let safeT = escHtml(JSON.stringify(item.ticker));
-      let divider = document.createElement("div");
-      divider.className = "market-divider wl-bar-divider";
-      tickerContent.appendChild(divider);
-      let node = document.createElement("div");
-      node.className = "market-item wl-bar-item";
-      node.setAttribute("onclick", "quickSearch(" + safeT + ")");
-      node.innerHTML =
-        "<span class='market-name'>" + escHtml(item.ticker) + "</span>" +
-        "<span class='market-price' data-wlprice='" + escHtml(item.ticker) + "'>—</span>" +
-        "<span class='market-change' data-wlchange='" + escHtml(item.ticker) + "'>—</span>";
-      tickerContent.appendChild(node);
-    });
-  }
 
-  // Clone content now (both copies get "—" placeholders; prices update both via querySelectorAll)
-  _rebuildTickerClone();
+  if (activeMarket === 'MX') {
+    // Rebuild ticker bar with MX indices
+    if (tickerContent) {
+      tickerContent.innerHTML =
+        '<div class="market-item" onclick="quickSearch(\'IPC\')">' +
+          '<span class="market-name">IPC</span>' +
+          '<span class="market-price" data-mid="ipc-price">—</span>' +
+          '<span class="market-change" data-mid="ipc-change">—</span>' +
+        '</div>' +
+        '<div class="market-divider"></div>' +
+        '<div class="market-item" onclick="quickSearch(\'INMEX\')">' +
+          '<span class="market-name">INMEX</span>' +
+          '<span class="market-price" data-mid="inmex-price">—</span>' +
+          '<span class="market-change" data-mid="inmex-change">—</span>' +
+        '</div>' +
+        '<div class="market-divider"></div>' +
+        '<div class="market-item">' +
+          '<span class="market-name">USD/MXN</span>' +
+          '<span class="market-price" data-mid="usdmxn-price">—</span>' +
+          '<span class="market-change" data-mid="usdmxn-change">—</span>' +
+        '</div>';
+      // Append MX watchlist items
+      watchlist.forEach(function(item) {
+        let safeT = escHtml(JSON.stringify(item.ticker));
+        let divider = document.createElement("div");
+        divider.className = "market-divider wl-bar-divider";
+        tickerContent.appendChild(divider);
+        let node = document.createElement("div");
+        node.className = "market-item wl-bar-item";
+        node.setAttribute("onclick", "quickSearch(" + safeT + ")");
+        node.innerHTML =
+          "<span class='market-name'>" + escHtml(item.ticker) + "</span>" +
+          "<span class='market-price' data-wlprice='" + escHtml(item.ticker) + "'>—</span>" +
+          "<span class='market-change' data-wlchange='" + escHtml(item.ticker) + "'>—</span>";
+        tickerContent.appendChild(node);
+      });
+    }
+    _rebuildTickerClone();
 
-  // Fetch index prices — update ALL matching elements (original + clone)
-  indices.forEach(function(index) {
-    fetch("https://finnhub.io/api/v1/quote?symbol=" + index.ticker + "&token=" + finnhubKey)
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        let price = data.c;
-        let changePct = data.dp;
-        if (!price) return;
-        let priceStr = "$" + price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        let arrow = changePct >= 0 ? "▲" : "▼";
-        let sign = changePct >= 0 ? "+" : "";
-        let changeStr = arrow + " " + sign + changePct.toFixed(2) + "%";
-        let changeColor = changePct >= 0 ? "#16a34a" : "#dc2626";
-        _updateTickerEl('[data-mid="' + index.priceKey + '"]', priceStr, null);
-        _updateTickerEl('[data-mid="' + index.changeKey + '"]', changeStr, changeColor);
-      })
-      .catch(function() {});
-  });
+    // Fetch MX indices
+    mxIndices().then(function(raw) {
+      let items = Array.isArray(raw) ? raw : (raw && raw.indices ? raw.indices : []);
+      items.forEach(function(idx) {
+        let name = (idx.indice || idx.nombre || idx.name || '').toUpperCase();
+        let price = idx.valor || idx.precio || idx.ultimo || 0;
+        let pct   = idx.porcentaje || idx.var_pct || idx.variacion_pct || 0;
+        let key   = name.includes('IPC') && !name.includes('INMEX') ? 'ipc' : name.includes('INMEX') ? 'inmex' : null;
+        if (!key) return;
+        let priceStr = 'MX$' + Number(price).toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        let arrow = pct >= 0 ? "▲" : "▼";
+        let sign  = pct >= 0 ? "+" : "";
+        let changeStr = arrow + " " + sign + Number(pct).toFixed(2) + "%";
+        let changeColor = pct >= 0 ? "#16a34a" : "#dc2626";
+        _updateTickerEl('[data-mid="' + key + '-price"]', priceStr, null);
+        _updateTickerEl('[data-mid="' + key + '-change"]', changeStr, changeColor);
+      });
+    }).catch(function() {});
 
-  // Fetch watchlist prices — staggered, update ALL matching elements (original + clone)
-  watchlist.forEach(function(item, i) {
-    setTimeout(function() {
-      fetch("https://finnhub.io/api/v1/quote?symbol=" + encodeURIComponent(item.ticker) + "&token=" + finnhubKey)
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          let price = data.c;
-          let changePct = data.dp;
-          if (!price) return;
-          let priceStr = "$" + price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-          let arrow = changePct >= 0 ? "▲" : "▼";
-          let sign = changePct >= 0 ? "+" : "";
-          let changeStr = arrow + " " + sign + changePct.toFixed(2) + "%";
-          let changeColor = changePct >= 0 ? "#16a34a" : "#dc2626";
+    // Fetch USD/MXN from divisas
+    mxDivisas().then(function(raw) {
+      let items = Array.isArray(raw) ? raw : (raw && raw.divisas ? raw.divisas : []);
+      let usdmxn = items.find(function(d) {
+        let par = (d.par || d.cruce || d.nombre || '').toUpperCase();
+        return par.includes('USD') && par.includes('MXN');
+      });
+      if (!usdmxn) return;
+      let price = usdmxn.precio || usdmxn.ultimo || usdmxn.valor || 0;
+      let pct   = usdmxn.porcentaje || usdmxn.var_pct || 0;
+      let priceStr  = '$' + Number(price).toFixed(4);
+      let arrow = pct >= 0 ? "▲" : "▼";
+      let sign  = pct >= 0 ? "+" : "";
+      let changeStr  = arrow + " " + sign + Number(pct).toFixed(2) + "%";
+      let changeColor = pct >= 0 ? "#16a34a" : "#dc2626";
+      _updateTickerEl('[data-mid="usdmxn-price"]', priceStr, null);
+      _updateTickerEl('[data-mid="usdmxn-change"]', changeStr, changeColor);
+    }).catch(function() {});
+
+    // Fetch MX watchlist prices
+    watchlist.forEach(function(item, i) {
+      setTimeout(function() {
+        mxQuote(item.ticker).then(function(raw) {
+          let q = adaptMXQuote(raw);
+          if (!q.c) return;
+          let priceStr  = 'MX$' + q.c.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          let arrow = q.dp >= 0 ? "▲" : "▼";
+          let sign  = q.dp >= 0 ? "+" : "";
+          let changeStr  = arrow + " " + sign + q.dp.toFixed(2) + "%";
+          let changeColor = q.dp >= 0 ? "#16a34a" : "#dc2626";
           _updateTickerEl('[data-wlprice="' + item.ticker + '"]', priceStr, null);
           _updateTickerEl('[data-wlchange="' + item.ticker + '"]', changeStr, changeColor);
-        })
-        .catch(function() {});
-    }, 200 * (i + 1));
-  });
+        }).catch(function() {});
+      }, 300 * (i + 1));
+    });
+
+  } else {
+    // US market: restore original indices HTML
+    if (tickerContent) {
+      tickerContent.innerHTML =
+        '<div class="market-item" onclick="quickSearch(\'SPY\')">' +
+          '<span class="market-name">S&P 500</span>' +
+          '<span class="market-price" data-mid="sp500-price">—</span>' +
+          '<span class="market-change" data-mid="sp500-change">—</span>' +
+        '</div>' +
+        '<div class="market-divider"></div>' +
+        '<div class="market-item" onclick="quickSearch(\'QQQ\')">' +
+          '<span class="market-name">NASDAQ</span>' +
+          '<span class="market-price" data-mid="nasdaq-price">—</span>' +
+          '<span class="market-change" data-mid="nasdaq-change">—</span>' +
+        '</div>' +
+        '<div class="market-divider"></div>' +
+        '<div class="market-item" onclick="quickSearch(\'DIA\')">' +
+          '<span class="market-name">DOW</span>' +
+          '<span class="market-price" data-mid="dow-price">—</span>' +
+          '<span class="market-change" data-mid="dow-change">—</span>' +
+        '</div>' +
+        '<div class="market-divider"></div>' +
+        '<div class="market-item" onclick="quickSearch(\'GLD\')">' +
+          '<span class="market-name">GOLD</span>' +
+          '<span class="market-price" data-mid="btc-price">—</span>' +
+          '<span class="market-change" data-mid="btc-change">—</span>' +
+        '</div>';
+      // Append US watchlist items
+      watchlist.forEach(function(item) {
+        let safeT = escHtml(JSON.stringify(item.ticker));
+        let divider = document.createElement("div");
+        divider.className = "market-divider wl-bar-divider";
+        tickerContent.appendChild(divider);
+        let node = document.createElement("div");
+        node.className = "market-item wl-bar-item";
+        node.setAttribute("onclick", "quickSearch(" + safeT + ")");
+        node.innerHTML =
+          "<span class='market-name'>" + escHtml(item.ticker) + "</span>" +
+          "<span class='market-price' data-wlprice='" + escHtml(item.ticker) + "'>—</span>" +
+          "<span class='market-change' data-wlchange='" + escHtml(item.ticker) + "'>—</span>";
+        tickerContent.appendChild(node);
+      });
+    }
+    _rebuildTickerClone();
+
+    let indices = [
+      { ticker: "SPY", priceKey: "sp500-price", changeKey: "sp500-change" },
+      { ticker: "QQQ", priceKey: "nasdaq-price", changeKey: "nasdaq-change" },
+      { ticker: "DIA", priceKey: "dow-price",    changeKey: "dow-change"   },
+      { ticker: "GLD", priceKey: "btc-price",    changeKey: "btc-change"   }
+    ];
+    indices.forEach(function(index) {
+      fetch("https://finnhub.io/api/v1/quote?symbol=" + index.ticker + "&token=" + finnhubKey)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          let price = data.c; let changePct = data.dp;
+          if (!price) return;
+          let priceStr   = "$" + price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          let arrow = changePct >= 0 ? "▲" : "▼";
+          let sign  = changePct >= 0 ? "+" : "";
+          let changeStr  = arrow + " " + sign + changePct.toFixed(2) + "%";
+          let changeColor = changePct >= 0 ? "#16a34a" : "#dc2626";
+          _updateTickerEl('[data-mid="' + index.priceKey + '"]', priceStr, null);
+          _updateTickerEl('[data-mid="' + index.changeKey + '"]', changeStr, changeColor);
+        }).catch(function() {});
+    });
+    watchlist.forEach(function(item, i) {
+      setTimeout(function() {
+        fetch("https://finnhub.io/api/v1/quote?symbol=" + encodeURIComponent(item.ticker) + "&token=" + finnhubKey)
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            let price = data.c; let changePct = data.dp;
+            if (!price) return;
+            let priceStr   = "$" + price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            let arrow = changePct >= 0 ? "▲" : "▼";
+            let sign  = changePct >= 0 ? "+" : "";
+            let changeStr  = arrow + " " + sign + changePct.toFixed(2) + "%";
+            let changeColor = changePct >= 0 ? "#16a34a" : "#dc2626";
+            _updateTickerEl('[data-wlprice="' + item.ticker + '"]', priceStr, null);
+            _updateTickerEl('[data-wlchange="' + item.ticker + '"]', changeStr, changeColor);
+          }).catch(function() {});
+      }, 200 * (i + 1));
+    });
+  }
 }
 
 function loadSectors() {
-  let sectors = [
-    { name: 'Technology',    etf: 'XLK' },
-    { name: 'Healthcare',    etf: 'XLV' },
-    { name: 'Financials',    etf: 'XLF' },
-    { name: 'Energy',        etf: 'XLE' },
-    { name: 'Consumer',      etf: 'XLY' },
-    { name: 'Industrials',   etf: 'XLI' },
-    { name: 'Real Estate',   etf: 'XLRE' },
-    { name: 'Utilities',     etf: 'XLU' },
-  ];
   let cached = localStorage.getItem('sectors-cache');
   if (cached) {
     let p = JSON.parse(cached);
     if (Date.now() - p.ts < 300000) { renderSectors(p.data); return; }
   }
+
+  if (activeMarket === 'MX') {
+    // Show MX sector benchmarks as static reference (no live ETF data for BMV sectors)
+    let mxData = Object.keys(mxSectorAverages).map(function(name) {
+      return { name: name, etf: '', changePct: 0, marketOpen: false };
+    });
+    renderSectors(mxData);
+    return;
+  }
+
+  let sectors = [
+    { name: 'Technology',  etf: 'XLK'  },
+    { name: 'Healthcare',  etf: 'XLV'  },
+    { name: 'Financials',  etf: 'XLF'  },
+    { name: 'Energy',      etf: 'XLE'  },
+    { name: 'Consumer',    etf: 'XLY'  },
+    { name: 'Industrials', etf: 'XLI'  },
+    { name: 'Real Estate', etf: 'XLRE' },
+    { name: 'Utilities',   etf: 'XLU'  },
+  ];
   let delay = 0;
   let promises = sectors.map(function(s) {
     let d = delay; delay += 150;
@@ -1928,7 +2403,7 @@ function migrateToMultiPortfolio(legacyStocks, legacyClosed, legacyHistory) {
   let history = legacyHistory || [];
   let id = 'port_' + Date.now();
   let all = {};
-  all[id] = { name: 'My Portfolio', isDemo: false, stocks: stocks, closedPositions: closed, valueHistory: history };
+  all[id] = { name: 'My Portfolio', isDemo: false, stocks: stocks, closedPositions: closed, valueHistory: history, market: 'US' };
   localStorage.setItem('portfolios', JSON.stringify(all));
   localStorage.setItem('activePortfolioId', id);
   // Clean up old keys
@@ -1937,10 +2412,10 @@ function migrateToMultiPortfolio(legacyStocks, legacyClosed, legacyHistory) {
   localStorage.removeItem('portfolio-value-history');
 }
 
-function createPortfolio(name, isDemo, stocks) {
+function createPortfolio(name, isDemo, stocks, market) {
   let all = getAllPortfolios();
   let id = 'port_' + Date.now();
-  all[id] = { name: name, isDemo: isDemo || false, stocks: stocks || [], closedPositions: [], valueHistory: [] };
+  all[id] = { name: name, isDemo: isDemo || false, stocks: stocks || [], closedPositions: [], valueHistory: [], market: market || activeMarket };
   localStorage.setItem('portfolios', JSON.stringify(all));
   localStorage.setItem('activePortfolioId', id);
   saveToFirestore({ portfolios: all, activePortfolioId: id });
@@ -1984,7 +2459,7 @@ function setActivePortfolio(id) {
 function promptNewPortfolio() {
   let name = prompt('Portfolio name:');
   if (!name || !name.trim()) return;
-  createPortfolio(name.trim(), false, []);
+  createPortfolio(name.trim(), false, [], activeMarket);
   renderPortfolioTabs();
   renderPortfolio();
 }
@@ -2018,7 +2493,14 @@ function renderPortfolioTabs() {
   if (!bar) return;
   let all = getAllPortfolios();
   let activeId = getActiveId();
-  let tabs = Object.keys(all).map(function(id) {
+  // Only show portfolios that belong to the active market
+  let filtered = Object.keys(all).filter(function(id) { return (all[id].market || 'US') === activeMarket; });
+  // If active portfolio is not in this market, auto-switch to first available
+  if (activeId && all[activeId] && (all[activeId].market || 'US') !== activeMarket) {
+    let first = filtered[0];
+    if (first) { localStorage.setItem('activePortfolioId', first); activeId = first; }
+  }
+  let tabs = filtered.map(function(id) {
     let p = all[id];
     let isActive = id === activeId;
     let demoTag = p.isDemo ? '<span class="port-tab-demo-tag">✦</span>' : '';
@@ -2027,7 +2509,8 @@ function renderPortfolioTabs() {
       (isActive ? '<span class="port-tab-menu-btn" id="port-menu-btn-' + id + '" onclick="event.stopPropagation();openPortfolioMenu(\'' + id + '\')">···</span>' : '') +
     '</button>';
   }).join('');
-  bar.innerHTML = tabs + '<button class="port-tab-add" onclick="promptNewPortfolio()" title="New portfolio">+</button>';
+  let marketLabel = activeMarket === 'MX' ? '🇲🇽 MX Portfolios' : '🇺🇸 US Portfolios';
+  bar.innerHTML = '<span class="port-market-label">' + marketLabel + '</span>' + tabs + '<button class="port-tab-add" onclick="promptNewPortfolio()" title="New portfolio">+</button>';
 }
 
 // Pool of candidates per profile — scored live, top 5 selected
@@ -2198,18 +2681,22 @@ function renderPortfolio() {
   empty.style.display = 'none';
   summary.style.display = 'block';
   let totalValue = 0, totalCost = 0, totalDayChange = 0;
+  let portMarket = active ? (active.market || 'US') : 'US';
+  let portCurrSym = portMarket === 'MX' ? 'MX$' : '$';
+  _portCurrSym = portCurrSym; // expose for renderPortfolioRows
   let scores = [], fetchPromises = [], stockData = [], failedTickers = [];
   portfolio.forEach(function(item, idx) {
     // Compute totals across all lots
     let totalShares = item.lots.reduce(function(sum, l) { return sum + l.shares; }, 0);
     let totalLotCost = item.lots.reduce(function(sum, l) { return sum + l.shares * l.price; }, 0);
     let avgPrice = totalShares > 0 ? totalLotCost / totalShares : 0;
-    // Stagger requests 120ms apart to avoid Finnhub rate limiting
     let p = new Promise(function(resolve) { setTimeout(resolve, idx * 120); })
-      .then(function() { return fetch('https://finnhub.io/api/v1/quote?symbol=' + item.ticker + '&token=' + finnhubKey); })
-      .then(function(r) { return r.json(); })
+      .then(function() {
+        if (portMarket === 'MX') return mxQuote(item.ticker).then(function(raw) { let q = adaptMXQuote(raw); return { c: q.c, dp: q.dp }; });
+        return fetch('https://finnhub.io/api/v1/quote?symbol=' + item.ticker + '&token=' + finnhubKey).then(function(r) { return r.json(); });
+      })
       .then(function(q) {
-        let currentPrice = q.c || avgPrice; // fall back to buy price if rate-limited
+        let currentPrice = q.c || avgPrice;
         let dayChange = q.dp || 0;
         let value = currentPrice * totalShares;
         let cost = totalLotCost;
@@ -2234,14 +2721,14 @@ function renderPortfolio() {
     let avgScore = scores.length > 0 ? Math.round(scores.reduce(function(a, b) { return a + b; }, 0) / scores.length) : null;
     let gainColor = totalGain >= 0 ? '#16a34a' : '#dc2626';
     let dayColor = totalDayChange >= 0 ? '#16a34a' : '#dc2626';
-    document.getElementById('port-total-value').textContent = '$' + totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    document.getElementById('port-total-value').textContent = portCurrSym + totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     let fmt = function(n) { return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
-    document.getElementById('port-total-gain').textContent = (totalGain >= 0 ? '+$' : '-$') + fmt(Math.abs(totalGain));
+    document.getElementById('port-total-gain').textContent = (totalGain >= 0 ? '+' + portCurrSym : '-' + portCurrSym) + fmt(Math.abs(totalGain));
     document.getElementById('port-total-gain').style.color = gainColor;
     document.getElementById('port-total-pct').textContent = (totalGainPct >= 0 ? '+' : '') + totalGainPct.toFixed(2) + '% since purchase';
     let prevValue = totalValue - totalDayChange;
     let totalDayChangePct = prevValue > 0 ? (totalDayChange / prevValue) * 100 : 0;
-    document.getElementById('port-today-change').textContent = (totalDayChange >= 0 ? '+$' : '-$') + fmt(Math.abs(totalDayChange));
+    document.getElementById('port-today-change').textContent = (totalDayChange >= 0 ? '+' + portCurrSym : '-' + portCurrSym) + fmt(Math.abs(totalDayChange));
     document.getElementById('port-today-change').style.color = dayColor;
     let todayPctEl = document.getElementById('port-today-pct');
     if (todayPctEl) { todayPctEl.textContent = (totalDayChangePct >= 0 ? '+' : '') + totalDayChangePct.toFixed(2) + '% today'; todayPctEl.style.color = dayColor; }
@@ -2523,9 +3010,9 @@ function renderPortfolioRows(data) {
             return '<div class="port-lot-row">' +
               '<div class="port-lot-info">' +
                 '<span class="port-lot-num">Lot ' + (i + 1) + '</span>' +
-                '<span>' + lot.shares + ' shares @ $' + lot.price.toFixed(2) + (lot.date ? ' · ' + lot.date : '') + '</span>' +
+                '<span>' + lot.shares + ' shares @ ' + _portCurrSym + lot.price.toFixed(2) + (lot.date ? ' · ' + lot.date : '') + '</span>' +
               '</div>' +
-              '<div class="port-lot-gain" style="color:' + lotGc + ';">' + (lotGain >= 0 ? '+' : '') + '$' + lotGain.toFixed(2) + ' (' + (lotGainPct >= 0 ? '+' : '') + lotGainPct.toFixed(1) + '%)</div>' +
+              '<div class="port-lot-gain" style="color:' + lotGc + ';">' + (lotGain >= 0 ? '+' : '') + _portCurrSym + lotGain.toFixed(2) + ' (' + (lotGainPct >= 0 ? '+' : '') + lotGainPct.toFixed(1) + '%)</div>' +
               '<button onclick="event.stopPropagation();removeLotFromPortfolio(' + escHtml(JSON.stringify(s.ticker)) + ',' + i + ')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:13px;padding:2px 6px;flex-shrink:0;">✕</button>' +
             '</div>';
           }).join('') +
@@ -2540,13 +3027,13 @@ function renderPortfolioRows(data) {
             (hasMultiple ? '<button id="lots-btn-' + s.ticker + '" onclick="event.stopPropagation();togglePortLots(' + escHtml(JSON.stringify(s.ticker)) + ')" class="port-lots-toggle">▾</button>' : '') +
             '<div>' +
               '<div style="font-weight:600;font-size:14px;">' + s.ticker + '</div>' +
-              '<div style="font-size:11px;color:#64748b;">' + s.shares.toFixed(s.shares % 1 === 0 ? 0 : 2) + ' shares · avg $' + s.buyPrice.toFixed(2) + (hasMultiple ? ' · ' + s.lots.length + ' lots' : '') + '</div>' +
-              '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">now $' + s.currentPrice.toFixed(2) + '</div>' +
+              '<div style="font-size:11px;color:#64748b;">' + s.shares.toFixed(s.shares % 1 === 0 ? 0 : 2) + ' shares · avg ' + _portCurrSym + s.buyPrice.toFixed(2) + (hasMultiple ? ' · ' + s.lots.length + ' lots' : '') + '</div>' +
+              '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">now ' + _portCurrSym + s.currentPrice.toFixed(2) + '</div>' +
             '</div>' +
           '</div>' +
-          '<div>$' + s.value.toFixed(2) + '</div>' +
-          '<div class="hide-mobile" style="color:' + gc + ';">' + (s.gain >= 0 ? '+' : '') + '$' + s.gain.toFixed(2) + '<br><span style="font-size:11px;">' + (s.gainPct >= 0 ? '+' : '') + s.gainPct.toFixed(1) + '%</span></div>' +
-          '<div class="hide-mobile" style="color:' + dc + ';">' + (s.dayChangeAmt >= 0 ? '+' : '') + '$' + s.dayChangeAmt.toFixed(2) + '</div>' +
+          '<div>' + _portCurrSym + s.value.toFixed(2) + '</div>' +
+          '<div class="hide-mobile" style="color:' + gc + ';">' + (s.gain >= 0 ? '+' : '') + _portCurrSym + s.gain.toFixed(2) + '<br><span style="font-size:11px;">' + (s.gainPct >= 0 ? '+' : '') + s.gainPct.toFixed(1) + '%</span></div>' +
+          '<div class="hide-mobile" style="color:' + dc + ';">' + (s.dayChangeAmt >= 0 ? '+' : '') + _portCurrSym + s.dayChangeAmt.toFixed(2) + '</div>' +
           '<div style="display:flex;align-items:center;gap:8px;">' + portSignal(s.score) +
             '<button onclick="event.stopPropagation();openSellModal(' + escHtml(JSON.stringify(s.ticker)) + ',' + s.currentPrice + ',' + s.shares + ')" class="sell-btn">Sell</button>' +
             '<button onclick="event.stopPropagation();removeFromPortfolio(' + escHtml(JSON.stringify(s.ticker)) + ')" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:16px;padding:0;">✕</button>' +
@@ -3305,6 +3792,13 @@ auth.onAuthStateChanged(function(user) {
     }
 
     document.getElementById('auth-overlay').style.display = 'none';
+
+    // Sync market switcher button state from localStorage
+    document.querySelectorAll('.market-switch-btn').forEach(function(b) {
+      b.classList.toggle('active', b.dataset.market === activeMarket);
+    });
+    let stockInput = document.getElementById('stock-input');
+    if (stockInput) stockInput.placeholder = activeMarket === 'MX' ? 'Buscar emisora (ej. WALMEX, CEMEX…)' : 'Search ticker (e.g. AAPL, NVDA…)';
 
     if (!userProfile) {
       document.getElementById('quiz-overlay').style.display = 'flex';

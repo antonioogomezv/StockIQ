@@ -482,9 +482,13 @@
       <!-- RIGHT: Main content -->
       <main>
       <div id="search-section">
+        <div id="market-switcher">
+          <button class="market-switch-btn active" data-market="MX" onclick="switchMarket('MX')">🇲🇽 México</button>
+          <button class="market-switch-btn" data-market="US" onclick="switchMarket('US')">🇺🇸 USA</button>
+        </div>
         <div id="search-input-row">
           <div id="search-input-wrap">
-            <input type="text" id="stock-input" placeholder="e.g. Apple, Tesla or AAPL"
+            <input type="text" id="stock-input" placeholder="Buscar emisora (ej. WALMEX, CEMEX…)"
               oninput="onSearchInput()"
               onkeypress="if(event.key==='Enter'){ hideDropdown(); searchStock(); }"
               onblur="hideDropdown()">
