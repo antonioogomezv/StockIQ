@@ -1081,8 +1081,8 @@ var DAILY_TIPS = [
 // ── ONBOARDING ─────────────────────────────────────────────────────────────
 
 function initOnboarding() {
-  if (localStorage.getItem('onboarding-done')) return;
-  var overlay = document.getElementById('onboarding-overlay');
+  if (localStorage.getItem('onboarding-done') || localStorage.getItem('tour-done')) return;
+  var overlay = document.getElementById('welcome-overlay');
   if (overlay) overlay.style.display = 'flex';
   setTimeout(function() {
     var input = document.getElementById('onboarding-input');
@@ -1105,7 +1105,7 @@ function setOnboardingTicker(ticker) {
 }
 
 function dismissOnboarding() {
-  var overlay = document.getElementById('onboarding-overlay');
+  var overlay = document.getElementById('welcome-overlay');
   if (overlay) {
     overlay.classList.add('onboarding-exit');
     setTimeout(function() { overlay.style.display = 'none'; overlay.classList.remove('onboarding-exit'); }, 300);

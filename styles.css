@@ -2053,8 +2053,8 @@ button:active { transform: translateY(0); }
 }
 .quick-ticker-chip:hover { border-color: var(--accent-green); background: var(--surface); transform: none; }
 
-/* ── Onboarding overlay ── */
-#onboarding-overlay {
+/* ── Welcome overlay ── */
+#welcome-overlay {
   position: fixed;
   inset: 0;
   background: var(--bg);
@@ -2065,7 +2065,7 @@ button:active { transform: translateY(0); }
   padding: 24px;
   transition: opacity 0.3s;
 }
-#onboarding-overlay.onboarding-exit { opacity: 0; }
+#welcome-overlay.onboarding-exit { opacity: 0; }
 #onboarding-modal {
   width: 100%;
   max-width: 440px;
