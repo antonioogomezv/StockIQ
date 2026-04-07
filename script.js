@@ -792,7 +792,11 @@ function renderFundamentals(f) {
     items.map(function(i) {
       let tid = 'fund-tip-' + (tipId++);
       let tip = fundTips[i.label] ? "<button class='fund-tip-btn' onclick=\"var e=document.getElementById('" + tid + "');e.style.display=e.style.display==='none'?'block':'none';\">?</button><div class='fund-tip' id='" + tid + "' style='display:none;'>" + fundTips[i.label] + "</div>" : '';
-      return "<div class='fund-item'><div class='fund-label'>" + i.label + tip + "</div><div class='fund-value'>" + i.value + "</div></div>";
+      let hasTermLink = !!_termMap[i.label];
+      let labelHtml = hasTermLink
+        ? "<span class='term-link' onclick=\"openTerm('" + i.label.replace(/'/g, "\\'") + "')\" title='Tap to learn more'>" + i.label + " <span class='term-link-icon'>📖</span></span>"
+        : i.label;
+      return "<div class='fund-item'><div class='fund-label'>" + labelHtml + tip + "</div><div class='fund-value'>" + i.value + "</div></div>";
     }).join('') + '</div>';
   el.style.display = 'block';
 }
@@ -829,7 +833,7 @@ function scoreBar(label, score, tooltip) {
   let dataAttr = "data-factor='" + label.replace(/'/g, '') + "'";
   return "<div class='score-item' " + dataAttr + ">" +
     "<div class='score-item-header'>" +
-      "<span class='score-item-name'>" + label + "</span>" +
+      "<span class='score-item-name term-link' onclick=\"event.stopPropagation();openTerm('" + label.replace(/'/g, "\\'") + "')\" title='Tap to learn more'>" + label + " <span class='term-link-icon'>📖</span></span>" +
       "<span class='score-item-num' style='color:" + color + ";'>" + score + "/10</span>" +
     "</div>" +
     "<div class='score-bar-wrap'>" +
@@ -1864,6 +1868,88 @@ function handleUrlParams() {
 function toggleDictionary() {
   document.getElementById("dict-drawer").classList.toggle("open");
   document.getElementById("dict-overlay").classList.toggle("open");
+}
+
+// Map from display label → the term string used in toggleDef / dict-item onclick
+var _termMap = {
+  // Score factors
+  'P/E Ratio':          'P/E Ratio',
+  'Razón P/U':          'P/E Ratio',
+  'Risk (Beta)':        'Beta',
+  'Riesgo (Beta)':      'Beta',
+  'Beta':               'Beta',
+  'Profit Margin':      'Profit Margin',
+  'Margen Neto':        'Profit Margin',
+  'Revenue Growth':     'Revenue Growth',
+  'Crecimiento':        'Revenue Growth',
+  'ROE':                'ROE',
+  'Current Ratio':      'Current Ratio',
+  'Razón Corriente':    'Current Ratio',
+  'Interest Coverage':  'Interest Coverage',
+  'Cobertura Int.':     'Interest Coverage',
+  'RSI':                'RSI',
+  'Moving Average':     'Moving Average',
+  'Media Móvil':        'Moving Average',
+  'Debt Level':         'Debt to Equity',
+  'Nivel de Deuda':     'Debt to Equity',
+  '52wk Position':      '52-Week High and Low',
+  'Posición 52s':       '52-Week High and Low',
+  'News Sentiment':     'Market Sentiment',
+  'Noticias':           'Market Sentiment',
+  'Price Movement':     'Volume',
+  'Movimiento':         'Volume',
+  // Fundamentals card
+  'Market Cap':         'Market Cap',
+  'Cap. Mercado':       'Market Cap',
+  'Dividend Yield':     'Dividend',
+  'Dividendo':          'Dividend',
+  'Profit Margin':      'Profit Margin',
+  'Rev. Growth':        'Revenue Growth',
+  'Crec. Ingresos':     'Revenue Growth',
+  'Next Earnings':      'Earnings Report',
+  'Last EPS':           'EPS',
+  'Últ. UPA':           'EPS'
+};
+
+function openTerm(label) {
+  var termKey = _termMap[label] || label;
+  // Open the drawer
+  var drawer = document.getElementById("dict-drawer");
+  var overlay = document.getElementById("dict-overlay");
+  if (!drawer.classList.contains("open")) {
+    drawer.classList.add("open");
+    overlay.classList.add("open");
+  }
+  // Find the matching dict-item by its onclick attribute containing the term key
+  var items = document.querySelectorAll("#dict-list .dict-item");
+  var found = null;
+  items.forEach(function(item) {
+    var attr = item.getAttribute("onclick") || "";
+    if (attr.indexOf("'" + termKey + "'") !== -1 || attr.indexOf('"' + termKey + '"') !== -1) {
+      found = item;
+    }
+  });
+  if (!found) {
+    // Fallback: partial match
+    items.forEach(function(item) {
+      if (!found) {
+        var termEl = item.querySelector(".dict-term");
+        if (termEl && termEl.textContent.toLowerCase().indexOf(termKey.toLowerCase()) !== -1) {
+          found = item;
+        }
+      }
+    });
+  }
+  if (found) {
+    // Expand it if not already open
+    if (!found.classList.contains("open")) {
+      found.click();
+    }
+    // Scroll to it after a brief delay for the animation
+    setTimeout(function() {
+      found.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 100);
+  }
 }
 
 function toggleDef(item, term) {
