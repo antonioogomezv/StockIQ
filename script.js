@@ -783,7 +783,11 @@ function renderCompanyAbout(profile, dividend) {
 function renderFundamentals(f) {
   let el = document.getElementById('fundamentals-card');
   if (!el) return;
-  let mktCap = f.marketCap > 0 ? (f.marketCap >= 1000 ? '$' + (f.marketCap / 1000).toFixed(2) + 'T' : '$' + f.marketCap.toFixed(1) + 'B') : '—';
+  let mktCap = f.marketCap > 0
+    ? (f.marketCap >= 1000000 ? '$' + (f.marketCap / 1000000).toFixed(2) + 'T'
+      : f.marketCap >= 1000 ? '$' + (f.marketCap / 1000).toFixed(1) + 'B'
+      : '$' + f.marketCap.toFixed(0) + 'M')
+    : '—';
   let divYield = f.dividend > 0 ? f.dividend.toFixed(2) + '%' : 'None';
 
   // Earnings values
@@ -1664,9 +1668,11 @@ function getRiskProfileWarning(beta, totalScore) {
 
   let cssClass = isAlert ? "risk-warning" : "risk-match";
   return "<div class='" + cssClass + "'>" +
-    "<span class='risk-profile-tag'>" + userProfile.icon + " " + userProfile.type + "</span>" +
-    "<span class='risk-stock-tag' style='background:rgba(0,0,0,0.06);color:" + stockColor + ";border-radius:20px;font-size:11px;font-weight:600;padding:3px 10px;margin-right:8px;'>" + stockLabel + "</span>" +
-    warning +
+    "<div class='risk-profile-header'>" +
+      "<span class='risk-profile-tag'>" + userProfile.icon + " " + userProfile.type.toUpperCase() + "</span>" +
+      "<span class='risk-stock-tag' style='color:" + stockColor + ";'>" + stockLabel + "</span>" +
+    "</div>" +
+    "<div class='risk-warning-text'>" + warning + "</div>" +
     "</div>";
 }
 
@@ -1955,17 +1961,19 @@ function renderWatchlist() {
       : "<button class='wl-alert-btn' onclick='event.stopPropagation();openAlertInput(\"" + item.ticker + "\"," + (price || 0) + ")'>🔔 Alert</button>";
     return "<div class='watchlist-item'>" +
       "<div class='wl-main-row'>" +
-        "<div onclick='loadFromWatchlist(\"" + item.ticker + "\")' style='flex:1;cursor:pointer;'>" +
+        "<div onclick='loadFromWatchlist(\"" + item.ticker + "\")' style='flex:1;cursor:pointer;min-width:0;'>" +
           "<div class='watchlist-ticker'>" + escHtml(item.ticker) + "</div>" +
           "<div class='watchlist-name'>" + escHtml(item.name || "") + "</div>" +
         "</div>" +
         "<div class='wl-price-block'>" + priceHtml + "</div>" +
-        "<div style='display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;'>" +
-          "<div class='watchlist-score' style='color:" + scoreColor + ";'>" + signal + " · " + item.score + "/100</div>" +
+        "<button class='watchlist-remove' onclick='event.stopPropagation();removeFromWatchlist(\"" + item.ticker + "\")'>✕</button>" +
+      "</div>" +
+      "<div class='wl-action-row'>" +
+        "<div class='watchlist-score' style='color:" + scoreColor + ";'>" + signal + " · " + item.score + "/100</div>" +
+        "<div class='wl-action-btns'>" +
           histToggle +
           alertHtml +
           "<button class='wl-add-port-btn' onclick='event.stopPropagation();addWatchlistToPortfolio(\"" + escHtml(item.ticker) + "\"," + (price || 0) + ")' title='Add to Portfolio'>+ Portfolio</button>" +
-          "<button class='watchlist-remove' onclick='event.stopPropagation();removeFromWatchlist(\"" + item.ticker + "\")'>✕</button>" +
         "</div>" +
       "</div>" +
       "<div id='alert-container-" + item.ticker + "'></div>" +

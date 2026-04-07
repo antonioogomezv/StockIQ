@@ -1118,6 +1118,21 @@ button:active { transform: translateY(0); }
 .wl-price { font-family: var(--mono); font-size: 14px; font-weight: 600; color: var(--text); }
 .wl-change { font-size: 12px; font-weight: 500; margin-top: 2px; }
 
+.wl-action-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.wl-action-btns {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+
 .wl-add-port-btn {
   background: rgba(22,163,74,0.1);
   border: 1px solid rgba(22,163,74,0.3);
@@ -2595,7 +2610,9 @@ details[open] .sector-summary { color: var(--text); }
 .dict-def { display: none; font-size: 13px; color: var(--text-muted); line-height: 1.8; padding-bottom: 18px; padding-right: 10px; }
 .dict-item.open .dict-def { display: block; }
 .dict-item.open .dict-arrow { transform: rotate(45deg); color: var(--accent-green); }
-.dict-item:hover .dict-term { color: var(--accent-gold); }
+@media (hover: hover) {
+  .dict-item:hover .dict-term { color: var(--accent-gold); }
+}
 
 .cheat-what { font-size: 13px; color: var(--text-muted); line-height: 1.7; margin-bottom: 10px; }
 .cheat-scale { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; font-size: 12px; }
@@ -3265,13 +3282,26 @@ footer {
   line-height: 1.5;
 }
 
+.risk-profile-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
 .risk-profile-tag {
   font-weight: 700;
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  margin-right: 8px;
   opacity: 0.8;
+}
+.risk-stock-tag {
+  font-size: 11px;
+  font-weight: 600;
+}
+.risk-warning-text {
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 
@@ -4735,6 +4765,7 @@ footer {
   }
   #tab-analyze main  { order: 1; padding: 0; }
   #trending-section  { order: 2; position: static; max-height: none; padding: 14px 12px; }
+  #trending-list { max-height: 320px; overflow-y: auto; }
 
   /* ── Search ── */
   #search-section { margin-bottom: 20px; }
