@@ -2716,16 +2716,25 @@ footer {
 .signal-pill.sell { background: rgba(220,38,38,0.1); color: var(--loss); }
 
 
-/* ── USER INFO CARD ── */
-#user-info-card {
+/* ── PROFILE HERO (merged user + investor card) ── */
+#profile-hero {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+/* ── USER INFO CARD ── */
+#user-info-card {
+  background: none;
+  border: none;
+  border-radius: 0;
+  border-bottom: 1px solid var(--border);
   padding: 20px 24px;
   display: flex;
   align-items: center;
   gap: 16px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+  box-shadow: none;
 }
 
 #user-avatar {
@@ -2863,16 +2872,16 @@ footer {
   gap: 20px;
 }
 
-/* Profile card — horizontal layout */
+/* Profile card — inside hero */
 #profile-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 24px 28px;
+  background: none;
+  border: none;
+  border-radius: 0;
+  padding: 18px 24px 22px;
   display: flex;
   align-items: center;
   gap: 20px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+  box-shadow: none;
 }
 
 #profile-card-left {
@@ -2929,9 +2938,8 @@ footer {
 #profile-stats {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: 20px;
   padding: 20px 24px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
 }
 
 #profile-stats h2 { margin-bottom: 16px; }
@@ -2939,19 +2947,27 @@ footer {
 #profile-stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+  gap: 10px;
 }
 
 .profile-stat-tile {
   background: var(--surface2);
-  border-radius: 12px;
-  padding: 14px 12px;
+  border-radius: 14px;
+  padding: 16px 10px 14px;
   text-align: center;
+  border: 1px solid transparent;
+  transition: border-color 0.15s;
 }
+.profile-stat-tile[data-accent="blue"]   { border-color: rgba(14,165,233,0.18); }
+.profile-stat-tile[data-accent="orange"] { border-color: rgba(217,119,6,0.18); }
+.profile-stat-tile[data-accent="green"]  { border-color: rgba(22,163,74,0.18); }
+.profile-stat-tile[data-accent="purple"] { border-color: rgba(139,92,246,0.18); }
+
+.profile-stat-icon { font-size: 18px; margin-bottom: 8px; line-height: 1; }
 
 .profile-stat-num {
   font-family: var(--display);
-  font-size: 24px;
+  font-size: 26px;
   font-weight: 700;
   color: var(--text);
   line-height: 1;
@@ -2959,58 +2975,78 @@ footer {
 }
 
 .profile-stat-label {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text-muted);
   line-height: 1.3;
+  font-weight: 500;
 }
 
 /* Badges */
 #profile-badges {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: 20px;
   padding: 20px 24px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
 }
 
-#profile-badges h2 { margin-bottom: 16px; }
+.badges-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.badges-header h2 { margin-bottom: 0; }
+#badges-progress {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
 
 #badges-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 10px;
 }
 
 .badge-item {
   background: var(--surface2);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 16px 8px 12px;
+  border-radius: 14px;
+  padding: 18px 10px 14px;
   text-align: center;
   transition: all 0.2s;
 }
 
 .badge-item.earned {
   border-color: var(--accent-gold);
-  background: rgba(217,119,6,0.05);
+  background: rgba(217,119,6,0.06);
+  box-shadow: 0 0 0 1px rgba(217,119,6,0.15);
 }
 
-.badge-item.locked { opacity: 0.3; filter: grayscale(1); }
+.badge-item.locked { opacity: 0.25; filter: grayscale(1); }
 
-.badge-icon { font-size: 26px; margin-bottom: 8px; }
+.badge-icon { font-size: 28px; margin-bottom: 10px; line-height: 1; }
 
 .badge-name {
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 700;
   color: var(--text);
   line-height: 1.3;
+  margin-bottom: 4px;
 }
 
 .badge-desc {
   font-size: 10px;
   color: var(--text-muted);
-  margin-top: 3px;
   line-height: 1.4;
+}
+
+/* Account actions */
+#profile-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 4px;
 }
 
 @media (max-width: 500px) {
@@ -3815,19 +3851,22 @@ footer {
 /* ── Delete account button ── */
 #remove-account-btn {
   background: none;
-  border: 1px solid rgba(220,38,38,0.2);
+  border: none;
   color: var(--text-muted);
-  font-size: 13px;
-  font-weight: 600;
-  padding: 10px 20px;
-  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 0;
+  border-radius: 0;
   cursor: pointer;
   width: 100%;
-  margin-top: 8px;
-  transition: color 0.15s, border-color 0.15s;
+  margin-top: 0;
+  text-align: center;
+  transition: color 0.15s;
   box-shadow: none;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
-#remove-account-btn:hover { color: var(--loss); border-color: var(--loss); transform: none; }
+#remove-account-btn:hover { color: var(--loss); transform: none; }
 
 /* ── Sell button ── */
 .sell-btn {

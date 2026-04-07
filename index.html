@@ -1018,17 +1018,30 @@
     <main>
       <div id="profile-section">
 
-        <!-- User identity card -->
-        <div id="user-info-card">
-          <div id="user-avatar"></div>
-          <div id="user-info-display">
-            <div id="user-name-display">Set your name</div>
-            <div id="user-username-display">@username</div>
-            <div id="user-email-display">email@example.com</div>
+        <!-- Hero card: identity + investor type merged -->
+        <div id="profile-hero">
+          <div id="user-info-card">
+            <div id="user-avatar"></div>
+            <div id="user-info-display">
+              <div id="user-name-display">Set your name</div>
+              <div id="user-username-display">@username</div>
+              <div id="user-email-display">email@example.com</div>
+            </div>
+            <button type="button" id="user-edit-btn" onclick="toggleEditProfile()">Edit</button>
           </div>
-          <button type="button" id="user-edit-btn" onclick="toggleEditProfile()">Edit</button>
+          <div id="profile-card">
+            <div id="profile-card-left">
+              <div id="profile-icon-display"></div>
+            </div>
+            <div id="profile-card-right">
+              <div id="profile-type-display">No profile set</div>
+              <div id="profile-desc-display">Complete the quiz to personalize your experience.</div>
+              <button type="button" onclick="document.getElementById('quiz-overlay').style.display='flex'" id="profile-quiz-btn">Take Risk Quiz</button>
+            </div>
+          </div>
         </div>
 
+        <!-- Edit form -->
         <div id="user-edit-form" style="display:none;">
           <div class="user-edit-field">
             <label for="input-name">Full Name</label>
@@ -1048,46 +1061,47 @@
           </div>
         </div>
 
-        <div id="profile-card">
-          <div id="profile-card-left">
-            <div id="profile-icon-display"></div>
-          </div>
-          <div id="profile-card-right">
-            <div id="profile-type-display">No profile set</div>
-            <div id="profile-desc-display">Complete the quiz to personalize your experience.</div>
-            <button type="button" onclick="document.getElementById('quiz-overlay').style.display='flex'" id="profile-quiz-btn">Take Risk Quiz</button>
-          </div>
-        </div>
-
+        <!-- Activity stats -->
         <div id="profile-stats">
           <h2>YOUR ACTIVITY</h2>
           <div id="profile-stats-grid">
-            <div class="profile-stat-tile">
+            <div class="profile-stat-tile" data-accent="blue">
+              <div class="profile-stat-icon">🔍</div>
               <div class="profile-stat-num" id="stat-analyzed">0</div>
               <div class="profile-stat-label">Stocks analyzed</div>
             </div>
-            <div class="profile-stat-tile">
+            <div class="profile-stat-tile" data-accent="orange">
+              <div class="profile-stat-icon">🔥</div>
               <div class="profile-stat-num" id="stat-streak">0</div>
-              <div class="profile-stat-label">Day streak 🔥</div>
+              <div class="profile-stat-label">Day streak</div>
             </div>
-            <div class="profile-stat-tile">
+            <div class="profile-stat-tile" data-accent="green">
+              <div class="profile-stat-icon">⭐</div>
               <div class="profile-stat-num" id="stat-watchlist">0</div>
               <div class="profile-stat-label">In watchlist</div>
             </div>
-            <div class="profile-stat-tile">
+            <div class="profile-stat-tile" data-accent="purple">
+              <div class="profile-stat-icon">📊</div>
               <div class="profile-stat-num" id="stat-portfolio">0</div>
               <div class="profile-stat-label">In portfolio</div>
             </div>
           </div>
         </div>
 
+        <!-- Achievements -->
         <div id="profile-badges">
-          <h2>ACHIEVEMENTS</h2>
+          <div class="badges-header">
+            <h2>ACHIEVEMENTS</h2>
+            <span id="badges-progress"></span>
+          </div>
           <div id="badges-grid"></div>
         </div>
 
-        <button type="button" id="logout-btn" onclick="logout()">Log Out</button>
-        <button type="button" id="remove-account-btn" onclick="removeAccount()">Delete Account</button>
+        <!-- Account actions -->
+        <div id="profile-actions">
+          <button type="button" id="logout-btn" onclick="logout()">Log Out</button>
+          <button type="button" id="remove-account-btn" onclick="removeAccount()">Delete Account</button>
+        </div>
 
       </div>
     </main>

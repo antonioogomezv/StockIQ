@@ -3420,6 +3420,9 @@ function renderBadges(analyzed, watchlistLen, portfolioLen, streak) {
   ];
   let grid = document.getElementById('badges-grid');
   if (!grid) return;
+  let earnedCount = allBadges.filter(function(b) { return b.earned; }).length;
+  let progressEl = document.getElementById('badges-progress');
+  if (progressEl) progressEl.textContent = earnedCount + ' of ' + allBadges.length + ' earned';
   grid.innerHTML = allBadges.map(function(b) {
     return "<div class='badge-item " + (b.earned ? 'earned' : 'locked') + "'>" +
       "<div class='badge-icon'>" + b.icon + "</div>" +
