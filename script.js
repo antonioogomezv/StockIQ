@@ -249,6 +249,7 @@ function clearSearchHistory() {
 function searchStock() {
   let query = document.getElementById("stock-input").value.trim().toUpperCase();
   if (!query) { showToast("Please enter a company name or ticker!"); return; }
+  hideQuickTickers();
 
   document.getElementById("loading").style.display = "block";
   let loadingTickerEl = document.getElementById("loading-ticker");
@@ -539,6 +540,8 @@ function getScoreHistoryHtml(ticker, currentScore) {
 function displayData(data) {
   document.getElementById("loading").style.display = "none";
   document.getElementById("results-section").style.display = "flex";
+  hideQuickTickers();
+  setTimeout(maybeShowCoachMark, 600);
 
   let { ticker, quote, profile, news, metrics, prices, dates, volumes, earningsData, pastEarnings } = data;
   let price = quote.c, changePct = quote.dp, prevClose = quote.pc, dayHigh = quote.h, dayLow = quote.l;
@@ -1070,6 +1073,85 @@ var DAILY_TIPS = [
   { term: 'Free Cash Flow',     emoji: '💸', tip: 'Free cash flow is the actual cash a company generates after paying for operations and investments. It\'s harder to fake than reported earnings. Companies with strong FCF can pay dividends, buy back stock, or invest in growth.' },
   { term: 'Interest Coverage',  emoji: '🛡️', tip: 'Interest coverage ratio = earnings divided by interest payments. A ratio of 5x means the company earns 5x what it owes in interest. Below 1.5x is dangerous — the company may struggle to pay its debt.' },
 ];
+
+// ── ONBOARDING ─────────────────────────────────────────────────────────────
+
+function initOnboarding() {
+  if (localStorage.getItem('onboarding-done')) return;
+  var overlay = document.getElementById('onboarding-overlay');
+  if (overlay) overlay.style.display = 'flex';
+  setTimeout(function() {
+    var input = document.getElementById('onboarding-input');
+    if (input) input.focus();
+  }, 300);
+}
+
+function onboardingSearch() {
+  var val = (document.getElementById('onboarding-input').value || '').trim();
+  if (!val) { showToast('Type a ticker or company name first!'); return; }
+  dismissOnboarding();
+  var mainInput = document.getElementById('stock-input');
+  if (mainInput) mainInput.value = val;
+  searchStock();
+}
+
+function setOnboardingTicker(ticker) {
+  var input = document.getElementById('onboarding-input');
+  if (input) { input.value = ticker; input.focus(); }
+}
+
+function dismissOnboarding() {
+  var overlay = document.getElementById('onboarding-overlay');
+  if (overlay) {
+    overlay.classList.add('onboarding-exit');
+    setTimeout(function() { overlay.style.display = 'none'; overlay.classList.remove('onboarding-exit'); }, 300);
+  }
+  localStorage.setItem('onboarding-done', '1');
+}
+
+// ── QUICK TICKERS ──────────────────────────────────────────────────────────
+
+function showQuickTickers() {
+  var results = document.getElementById('results-section');
+  var loading = document.getElementById('loading');
+  if (results && results.style.display !== 'none') return; // already have results
+  if (loading && loading.style.display !== 'none') return;
+  var el = document.getElementById('quick-tickers');
+  if (el) el.style.display = 'flex';
+}
+
+function hideQuickTickers() {
+  var el = document.getElementById('quick-tickers');
+  if (el) el.style.display = 'none';
+}
+
+function pickQuickTicker(ticker) {
+  var input = document.getElementById('stock-input');
+  if (input) input.value = ticker;
+  hideQuickTickers();
+  searchStock();
+}
+
+// ── COACH MARK ─────────────────────────────────────────────────────────────
+
+function maybeShowCoachMark() {
+  if (localStorage.getItem('coach-mark-seen')) return;
+  var scoreEl = document.getElementById('health-score');
+  if (!scoreEl) return;
+  var cm = document.getElementById('coach-mark');
+  if (!cm) return;
+  cm.style.display = 'block';
+  // Position below the health score
+  var rect = scoreEl.getBoundingClientRect();
+  cm.style.top = (rect.bottom + window.scrollY + 12) + 'px';
+  cm.style.left = Math.max(12, rect.left + window.scrollX) + 'px';
+}
+
+function dismissCoachMark() {
+  var cm = document.getElementById('coach-mark');
+  if (cm) cm.style.display = 'none';
+  localStorage.setItem('coach-mark-seen', '1');
+}
 
 function renderDailyTip() {
   var el = document.getElementById('daily-tip');
@@ -4216,6 +4298,7 @@ auth.onAuthStateChanged(function(user) {
     loadTrendingTickers();
     loadSectors();
     renderDailyTip();
+    initOnboarding();
     setInterval(function() { loadTrendingTickers(true); }, 60000);
     setInterval(function() { loadSectors(); }, 300000);
     renderWatchlist();

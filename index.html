@@ -749,10 +749,21 @@
             <input type="text" id="stock-input" placeholder="e.g. Apple, Tesla or AAPL"
               oninput="onSearchInput()"
               onkeypress="if(event.key==='Enter'){ hideDropdown(); searchStock(); }"
-              onblur="hideDropdown()">
+              onblur="hideDropdown()"
+              onfocus="showQuickTickers()">
             <div id="search-dropdown"></div>
           </div>
           <button type="button" onclick="searchStock()">Analyze</button>
+        </div>
+        <div id="quick-tickers" style="display:none;">
+          <span class="quick-tickers-label">Popular</span>
+          <div class="quick-tickers-chips">
+            <button class="quick-ticker-chip" onclick="pickQuickTicker('AAPL')">AAPL</button>
+            <button class="quick-ticker-chip" onclick="pickQuickTicker('TSLA')">TSLA</button>
+            <button class="quick-ticker-chip" onclick="pickQuickTicker('NVDA')">NVDA</button>
+            <button class="quick-ticker-chip" onclick="pickQuickTicker('MSFT')">MSFT</button>
+            <button class="quick-ticker-chip" onclick="pickQuickTicker('AMZN')">AMZN</button>
+          </div>
         </div>
         <div id="search-history" style="display:none;"></div>
         <div id="loading" style="display:none;">
@@ -1122,6 +1133,41 @@
 
   <!-- Floating Learn Terms button — mobile only -->
   <button id="float-dict-btn" onclick="toggleDictionary()" aria-label="Learn Terms">📖</button>
+
+  <!-- Welcome Onboarding Overlay -->
+  <div id="onboarding-overlay" style="display:none;">
+    <div id="onboarding-modal">
+      <div id="onboarding-logo">📊 StockIQ</div>
+      <h1 id="onboarding-title">Understand any stock<br>in seconds.</h1>
+      <p id="onboarding-sub">No finance degree needed. StockIQ breaks down every number so you actually know what you're looking at.</p>
+      <div id="onboarding-bullets">
+        <div class="onboarding-bullet"><span>🔍</span><span>Search any company or ticker</span></div>
+        <div class="onboarding-bullet"><span>📊</span><span>Get an instant 0–100 health score</span></div>
+        <div class="onboarding-bullet"><span>🎓</span><span>Learn what every number means</span></div>
+      </div>
+      <div id="onboarding-search-row">
+        <input type="text" id="onboarding-input" placeholder="Try AAPL, TSLA, NVDA…"
+          onkeypress="if(event.key==='Enter') onboardingSearch()">
+        <button id="onboarding-btn" onclick="onboardingSearch()">Let's go →</button>
+      </div>
+      <div id="onboarding-suggestions">
+        <button class="onboarding-chip" onclick="setOnboardingTicker('AAPL')">AAPL</button>
+        <button class="onboarding-chip" onclick="setOnboardingTicker('TSLA')">TSLA</button>
+        <button class="onboarding-chip" onclick="setOnboardingTicker('NVDA')">NVDA</button>
+        <button class="onboarding-chip" onclick="setOnboardingTicker('MSFT')">MSFT</button>
+      </div>
+      <button id="onboarding-skip" onclick="dismissOnboarding()">I already know my way around →</button>
+    </div>
+  </div>
+
+  <!-- First-analysis coach mark -->
+  <div id="coach-mark" style="display:none;">
+    <div id="coach-mark-inner">
+      <div id="coach-mark-text">This is your <strong>StockIQ Score</strong> — 0 to 100 based on 10 factors. Tap it to see exactly what drives it.</div>
+      <button id="coach-mark-close" onclick="dismissCoachMark()">Got it</button>
+    </div>
+    <div id="coach-mark-arrow"></div>
+  </div>
 
   <!-- Stock Quiz Modal -->
   <div id="stock-quiz-overlay" style="display:none;" onclick="closeStockQuiz()">
