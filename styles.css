@@ -3478,25 +3478,24 @@ footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 
 #portfolio-chart-header h2 { margin-bottom: 0; }
 
 #portfolio-chart-toggle {
   display: flex;
-  gap: 0;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  overflow: hidden;
+  gap: 4px;
+  flex-shrink: 0;
 }
 
 .port-chart-btn {
   background: none;
-  border: none;
-  border-right: 1px solid var(--border);
+  border: 1px solid var(--border);
   color: var(--text-muted);
-  border-radius: 0;
+  border-radius: 6px;
   font-size: 11px;
   font-weight: 700;
   font-family: var(--sans);
@@ -3507,13 +3506,12 @@ footer {
   transition: all 0.15s;
 }
 
-.port-chart-btn:last-child { border-right: none; }
-.port-chart-btn:hover { color: var(--text); background: var(--surface2); transform: none; }
+.port-chart-btn:hover { color: var(--text); transform: none; }
 
 .port-chart-btn.active {
-  background: var(--surface2);
-  color: var(--text);
-  font-weight: 700;
+  background: rgba(22,163,74,0.1);
+  border-color: var(--accent-green);
+  color: var(--accent-green);
 }
 
 #portfolio-chart-wrap {
