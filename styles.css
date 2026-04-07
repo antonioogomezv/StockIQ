@@ -36,6 +36,26 @@
   --push:         hsl(38, 92%, 60%);
 }
 
+[data-theme="dark"] .card-surface,
+[data-theme="dark"] #trending-section,
+[data-theme="dark"] #search-section > *,
+[data-theme="dark"] #company-about,
+[data-theme="dark"] #fundamentals-card,
+[data-theme="dark"] #ai-explanation,
+[data-theme="dark"] #chart-section,
+[data-theme="dark"] #news-section,
+[data-theme="dark"] #results-section,
+[data-theme="dark"] #add-stock-form,
+[data-theme="dark"] #portfolio-chart-section,
+[data-theme="dark"] #port-winners-card,
+[data-theme="dark"] #profile-hero,
+[data-theme="dark"] #profile-stats,
+[data-theme="dark"] #profile-badges,
+[data-theme="dark"] .sector-stocks-panel,
+[data-theme="dark"] .earnings-card-inner {
+  border-color: rgba(255,255,255,0.08);
+}
+
 body {
   background-color: var(--bg);
   color: var(--text);
@@ -165,12 +185,12 @@ main {
 }
 
 h2 {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text-muted);
   margin-bottom: 14px;
   text-transform: uppercase;
-  letter-spacing: 2px;
-  font-weight: 600;
+  letter-spacing: 0.12em;
+  font-weight: 700;
 }
 
 /* SEARCH */
@@ -239,19 +259,29 @@ button:active { transform: translateY(0); }
   width: 100%;
   font-size: 20px;
   padding: 22px 24px;
-  border-radius: var(--radius);
-  border-width: 2px;
+  border-radius: 12px;
+  border-width: 1px;
+  background: var(--surface2);
 }
 
 #stock-input:focus {
-  box-shadow: 0 0 0 4px rgba(22,163,74,0.12);
+  box-shadow: 0 0 0 2px rgba(22,163,74,0.2);
+}
+
+[data-theme="dark"] #stock-input {
+  border-color: rgba(255,255,255,0.08);
 }
 
 #search-input-row > button {
   font-size: 15px;
   padding: 22px 28px;
-  border-radius: var(--radius);
+  border-radius: 12px;
   white-space: nowrap;
+  background: var(--accent-green);
+  color: #fff;
+  border: none;
+  box-shadow: 0 0 20px -5px rgba(22,163,74,0.35);
+  font-weight: 700;
 }
 
 /* AUTOCOMPLETE */
@@ -1146,7 +1176,9 @@ button:active { transform: translateY(0); }
   font-size: 10px;
   margin-bottom: 14px;
   color: var(--text-muted);
-  letter-spacing: 1.5px;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+  text-transform: uppercase;
 }
 .trending-loading { font-size: 12px; color: var(--text-muted); padding: 16px 0; text-align: center; }
 .trending-row {
@@ -1163,7 +1195,7 @@ button:active { transform: translateY(0); }
 .trending-avatar {
   width: 30px;
   height: 30px;
-  border-radius: 50%;
+  border-radius: 8px;
   background: var(--surface2);
   border: 1px solid var(--border);
   display: flex;
@@ -1212,8 +1244,8 @@ button:active { transform: translateY(0); }
 }
 .trend-filter-btn {
   background: none;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border: none;
+  border-radius: 9999px;
   font-size: 11px;
   font-family: var(--sans);
   font-weight: 600;
@@ -1223,8 +1255,8 @@ button:active { transform: translateY(0); }
   box-shadow: none;
   transition: all 0.15s;
 }
-.trend-filter-btn:hover { border-color: var(--accent-green); color: var(--accent-green); transform: none; }
-.trend-filter-btn.active { background: var(--accent-green); border-color: var(--accent-green); color: #fff; }
+.trend-filter-btn:hover { background: var(--surface2); color: var(--text); transform: none; }
+.trend-filter-btn.active { background: var(--accent-green); color: #fff; }
 
 /* Sector box */
 #sector-list {
@@ -2718,9 +2750,9 @@ footer {
   display: inline-block;
 }
 
-.signal-pill.buy { background: rgba(22,163,74,0.1); color: var(--win); }
-.signal-pill.hold { background: rgba(217,119,6,0.1); color: var(--push); }
-.signal-pill.sell { background: rgba(220,38,38,0.1); color: var(--loss); }
+.signal-pill.buy { background: rgba(22,163,74,0.15); color: var(--win); }
+.signal-pill.hold { background: rgba(217,119,6,0.15); color: var(--push); }
+.signal-pill.sell { background: rgba(220,38,38,0.15); color: var(--loss); }
 
 
 /* ── PROFILE HERO (merged user + investor card) ── */
@@ -3370,23 +3402,22 @@ footer {
   width: 100%;
   margin-bottom: 20px;
   margin-top: 4px;
-  background: none;
-  border: 1px solid var(--border);
-  color: var(--accent-gold);
-  border-radius: calc(var(--radius) - 2px);
+  background: var(--accent-green);
+  border: none;
+  color: #fff;
+  border-radius: 10px;
   font-size: 13px;
   font-family: var(--sans);
   padding: 14px;
   cursor: pointer;
-  box-shadow: none;
+  box-shadow: 0 0 20px -5px rgba(22,163,74,0.3);
   font-weight: 600;
   letter-spacing: 0.5px;
   transition: all 0.15s;
 }
 
 #port-ai-btn:hover {
-  border-color: var(--accent-gold);
-  background: rgba(217,119,6,0.05);
+  opacity: 0.9;
   transform: none;
 }
 
@@ -3495,13 +3526,14 @@ footer {
   display: flex;
   gap: 4px;
   flex-shrink: 0;
+  border: none;
 }
 
 .port-chart-btn {
   background: none;
-  border: 1px solid var(--border);
+  border: none;
   color: var(--text-muted);
-  border-radius: 6px;
+  border-radius: 9999px;
   font-size: 11px;
   font-weight: 700;
   font-family: var(--sans);
@@ -3512,12 +3544,11 @@ footer {
   transition: all 0.15s;
 }
 
-.port-chart-btn:hover { color: var(--text); transform: none; }
+.port-chart-btn:hover { background: var(--surface2); color: var(--text); transform: none; }
 
 .port-chart-btn.active {
-  background: rgba(22,163,74,0.1);
-  border-color: var(--accent-green);
-  color: var(--accent-green);
+  background: var(--accent-green);
+  color: #fff;
 }
 
 #portfolio-chart-wrap {
@@ -3566,6 +3597,14 @@ footer {
   padding: 16px;
 }
 
+#add-stock-form button {
+  background: var(--accent-green);
+  color: #fff;
+  border: none;
+  box-shadow: 0 0 20px -5px rgba(22,163,74,0.3);
+  border-radius: 10px;
+}
+
 .add-form-col {
   display: flex;
   flex-direction: column;
@@ -3591,6 +3630,23 @@ footer {
 .add-form-col input { width: 100%; font-size: 14px; padding: 11px 14px; }
 .add-form-col button { width: 100%; padding: 12px; font-size: 14px; }
 
+/* Portfolio form inputs */
+#port-ticker,
+#port-shares,
+#port-price,
+#port-date {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+#port-ticker:focus,
+#port-shares:focus,
+#port-price:focus,
+#port-date:focus {
+  border-color: var(--accent-green);
+  box-shadow: none;
+}
+
 .signal-pill {
   font-size: 10px;
   font-weight: 700;
@@ -3599,9 +3655,9 @@ footer {
   display: inline-block;
 }
 
-.signal-pill.buy { background: rgba(22,163,74,0.1); color: var(--win); }
-.signal-pill.hold { background: rgba(217,119,6,0.1); color: var(--push); }
-.signal-pill.sell { background: rgba(220,38,38,0.1); color: var(--loss); }
+.signal-pill.buy { background: rgba(22,163,74,0.15); color: var(--win); }
+.signal-pill.hold { background: rgba(217,119,6,0.15); color: var(--push); }
+.signal-pill.sell { background: rgba(220,38,38,0.15); color: var(--loss); }
 
 @media (max-width: 768px) {
   .port-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
