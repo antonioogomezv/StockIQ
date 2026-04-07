@@ -673,82 +673,90 @@ function searchStock() {
 function _searchStockMX(query) {
   let today = new Date();
   let toDate = today.toISOString().split("T")[0];
-  // 1 year of history for 52wk high/low and beta calculation
   let from365 = new Date(today); from365.setDate(today.getDate() - 365);
   let from365Str = from365.toISOString().split("T")[0];
 
-  // Look up the base emisora (without serie) for financieros, and get profile info from cache
-  // e.g. query="WALMEX*" → baseEmisora="WALMEX"; query="CEMEXCPO" → baseEmisora="CEMEX"
-  let emisInfoFromCache = _mxEmisorasCache
-    ? _mxEmisorasCache.find(function(e) { return e.emisoraSerie === query; }) || null
-    : null;
-  let baseEmisora = emisInfoFromCache ? emisInfoFromCache.emisora : query.replace(/[^A-Z0-9]/g, '').replace(/\*$/, '');
-
-  Promise.all([
-    mxQuote(query).catch(function() { return {}; }),
-    mxNoticias().catch(function() { return []; }),
-    mxFinancials(baseEmisora).catch(function() { return {}; }),
-    mxFinancialsPrev(baseEmisora).catch(function() { return {}; }),
-    mxPosition(baseEmisora).catch(function() { return {}; }),
-    mxHistorical(query, from365Str, toDate).catch(function() { return {}; }),
-    mxHistorical('IPC', from365Str, toDate).catch(function() { return {}; })  // for beta
-  ]).then(function(results) {
-    let rawQuote         = results[0];
-    let rawNoticias      = results[1];
-    let rawFinancials    = results[2];
-    let rawFinancialsPrev = results[3];
-    let rawPosition      = results[4];
-    let rawHistorical    = results[5];
-    let rawIPC           = results[6];
-
-    let emisInfo = emisInfoFromCache;
-
-    let quote   = adaptMXQuote(rawQuote);
-    let profile = adaptMXProfile(emisInfo, query);
-    let news    = adaptMXNews(rawNoticias);
-    let metrics = adaptMXMetrics(rawFinancials, rawFinancialsPrev, rawPosition);
-    let bars    = adaptMXHistorical(rawHistorical);
-    let ipcBars = adaptMXHistorical(rawIPC);
-
-    // Calculate P/U from price / EPS
-    if (metrics.epsBasic > 0 && quote.c > 0) {
-      metrics.peBasicExclExtraTTM = quote.c / metrics.epsBasic;
+  // Always ensure emisoras cache is loaded before proceeding,
+  // so we can reliably extract the base emisora (e.g. CEMEXCPO → CEMEX)
+  getMXEmisoras(function() {
+    let emisInfoFromCache = _mxEmisorasCache
+      ? _mxEmisorasCache.find(function(e) { return e.emisoraSerie === query; }) || null
+      : null;
+    // Fallback: find by prefix match if exact not found (handles direct typing)
+    if (!emisInfoFromCache && _mxEmisorasCache) {
+      emisInfoFromCache = _mxEmisorasCache.find(function(e) {
+        return query.startsWith(e.emisora) && query === e.emisoraSerie;
+      }) || _mxEmisorasCache.find(function(e) {
+        return e.emisora === query.replace(/\*$/, '');
+      }) || null;
     }
+    let baseEmisora = emisInfoFromCache
+      ? emisInfoFromCache.emisora
+      : query.replace(/\*$/, '');
 
-    // Calculate beta from 1-year weekly returns vs IPC
-    let beta = calculateMXBeta(bars, ipcBars);
-    if (beta > 0) metrics.beta = parseFloat(beta.toFixed(2));
+    Promise.all([
+      mxQuote(query).catch(function() { return {}; }),
+      mxNoticias().catch(function() { return []; }),
+      mxFinancials(baseEmisora).catch(function() { return {}; }),
+      mxFinancialsPrev(baseEmisora).catch(function() { return {}; }),
+      mxPosition(baseEmisora).catch(function() { return {}; }),
+      mxHistorical(query, from365Str, toDate).catch(function() { return {}; }),
+      mxHistorical('IPC', from365Str, toDate).catch(function() { return {}; })
+    ]).then(function(results) {
+      let rawQuote          = results[0];
+      let rawNoticias       = results[1];
+      let rawFinancials     = results[2];
+      let rawFinancialsPrev = results[3];
+      let rawPosition       = results[4];
+      let rawHistorical     = results[5];
+      let rawIPC            = results[6];
 
-    // 52-week high and low from historical
-    if (bars.length > 0) {
-      let closes = bars.map(function(b) { return b.c; });
-      metrics['52WeekHigh'] = Math.max.apply(null, closes);
-      metrics['52WeekLow']  = Math.min.apply(null, closes);
-    }
+      let quote   = adaptMXQuote(rawQuote);
+      let profile = adaptMXProfile(emisInfoFromCache, query);
+      let news    = adaptMXNews(rawNoticias);
+      let metrics = adaptMXMetrics(rawFinancials, rawFinancialsPrev, rawPosition);
+      let bars    = adaptMXHistorical(rawHistorical);
+      let ipcBars = adaptMXHistorical(rawIPC);
 
-    if (!quote.c) {
+      // P/U = precio ÷ EPS
+      if (metrics.epsBasic > 0 && quote.c > 0) {
+        metrics.peBasicExclExtraTTM = quote.c / metrics.epsBasic;
+      }
+
+      // Beta vs IPC
+      let beta = calculateMXBeta(bars, ipcBars);
+      if (beta > 0) metrics.beta = parseFloat(beta.toFixed(2));
+
+      // 52-week high/low
+      if (bars.length > 0) {
+        let closes = bars.map(function(b) { return b.c; });
+        metrics['52WeekHigh'] = Math.max.apply(null, closes);
+        metrics['52WeekLow']  = Math.min.apply(null, closes);
+      }
+
+      if (!quote.c) {
+        document.getElementById("loading").style.display = "none";
+        showToast("\"" + query + "\" no encontrado en BMV/BIVA. Verifica el ticker (ej. WALMEX*, CEMEXCPO).");
+        return;
+      }
+
+      let mxPrices  = bars.map(function(b) { return b.c; });
+      let mxDates   = bars.map(function(b) { return new Date(b.t).toISOString().split("T")[0]; });
+      let mxVolumes = bars.map(function(b) { return b.v || 0; });
+
+      let data = { ticker: query, quote, profile, news, metrics, prices: mxPrices, dates: mxDates, volumes: mxVolumes, earningsData: {}, pastEarnings: [], market: 'MX' };
+      cache[query] = data;
+      displayData(data);
+
+      if (mxPrices.length > 0) {
+        loadChart(mxPrices, mxDates, mxVolumes, quote.pc || 0, quote.h || 0, quote.l || 0, metrics['52WeekHigh'] || 0);
+        updateTechnicalFactors(mxPrices, quote.c || 0);
+      }
+    }).catch(function() {
       document.getElementById("loading").style.display = "none";
-      showToast("\"" + query + "\" no encontrado en BMV/BIVA. Verifica el ticker (ej. WALMEX*, CEMEXCPO).");
-      return;
-    }
-
-    // Populate prices BEFORE displayData so RSI and MA50 are computed correctly in calculateScore
-    let mxPrices  = bars.map(function(b) { return b.c; });
-    let mxDates   = bars.map(function(b) { return new Date(b.t).toISOString().split("T")[0]; });
-    let mxVolumes = bars.map(function(b) { return b.v || 0; });
-
-    let data = { ticker: query, quote, profile, news, metrics, prices: mxPrices, dates: mxDates, volumes: mxVolumes, earningsData: {}, pastEarnings: [], market: 'MX' };
-    cache[query] = data;
-    displayData(data);
-
-    if (mxPrices.length > 0) {
-      loadChart(mxPrices, mxDates, mxVolumes, quote.pc || 0, quote.h || 0, quote.l || 0, metrics['52WeekHigh'] || 0);
-      updateTechnicalFactors(mxPrices, quote.c || 0);
-    }
-  }).catch(function() {
-    document.getElementById("loading").style.display = "none";
-    document.getElementById("explanation").textContent = "Error cargando datos. Intenta de nuevo.";
-  });
+      document.getElementById("explanation").textContent = "Error cargando datos. Intenta de nuevo.";
+    });
+  }); // end getMXEmisoras callback
 }
 
 function _searchStockUS(query) {
