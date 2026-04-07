@@ -675,7 +675,7 @@ function displayData(data) {
   document.getElementById("show-details-btn").textContent = "Show Full Analysis";
 
   document.getElementById("explanation").innerHTML =
-    "<strong>Score Breakdown (13 Factors):</strong>" +
+    "" +
 (function() {
   let factors = [
     { label: "Price Movement", score: breakdown.price, what: "Today " + (changePct >= 0 ? "+" : "") + changePct.toFixed(2) + "% change. " + (changePct > 1 ? "Moving up more than 1% today is a positive momentum signal." : changePct < -1 ? "Dropping more than 1% today indicates selling pressure." : "Less than 1% movement means low activity today."), verdict: changePct > 1 ? "Moving up today" : changePct < -1 ? "Dropping today" : "No significant movement" },
