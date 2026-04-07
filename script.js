@@ -732,20 +732,18 @@ function _searchStockMX(query) {
       return;
     }
 
-    let data = { ticker: query, quote, profile, news, metrics, prices: [], dates: [], volumes: [], earningsData: {}, pastEarnings: [], market: 'MX' };
+    // Populate prices BEFORE displayData so RSI and MA50 are computed correctly in calculateScore
+    let mxPrices  = bars.map(function(b) { return b.c; });
+    let mxDates   = bars.map(function(b) { return new Date(b.t).toISOString().split("T")[0]; });
+    let mxVolumes = bars.map(function(b) { return b.v || 0; });
+
+    let data = { ticker: query, quote, profile, news, metrics, prices: mxPrices, dates: mxDates, volumes: mxVolumes, earningsData: {}, pastEarnings: [], market: 'MX' };
     cache[query] = data;
     displayData(data);
 
-    // Chart: show last 90 days by default, store full year
-    if (bars.length > 0) {
-      let prices  = bars.map(function(b) { return b.c; });
-      let dates   = bars.map(function(b) { return new Date(b.t).toISOString().split("T")[0]; });
-      let volumes = bars.map(function(b) { return b.v || 0; });
-      cache[query].prices  = prices;
-      cache[query].dates   = dates;
-      cache[query].volumes = volumes;
-      loadChart(prices, dates, volumes, quote.pc || 0, quote.h || 0, quote.l || 0, metrics['52WeekHigh'] || 0);
-      updateTechnicalFactors(prices, quote.c || 0);
+    if (mxPrices.length > 0) {
+      loadChart(mxPrices, mxDates, mxVolumes, quote.pc || 0, quote.h || 0, quote.l || 0, metrics['52WeekHigh'] || 0);
+      updateTechnicalFactors(mxPrices, quote.c || 0);
     }
   }).catch(function() {
     document.getElementById("loading").style.display = "none";
