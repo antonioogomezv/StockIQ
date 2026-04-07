@@ -272,6 +272,10 @@ function searchStock() {
   if (fundCard) fundCard.style.display = 'none';
   let earningsCard = document.getElementById('earnings-card');
   if (earningsCard) earningsCard.style.display = 'none';
+  let scoreExp = document.getElementById('score-explainer-card');
+  if (scoreExp) scoreExp.style.display = 'none';
+  let ctxTerms = document.getElementById('contextual-terms');
+  if (ctxTerms) ctxTerms.style.display = 'none';
   let newsSection = document.getElementById('news-section');
   if (newsSection) newsSection.style.display = 'none';
 
@@ -712,6 +716,8 @@ function displayData(data) {
   renderCompanyAbout(profile, metrics['dividendYieldIndicatedAnnual'] || 0);
   renderFundamentals({ price, changePct, prevClose, dayHigh, dayLow, week52High, week52Low, pe, beta, margin, growth, roe, marketCap: profile.marketCapitalization, dividend: metrics['dividendYieldIndicatedAnnual'], nextEarningsDate, lastEarnings });
   renderEarningsCard(nextEarningsDate, lastEarnings, companyName);
+  renderScoreExplainer(totalScore);
+  renderContextualTerms(pe, beta, margin, growth, rsi, ma50, currentRatio, interestCoverage);
   renderNewsSection(news, ticker, companyName);
 }
 
@@ -841,6 +847,119 @@ function renderEarningsCard(nextEarningsDate, lastEarnings, companyName) {
         (daysUntil <= 7 ? 'this is coming up very soon.' : 'worth keeping an eye on.') +
       '</div>' +
       lastHtml +
+    '</div>';
+  el.style.display = 'block';
+}
+
+// ── DAILY TIP ──────────────────────────────────────────────────────────────
+var DAILY_TIPS = [
+  { term: 'P/E Ratio',          emoji: '📊', tip: 'The P/E ratio tells you how much investors pay for every $1 a company earns. A P/E of 20 means you pay $20 for $1 of profit. Lower can mean cheaper — but also less growth expected.' },
+  { term: 'Beta',               emoji: '📈', tip: 'Beta measures how much a stock moves compared to the market. A beta of 1.5 means if the market drops 10%, this stock typically drops 15%. Higher beta = more risk and more reward.' },
+  { term: 'Dividend',           emoji: '💰', tip: 'A dividend is cash a company pays you just for owning its stock — usually every quarter. If Apple pays a 0.5% dividend and you own $10,000 in stock, you get $50/year without selling anything.' },
+  { term: 'Market Cap',         emoji: '🏢', tip: 'Market cap = share price × number of shares. It tells you the total value of a company. Apple is a mega-cap ($3T+). A small-cap company might be worth $500M. Bigger isn\'t always better.' },
+  { term: 'RSI',                emoji: '⚡', tip: 'RSI (Relative Strength Index) measures momentum on a 0-100 scale. Below 30 means the stock may be oversold and due for a bounce. Above 70 means it may be overbought and due for a pullback.' },
+  { term: 'Moving Average',     emoji: '📉', tip: 'A moving average smooths out daily price swings to show the trend. If a stock is above its 50-day average, it\'s in an uptrend. Below = downtrend. Traders use this as a buy/sell signal.' },
+  { term: 'Profit Margin',      emoji: '💡', tip: 'Profit margin = how many cents of profit a company keeps per dollar of sales. A 20% margin means for every $100 in revenue, $20 is profit. Software companies often have 30%+ margins.' },
+  { term: 'Revenue Growth',     emoji: '🚀', tip: 'Revenue growth shows if a company is selling more over time. 15%+ growth is fast. Negative growth is a warning sign. Growth companies often trade at high P/E ratios because investors expect future profits.' },
+  { term: 'ROE',                emoji: '🏆', tip: 'Return on Equity shows how efficiently a company uses shareholder money to generate profit. ROE of 20% means for every $100 investors put in, the company generates $20 in profit. Warren Buffett loves high ROE.' },
+  { term: 'Diversification',    emoji: '🌍', tip: 'Owning stocks in different sectors reduces risk. If you own 10 tech stocks, a bad tech week hurts everything. But if you also own healthcare and energy, those may hold up while tech falls.' },
+  { term: 'Sector Rotation',    emoji: '🔄', tip: 'As the economy changes, investors move money between sectors. When interest rates rise, money often flows from tech (hurt by high rates) into financials (banks earn more on loans).' },
+  { term: 'EPS',                emoji: '📋', tip: 'EPS (Earnings Per Share) = total profit divided by shares outstanding. If a company earns $1B and has 500M shares, EPS is $2. When EPS grows quarter over quarter, it\'s a positive sign.' },
+  { term: 'DCA',                emoji: '📅', tip: 'Dollar-cost averaging means investing a fixed amount regularly (e.g. $100/month) regardless of price. You buy more shares when prices are low and fewer when high — reducing the impact of volatility.' },
+  { term: 'Free Cash Flow',     emoji: '💸', tip: 'Free cash flow is the actual cash a company generates after paying for operations and investments. It\'s harder to fake than reported earnings. Companies with strong FCF can pay dividends, buy back stock, or invest in growth.' },
+  { term: 'Interest Coverage',  emoji: '🛡️', tip: 'Interest coverage ratio = earnings divided by interest payments. A ratio of 5x means the company earns 5x what it owes in interest. Below 1.5x is dangerous — the company may struggle to pay its debt.' },
+];
+
+function renderDailyTip() {
+  var el = document.getElementById('daily-tip');
+  if (!el) return;
+  var dayIndex = Math.floor(Date.now() / 86400000);
+  var dismissed = localStorage.getItem('tip-dismissed-' + dayIndex);
+  if (dismissed) { el.style.display = 'none'; return; }
+  var tip = DAILY_TIPS[dayIndex % DAILY_TIPS.length];
+  el.innerHTML =
+    '<div class="daily-tip-inner">' +
+      '<div class="daily-tip-left">' +
+        '<span class="daily-tip-emoji">' + tip.emoji + '</span>' +
+        '<div>' +
+          '<div class="daily-tip-label">DID YOU KNOW?</div>' +
+          '<div class="daily-tip-term">' + tip.term + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<button class="daily-tip-close" onclick="dismissDailyTip(' + dayIndex + ')" title="Dismiss">✕</button>' +
+    '</div>' +
+    '<div class="daily-tip-text">' + tip.tip + '</div>' +
+    '<button class="daily-tip-learn" onclick="openTerm(\'' + tip.term + '\')">Learn more about ' + tip.term + ' →</button>';
+  el.style.display = 'block';
+}
+
+function dismissDailyTip(dayIndex) {
+  localStorage.setItem('tip-dismissed-' + dayIndex, '1');
+  var el = document.getElementById('daily-tip');
+  if (el) { el.style.opacity = '0'; el.style.transition = 'opacity 0.2s'; setTimeout(function() { el.style.display = 'none'; }, 200); }
+}
+
+// ── SCORE EXPLAINER ────────────────────────────────────────────────────────
+function renderScoreExplainer(score) {
+  var el = document.getElementById('score-explainer-card');
+  if (!el) return;
+  var ranges = [
+    { min: 70, max: 100, color: '#16a34a', label: 'Strong', desc: 'Fundamentals look solid across most factors.' },
+    { min: 50, max: 69,  color: '#d97706', label: 'Watch',  desc: 'Some positives, but notable risks. Monitor closely.' },
+    { min: 0,  max: 49,  color: '#dc2626', label: 'Risky',  desc: 'Multiple weak factors. High risk — proceed carefully.' },
+  ];
+  var current = ranges.find(function(r) { return score >= r.min && score <= r.max; });
+
+  el.innerHTML =
+    '<div class="score-explainer-trigger" onclick="toggleScoreExplainer()">' +
+      '<span class="score-explainer-q">What does ' + score + '/100 mean?</span>' +
+      '<span class="score-explainer-chevron" id="score-explainer-chevron">▾</span>' +
+    '</div>' +
+    '<div class="score-explainer-body" id="score-explainer-body" style="display:none;">' +
+      ranges.map(function(r) {
+        var isActive = r.label === current.label;
+        return '<div class="score-explainer-range' + (isActive ? ' active' : '') + '" style="' + (isActive ? 'border-color:' + r.color + ';background:' + r.color + '18;' : '') + '">' +
+          '<span class="score-range-band" style="color:' + r.color + ';">' + r.min + (r.max === 100 ? '–100' : '–' + r.max) + '</span>' +
+          '<span class="score-range-label" style="color:' + r.color + ';font-weight:700;">' + r.label + '</span>' +
+          '<span class="score-range-desc">' + r.desc + '</span>' +
+        '</div>';
+      }).join('') +
+      '<p class="score-explainer-note">Scroll down to see the 13 factors that make up this score.</p>' +
+    '</div>';
+  el.style.display = 'block';
+}
+
+function toggleScoreExplainer() {
+  var body = document.getElementById('score-explainer-body');
+  var chevron = document.getElementById('score-explainer-chevron');
+  if (!body) return;
+  var isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  if (chevron) chevron.textContent = isOpen ? '▾' : '▴';
+}
+
+// ── CONTEXTUAL TERMS ───────────────────────────────────────────────────────
+function renderContextualTerms(pe, beta, margin, growth, rsi, ma50, currentRatio, interestCoverage) {
+  var el = document.getElementById('contextual-terms');
+  if (!el) return;
+  var terms = [];
+  if (pe > 0) terms.push('P/E Ratio');
+  if (beta > 0) terms.push('Beta');
+  if (margin !== 0) terms.push('Profit Margin');
+  if (growth !== 0) terms.push('Revenue Growth');
+  if (rsi !== null) terms.push('RSI');
+  if (ma50 !== null) terms.push('Moving Average');
+  if (currentRatio > 0) terms.push('Current Ratio');
+  if (interestCoverage > 0) terms.push('Interest Coverage');
+  // Pick 4 most relevant
+  terms = terms.slice(0, 4);
+  if (terms.length === 0) { el.style.display = 'none'; return; }
+  el.innerHTML =
+    '<div class="ctx-terms-label">Based on this result, learn about:</div>' +
+    '<div class="ctx-terms-chips">' +
+    terms.map(function(t) {
+      return '<button class="ctx-term-chip" onclick="openTerm(\'' + t.replace(/'/g, "\\'") + '\')">' + t + ' →</button>';
+    }).join('') +
     '</div>';
   el.style.display = 'block';
 }
@@ -3849,6 +3968,7 @@ auth.onAuthStateChanged(function(user) {
     loadMarketOverview();
     loadTrendingTickers();
     loadSectors();
+    renderDailyTip();
     setInterval(function() { loadTrendingTickers(true); }, 60000);
     setInterval(function() { loadSectors(); }, 300000);
     renderWatchlist();
