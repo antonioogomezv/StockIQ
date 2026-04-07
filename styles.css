@@ -1417,32 +1417,38 @@ details[open] .sector-summary { color: var(--text); }
 .fundamentals-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+  gap: 10px;
 }
 .fund-item {
   background: var(--surface2);
-  border-radius: 10px;
-  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: border-color 0.15s;
 }
+.fund-item:hover { border-color: var(--accent-blue); }
 .fund-label {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text-muted);
-  font-weight: 500;
-  margin-bottom: 4px;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.07em;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
+  line-height: 1;
 }
 .fund-tip-btn {
   background: none;
   border: 1px solid var(--border);
   color: var(--text-muted);
   border-radius: 50%;
-  width: 14px;
-  height: 14px;
-  font-size: 9px;
+  width: 13px;
+  height: 13px;
+  font-size: 8px;
   font-weight: 700;
   cursor: pointer;
   padding: 0;
@@ -1459,18 +1465,18 @@ details[open] .sector-summary { color: var(--text); }
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 8px 10px;
-  margin-top: 6px;
+  margin-top: 4px;
   line-height: 1.5;
   text-transform: none;
   letter-spacing: 0;
   font-weight: 400;
-  grid-column: 1 / -1;
 }
 .fund-value {
   font-family: var(--mono);
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 700;
   color: var(--text);
+  line-height: 1.2;
 }
 
 /* NEWS SECTION */

@@ -767,16 +767,6 @@ function renderFundamentals(f) {
       (beat ? " <span style='color:" + beatColor + ";font-weight:700;font-size:11px;'>" + beat + "</span>" : "");
   }
 
-  let fundTips = {
-    'Market Cap':     'Total value of all shares. Larger = more established & stable.',
-    'P/E Ratio':      'Price ÷ earnings. High = growth expected, low = cheap or struggling.',
-    'Dividend Yield': 'Annual cash paid to shareholders as % of price. 0% = no dividend.',
-    'Beta':           'Volatility vs the market. >1 = bigger swings, <1 = steadier.',
-    'Profit Margin':  '% of revenue kept as profit after all costs. Higher = more efficient.',
-    'Rev. Growth':    'How fast sales grew vs the same period last year.',
-    'Next Earnings':  'Date the company reports quarterly results — often causes big price moves.',
-    'Last EPS':       'Earnings per share last quarter. "Beat" = did better than analysts expected.'
-  };
   let items = [
     { label: 'Market Cap',     value: mktCap },
     { label: 'P/E Ratio',      value: f.pe > 0 ? f.pe.toFixed(1) : '—' },
@@ -787,16 +777,13 @@ function renderFundamentals(f) {
     { label: 'Next Earnings',  value: nextEarningsVal },
     { label: 'Last EPS',       value: lastEarningsVal },
   ];
-  let tipId = 0;
   el.innerHTML = '<h2>KEY STATS</h2><div class="fundamentals-grid">' +
     items.map(function(i) {
-      let tid = 'fund-tip-' + (tipId++);
-      let tip = fundTips[i.label] ? "<button class='fund-tip-btn' onclick=\"var e=document.getElementById('" + tid + "');e.style.display=e.style.display==='none'?'block':'none';\">?</button><div class='fund-tip' id='" + tid + "' style='display:none;'>" + fundTips[i.label] + "</div>" : '';
       let hasTermLink = !!_termMap[i.label];
       let labelHtml = hasTermLink
-        ? "<span class='term-link' onclick=\"openTerm('" + i.label.replace(/'/g, "\\'") + "')\" title='Tap to learn more'>" + i.label + " <span class='term-link-icon'>📖</span></span>"
+        ? "<span class='term-link' onclick=\"openTerm('" + i.label.replace(/'/g, "\\'") + "')\" title='Learn more'>" + i.label + "</span>"
         : i.label;
-      return "<div class='fund-item'><div class='fund-label'>" + labelHtml + tip + "</div><div class='fund-value'>" + i.value + "</div></div>";
+      return "<div class='fund-item'><div class='fund-label'>" + labelHtml + "</div><div class='fund-value'>" + i.value + "</div></div>";
     }).join('') + '</div>';
   el.style.display = 'block';
 }
@@ -833,7 +820,7 @@ function scoreBar(label, score, tooltip) {
   let dataAttr = "data-factor='" + label.replace(/'/g, '') + "'";
   return "<div class='score-item' " + dataAttr + ">" +
     "<div class='score-item-header'>" +
-      "<span class='score-item-name term-link' onclick=\"event.stopPropagation();openTerm('" + label.replace(/'/g, "\\'") + "')\" title='Tap to learn more'>" + label + " <span class='term-link-icon'>📖</span></span>" +
+      "<span class='score-item-name term-link' onclick=\"event.stopPropagation();openTerm('" + label.replace(/'/g, "\\'") + "')\" title='Learn more'>" + label + "</span>" +
       "<span class='score-item-num' style='color:" + color + ";'>" + score + "/10</span>" +
     "</div>" +
     "<div class='score-bar-wrap'>" +
