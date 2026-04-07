@@ -104,7 +104,11 @@ let mxSectorAverages = {
 const DB_BASE = 'https://api.databursatil.com/v2';
 
 function dbFetch(endpoint, params) {
-  let qs = Object.keys(params).map(function(k) { return k + '=' + encodeURIComponent(params[k]); }).join('&');
+  // DataBursatil expects literal commas in parameters (e.g. bolsa=BMV,BIVA)
+  // so we encode values but restore %2C → ,
+  let qs = Object.keys(params).map(function(k) {
+    return k + '=' + encodeURIComponent(params[k]).replace(/%2C/gi, ',');
+  }).join('&');
   let url = DB_BASE + '/' + endpoint + '?token=' + databursatilKey + (qs ? '&' + qs : '');
   return fetch(url).then(function(r) { return r.json(); });
 }
