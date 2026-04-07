@@ -270,6 +270,8 @@ function searchStock() {
   if (aboutCard) aboutCard.style.display = 'none';
   let fundCard = document.getElementById('fundamentals-card');
   if (fundCard) fundCard.style.display = 'none';
+  let earningsCard = document.getElementById('earnings-card');
+  if (earningsCard) earningsCard.style.display = 'none';
   let newsSection = document.getElementById('news-section');
   if (newsSection) newsSection.style.display = 'none';
 
@@ -709,6 +711,7 @@ function displayData(data) {
   loadChart(prices, dates, volumes || [], prevClose, dayHigh, dayLow, week52High);
   renderCompanyAbout(profile, metrics['dividendYieldIndicatedAnnual'] || 0);
   renderFundamentals({ price, changePct, prevClose, dayHigh, dayLow, week52High, week52Low, pe, beta, margin, growth, roe, marketCap: profile.marketCapitalization, dividend: metrics['dividendYieldIndicatedAnnual'], nextEarningsDate, lastEarnings });
+  renderEarningsCard(nextEarningsDate, lastEarnings, companyName);
   renderNewsSection(news, ticker, companyName);
 }
 
@@ -785,6 +788,60 @@ function renderFundamentals(f) {
         : i.label;
       return "<div class='fund-item'><div class='fund-label'>" + labelHtml + "</div><div class='fund-value'>" + i.value + "</div></div>";
     }).join('') + '</div>';
+  el.style.display = 'block';
+}
+
+function renderEarningsCard(nextEarningsDate, lastEarnings, companyName) {
+  var el = document.getElementById('earnings-card');
+  if (!el) return;
+  if (!nextEarningsDate) { el.style.display = 'none'; return; }
+
+  var today = new Date();
+  today.setHours(0, 0, 0, 0);
+  var eDate = new Date(nextEarningsDate + 'T12:00:00');
+  var daysUntil = Math.round((eDate - today) / 86400000);
+
+  var dateStr = eDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+  var urgencyColor, countdownText, urgencyBg;
+  if (daysUntil <= 0) {
+    urgencyColor = '#dc2626'; countdownText = 'Today'; urgencyBg = 'rgba(220,38,38,0.08)';
+  } else if (daysUntil === 1) {
+    urgencyColor = '#dc2626'; countdownText = 'Tomorrow'; urgencyBg = 'rgba(220,38,38,0.08)';
+  } else if (daysUntil <= 7) {
+    urgencyColor = '#d97706'; countdownText = 'In ' + daysUntil + ' days'; urgencyBg = 'rgba(217,119,6,0.08)';
+  } else if (daysUntil <= 30) {
+    urgencyColor = 'var(--accent-blue)'; countdownText = 'In ' + daysUntil + ' days'; urgencyBg = 'rgba(14,165,233,0.07)';
+  } else {
+    urgencyColor = 'var(--text-muted)'; countdownText = 'In ' + daysUntil + ' days'; urgencyBg = 'var(--surface2)';
+  }
+
+  var lastHtml = '';
+  if (lastEarnings && lastEarnings.actual != null) {
+    var beat = lastEarnings.estimate != null
+      ? (lastEarnings.actual >= lastEarnings.estimate ? 'Beat' : 'Missed')
+      : null;
+    var beatColor = beat === 'Beat' ? '#16a34a' : '#dc2626';
+    lastHtml = '<div class="earnings-last">' +
+      '<span class="earnings-last-label">Last quarter:</span> ' +
+      '<span class="earnings-last-val">$' + lastEarnings.actual.toFixed(2) + ' EPS</span>' +
+      (beat ? ' <span class="earnings-badge" style="color:' + beatColor + ';border-color:' + beatColor + ';">' + beat + ' estimate</span>' : '') +
+    '</div>';
+  }
+
+  el.innerHTML =
+    '<div class="earnings-card-inner" style="background:' + urgencyBg + ';border-color:' + urgencyColor + ';">' +
+      '<div class="earnings-header">' +
+        '<span class="earnings-label">NEXT EARNINGS</span>' +
+        '<span class="earnings-countdown" style="color:' + urgencyColor + ';">' + countdownText + '</span>' +
+      '</div>' +
+      '<div class="earnings-date">' + dateStr + '</div>' +
+      '<div class="earnings-explainer">This is when ' + escHtml(companyName) + ' will report its quarterly results. ' +
+        'Stock prices often move <strong>5–15% in a single day</strong> around earnings — ' +
+        (daysUntil <= 7 ? 'this is coming up very soon.' : 'worth keeping an eye on.') +
+      '</div>' +
+      lastHtml +
+    '</div>';
   el.style.display = 'block';
 }
 

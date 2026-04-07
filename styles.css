@@ -1360,6 +1360,61 @@ button:active { transform: translateY(0); }
 }
 .sector-stock-btn:hover { background: var(--accent-blue); color: #fff; border-color: var(--accent-blue); }
 
+/* Earnings card */
+#earnings-card { margin-bottom: 18px; }
+.earnings-card-inner {
+  border: 1px solid;
+  border-radius: 14px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.earnings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.earnings-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+.earnings-countdown {
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--mono);
+}
+.earnings-date {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+}
+.earnings-explainer {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.earnings-last {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.earnings-last-label { color: var(--text-muted); }
+.earnings-last-val { color: var(--text); font-weight: 600; font-family: var(--mono); }
+.earnings-badge {
+  border: 1px solid;
+  border-radius: 20px;
+  padding: 1px 8px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
 /* Portfolio search */
 #port-search-wrap {
   margin-bottom: 10px;
