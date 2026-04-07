@@ -3476,11 +3476,10 @@ footer {
 
 #portfolio-chart-header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: flex-start;
   gap: 12px;
   margin-bottom: 20px;
-  flex-wrap: wrap;
 }
 
 #portfolio-chart-header h2 { margin-bottom: 0; }
@@ -3516,18 +3515,18 @@ footer {
 
 #portfolio-chart-wrap {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 32px;
-  flex-wrap: wrap;
+  gap: 24px;
 }
 
-#portfolioChart { max-width: 180px; max-height: 180px; flex-shrink: 0; }
+#portfolioChart { max-width: 200px; max-height: 200px; flex-shrink: 0; }
 
 #portfolio-chart-legend {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  flex: 1;
+  gap: 10px;
+  width: 100%;
   min-width: 140px;
 }
 
@@ -3536,6 +3535,7 @@ footer {
   align-items: center;
   gap: 10px;
   font-size: 13px;
+  padding: 2px 0;
 }
 
 .port-legend-dot {
@@ -3545,12 +3545,11 @@ footer {
   flex-shrink: 0;
 }
 
-.port-legend-ticker { font-weight: 700; color: var(--text); min-width: 50px; }
-.port-legend-pct { color: var(--text-muted); font-size: 12px; }
+.port-legend-ticker { font-weight: 700; color: var(--text); min-width: 54px; }
+.port-legend-pct { color: var(--text-muted); font-size: 12px; margin-left: auto; }
 
 @media (max-width: 768px) {
-  #portfolio-chart-wrap { justify-content: center; }
-  #portfolioChart { max-width: 140px; max-height: 140px; }
+  #portfolioChart { max-width: 160px; max-height: 160px; }
 }
 
 #add-stock-form {
