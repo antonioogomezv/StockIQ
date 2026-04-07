@@ -719,6 +719,9 @@ function displayData(data) {
   renderScoreExplainer(totalScore);
   renderContextualTerms(pe, beta, margin, growth, rsi, ma50, currentRatio, interestCoverage);
   renderNewsSection(news, ticker, companyName);
+  setTimeout(function() {
+    showStockQuiz(ticker, companyName, pe, beta, margin, growth, rsi, totalScore, currentRatio);
+  }, 1200);
 }
 
 function renderCompanyAbout(profile, dividend) {
@@ -849,6 +852,186 @@ function renderEarningsCard(nextEarningsDate, lastEarnings, companyName) {
       lastHtml +
     '</div>';
   el.style.display = 'block';
+}
+
+// ── STOCK QUIZ ─────────────────────────────────────────────────────────────
+function buildStockQuiz(ticker, companyName, pe, beta, margin, growth, rsi, totalScore, currentRatio) {
+  var questions = [];
+
+  if (pe > 0) {
+    var peLevel = pe < 15 ? 'Low' : pe < 30 ? 'Average' : 'High';
+    var peWrong = pe < 15 ? ['Average', 'High'] : pe < 30 ? ['Low', 'High'] : ['Low', 'Average'];
+    questions.push({
+      q: companyName + ' has a P/E ratio of ' + pe.toFixed(1) + '. How does that compare to a typical stock?',
+      options: shuffle([peLevel, peWrong[0], peWrong[1]]),
+      answer: peLevel,
+      explain: pe < 15
+        ? 'A P/E below 15 is considered low — you\'re paying less per dollar of earnings. This can mean the stock is cheap, or that growth is slow.'
+        : pe < 30
+        ? 'A P/E between 15–30 is in the normal range for most quality companies. Not cheap, not expensive.'
+        : 'A P/E above 30 is high — investors expect strong future growth. If that growth doesn\'t come, the stock can fall sharply.',
+      term: 'P/E Ratio'
+    });
+  }
+
+  if (beta > 0) {
+    var betaLevel = beta < 0.8 ? 'Less volatile than the market' : beta < 1.3 ? 'About as volatile as the market' : 'More volatile than the market';
+    var betaWrong = beta < 0.8
+      ? ['About as volatile as the market', 'More volatile than the market']
+      : beta < 1.3
+      ? ['Less volatile than the market', 'More volatile than the market']
+      : ['Less volatile than the market', 'About as volatile as the market'];
+    questions.push({
+      q: companyName + ' has a beta of ' + beta.toFixed(2) + '. What does that tell you?',
+      options: shuffle([betaLevel, betaWrong[0], betaWrong[1]]),
+      answer: betaLevel,
+      explain: 'Beta measures how much a stock moves vs the market. Beta 1.0 = moves with market. Below 1 = calmer. Above 1.5 = bigger swings both ways.',
+      term: 'Beta'
+    });
+  }
+
+  if (rsi !== null) {
+    var rsiZone = rsi < 30 ? 'Oversold — possible bounce coming' : rsi > 70 ? 'Overbought — could correct soon' : 'Neutral — no extreme signal';
+    var rsiWrong = rsi < 30
+      ? ['Overbought — could correct soon', 'Neutral — no extreme signal']
+      : rsi > 70
+      ? ['Oversold — possible bounce coming', 'Neutral — no extreme signal']
+      : ['Oversold — possible bounce coming', 'Overbought — could correct soon'];
+    questions.push({
+      q: companyName + '\'s RSI is ' + rsi + '. What zone does that put it in?',
+      options: shuffle([rsiZone, rsiWrong[0], rsiWrong[1]]),
+      answer: rsiZone,
+      explain: 'RSI runs 0–100. Below 30 = oversold (stock may have fallen too far, could bounce). Above 70 = overbought (stock may have risen too fast). 30–70 = neutral.',
+      term: 'RSI'
+    });
+  }
+
+  if (margin !== 0) {
+    var marginLevel = margin > 20 ? 'Excellent' : margin > 10 ? 'Healthy' : margin > 0 ? 'Thin' : 'Negative';
+    var marginWrong = margin > 20 ? ['Healthy', 'Thin'] : margin > 10 ? ['Excellent', 'Thin'] : margin > 0 ? ['Healthy', 'Excellent'] : ['Thin', 'Healthy'];
+    questions.push({
+      q: companyName + ' keeps ' + margin.toFixed(1) + '% of every dollar as profit. How would you describe that margin?',
+      options: shuffle([marginLevel, marginWrong[0], marginWrong[1]]),
+      answer: marginLevel,
+      explain: 'Profit margin above 20% is exceptional (most software companies). 10–20% is healthy. Under 5% is thin — the company is vulnerable to cost increases.',
+      term: 'Profit Margin'
+    });
+  }
+
+  if (totalScore > 0) {
+    var scoreRange = totalScore >= 70 ? 'Strong — fundamentals look solid' : totalScore >= 50 ? 'Watch & Wait — some risks present' : 'Risky — multiple weak factors';
+    var scoreWrong = totalScore >= 70
+      ? ['Watch & Wait — some risks present', 'Risky — multiple weak factors']
+      : totalScore >= 50
+      ? ['Strong — fundamentals look solid', 'Risky — multiple weak factors']
+      : ['Strong — fundamentals look solid', 'Watch & Wait — some risks present'];
+    questions.push({
+      q: companyName + ' scores ' + totalScore + '/100. What signal does StockIQ give it?',
+      options: shuffle([scoreRange, scoreWrong[0], scoreWrong[1]]),
+      answer: scoreRange,
+      explain: 'Scores 70+ = Strong (solid fundamentals across most factors). 50–69 = Watch (mixed signals). Below 50 = Risky (multiple weak areas).',
+      term: null
+    });
+  }
+
+  return questions.slice(0, 3); // max 3 questions
+}
+
+function shuffle(arr) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
+
+var _quizState = { questions: [], current: 0, score: 0 };
+
+function showStockQuiz(ticker, companyName, pe, beta, margin, growth, rsi, totalScore, currentRatio) {
+  var qs = buildStockQuiz(ticker, companyName, pe, beta, margin, growth, rsi, totalScore, currentRatio);
+  if (qs.length === 0) return;
+  _quizState = { questions: qs, current: 0, score: 0 };
+  var overlay = document.getElementById('stock-quiz-overlay');
+  if (overlay) overlay.style.display = 'flex';
+  renderQuizQuestion();
+}
+
+function renderQuizQuestion() {
+  var body = document.getElementById('stock-quiz-body');
+  if (!body) return;
+  var state = _quizState;
+  var q = state.questions[state.current];
+  var total = state.questions.length;
+
+  body.innerHTML =
+    '<div class="quiz-progress">' +
+      '<div class="quiz-progress-bar"><div class="quiz-progress-fill" style="width:' + (state.current / total * 100) + '%"></div></div>' +
+      '<span class="quiz-progress-text">Question ' + (state.current + 1) + ' of ' + total + '</span>' +
+    '</div>' +
+    '<div class="quiz-question">' + q.q + '</div>' +
+    '<div class="quiz-options">' +
+    q.options.map(function(opt) {
+      return '<button class="quiz-option" onclick="answerQuiz(\'' + opt.replace(/'/g, "\\'") + '\')">' + opt + '</button>';
+    }).join('') +
+    '</div>';
+}
+
+function answerQuiz(chosen) {
+  var state = _quizState;
+  var q = state.questions[state.current];
+  var correct = chosen === q.answer;
+  if (correct) state.score++;
+
+  var body = document.getElementById('stock-quiz-body');
+  var optBtns = body.querySelectorAll('.quiz-option');
+  optBtns.forEach(function(btn) {
+    btn.disabled = true;
+    if (btn.textContent === q.answer) btn.classList.add('correct');
+    else if (btn.textContent === chosen && !correct) btn.classList.add('wrong');
+  });
+
+  var feedback = document.createElement('div');
+  feedback.className = 'quiz-feedback ' + (correct ? 'correct' : 'wrong');
+  feedback.innerHTML =
+    '<div class="quiz-feedback-icon">' + (correct ? '✓ Correct!' : '✗ Not quite') + '</div>' +
+    '<div class="quiz-feedback-explain">' + q.explain + '</div>' +
+    (q.term ? '<button class="quiz-learn-btn" onclick="openTerm(\'' + q.term + '\')">Learn more about ' + q.term + ' →</button>' : '') +
+    '<button class="quiz-next-btn" onclick="nextQuizQuestion()">' + (state.current + 1 < state.questions.length ? 'Next question →' : 'See results →') + '</button>';
+  body.appendChild(feedback);
+}
+
+function nextQuizQuestion() {
+  var state = _quizState;
+  state.current++;
+  if (state.current >= state.questions.length) {
+    showQuizResults();
+  } else {
+    renderQuizQuestion();
+  }
+}
+
+function showQuizResults() {
+  var state = _quizState;
+  var body = document.getElementById('stock-quiz-body');
+  var pct = Math.round((state.score / state.questions.length) * 100);
+  var msg = pct === 100 ? 'Perfect score! You\'re learning fast.' : pct >= 66 ? 'Good work! Keep analyzing stocks to sharpen your knowledge.' : 'Keep going — every stock you analyze teaches you something new.';
+  var emoji = pct === 100 ? '🏆' : pct >= 66 ? '👍' : '📚';
+  body.innerHTML =
+    '<div class="quiz-results">' +
+      '<div class="quiz-results-emoji">' + emoji + '</div>' +
+      '<div class="quiz-results-score">' + state.score + ' / ' + state.questions.length + '</div>' +
+      '<div class="quiz-results-msg">' + msg + '</div>' +
+      '<button class="quiz-next-btn" onclick="closeStockQuiz()">Done</button>' +
+    '</div>';
+  // Update streak/achievement for completing a quiz
+  var quizCount = parseInt(localStorage.getItem('quizzes-completed') || '0') + 1;
+  localStorage.setItem('quizzes-completed', quizCount);
+}
+
+function closeStockQuiz() {
+  var overlay = document.getElementById('stock-quiz-overlay');
+  if (overlay) overlay.style.display = 'none';
 }
 
 // ── DAILY TIP ──────────────────────────────────────────────────────────────
@@ -2341,8 +2524,54 @@ function handleUrlParams() {
 }
 
 function toggleDictionary() {
-  document.getElementById("dict-drawer").classList.toggle("open");
-  document.getElementById("dict-overlay").classList.toggle("open");
+  var drawer = document.getElementById("dict-drawer");
+  var overlay = document.getElementById("dict-overlay");
+  drawer.classList.toggle("open");
+  overlay.classList.toggle("open");
+  // Clear search when closing
+  if (!drawer.classList.contains("open")) {
+    var s = document.getElementById("dict-search");
+    if (s) { s.value = ""; filterDictTerms(""); }
+  }
+}
+
+function filterDictTerms(query) {
+  var q = query.trim().toLowerCase();
+  var items = document.querySelectorAll("#dict-list .dict-item");
+  var categories = document.querySelectorAll("#dict-list .dict-category");
+  var noResults = document.getElementById("dict-no-results");
+  var visible = 0;
+
+  if (!q) {
+    items.forEach(function(el) { el.style.display = ""; });
+    categories.forEach(function(el) { el.style.display = ""; });
+    if (noResults) noResults.style.display = "none";
+    return;
+  }
+
+  // Hide all categories first, show only those with matching items
+  var visibleCategories = new Set();
+  items.forEach(function(el) {
+    var termEl = el.querySelector(".dict-term");
+    var defEl  = el.querySelector(".dict-def");
+    var text = ((termEl ? termEl.textContent : "") + " " + (defEl ? defEl.textContent : "")).toLowerCase();
+    if (text.includes(q)) {
+      el.style.display = "";
+      visible++;
+      // Find preceding category
+      var prev = el.previousElementSibling;
+      while (prev) {
+        if (prev.classList.contains("dict-category")) { visibleCategories.add(prev); break; }
+        prev = prev.previousElementSibling;
+      }
+    } else {
+      el.style.display = "none";
+    }
+  });
+  categories.forEach(function(el) {
+    el.style.display = visibleCategories.has(el) ? "" : "none";
+  });
+  if (noResults) noResults.style.display = visible === 0 ? "block" : "none";
 }
 
 // Map from display label → the term string used in toggleDef / dict-item onclick

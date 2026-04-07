@@ -201,6 +201,10 @@
     <span>Financial Terms</span>
     <button onclick="toggleDictionary()">✕</button>
   </div>
+  <div id="dict-search-wrap">
+    <input type="text" id="dict-search" placeholder="Search terms…" oninput="filterDictTerms(this.value)" autocomplete="off">
+  </div>
+  <div id="dict-no-results" style="display:none;">No terms found.</div>
   <div id="dict-list">
 
     <div class="dict-category">Valuation</div>
@@ -1117,6 +1121,17 @@
 
   <!-- Floating Learn Terms button — mobile only -->
   <button id="float-dict-btn" onclick="toggleDictionary()" aria-label="Learn Terms">📖</button>
+
+  <!-- Stock Quiz Modal -->
+  <div id="stock-quiz-overlay" style="display:none;" onclick="closeStockQuiz()">
+    <div id="stock-quiz-modal" onclick="event.stopPropagation()">
+      <div id="stock-quiz-header">
+        <span id="stock-quiz-label">QUICK QUIZ</span>
+        <button onclick="closeStockQuiz()">✕</button>
+      </div>
+      <div id="stock-quiz-body"></div>
+    </div>
+  </div>
 
 </div>
 
