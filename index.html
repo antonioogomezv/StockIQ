@@ -894,6 +894,7 @@
               <div id="portfolio-chart-toggle">
                 <button class="port-chart-btn active" data-view="pie" onclick="switchPortfolioChart('pie')">Allocation</button>
                 <button class="port-chart-btn" data-view="line" onclick="switchPortfolioChart('line')">History</button>
+                <button class="port-chart-btn" data-view="sectors" onclick="switchPortfolioChart('sectors')">Sectors</button>
               </div>
             </div>
             <div id="portfolio-pie-view">
@@ -907,6 +908,9 @@
               <div id="portfolio-line-empty" style="display:none;text-align:center;padding:24px 0;font-size:13px;color:var(--text-muted);">
                 Visit the app on multiple days to see your portfolio value over time.
               </div>
+            </div>
+            <div id="portfolio-sectors-view" style="display:none;">
+              <div id="portfolio-sectors-bars"></div>
             </div>
           </div>
 
@@ -1001,6 +1005,10 @@
           </div>
         </div>
         <div id="watchlist-items"></div>
+      </div>
+      <div id="wl-news-section" style="display:none;">
+        <h2>LATEST NEWS FOR YOUR WATCHLIST</h2>
+        <div id="wl-news-list"></div>
       </div>
     </main>
   </div>

@@ -1441,12 +1441,79 @@ function setWlSort(sort) {
   renderWatchlist();
 }
 
+function loadWatchlistNews(tickers) {
+  var section = document.getElementById('wl-news-section');
+  var list = document.getElementById('wl-news-list');
+  if (!section || !list || !tickers || tickers.length === 0) return;
+
+  var cacheKey = 'wl-news-cache-' + tickers.slice().sort().join(',');
+  var cached = localStorage.getItem(cacheKey);
+  if (cached) {
+    try {
+      var p = JSON.parse(cached);
+      if (Date.now() - p.ts < 1800000) { renderWatchlistNews(p.articles); return; }
+    } catch(e) {}
+  }
+
+  var today = new Date();
+  var from = new Date(today); from.setDate(today.getDate() - 7);
+  var toStr = today.toISOString().split('T')[0];
+  var fromStr = from.toISOString().split('T')[0];
+
+  // Fetch news for up to 5 tickers, merge and deduplicate
+  var limit = tickers.slice(0, 5);
+  var promises = limit.map(function(t) {
+    return fetch('https://finnhub.io/api/v1/company-news?symbol=' + t + '&from=' + fromStr + '&to=' + toStr + '&token=' + finnhubKey)
+      .then(function(r) { return r.json(); })
+      .then(function(news) {
+        return (Array.isArray(news) ? news : []).slice(0, 5).map(function(a) {
+          return Object.assign({}, a, { _ticker: t });
+        });
+      })
+      .catch(function() { return []; });
+  });
+
+  Promise.all(promises).then(function(results) {
+    var all = [].concat.apply([], results);
+    // Deduplicate by headline, sort by date desc
+    var seen = {};
+    var unique = all.filter(function(a) {
+      if (seen[a.headline]) return false;
+      seen[a.headline] = true;
+      return true;
+    }).sort(function(a, b) { return b.datetime - a.datetime; }).slice(0, 12);
+    localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), articles: unique }));
+    renderWatchlistNews(unique);
+  });
+}
+
+function renderWatchlistNews(articles) {
+  var section = document.getElementById('wl-news-section');
+  var list = document.getElementById('wl-news-list');
+  if (!section || !list) return;
+  if (!articles || articles.length === 0) { section.style.display = 'none'; return; }
+  list.innerHTML = articles.map(function(a) {
+    var date = a.datetime ? new Date(a.datetime * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+    var source = escHtml(a.source || '');
+    var url = a.url || '#';
+    return "<a class='news-item wl-news-item' href='" + escHtml(url) + "' target='_blank' rel='noopener'>" +
+      "<span class='wl-news-ticker'>" + escHtml(a._ticker || '') + "</span>" +
+      "<div class='wl-news-right'>" +
+        "<div class='news-headline'>" + escHtml(a.headline) + "</div>" +
+        "<div class='news-meta'>" + (source ? source + ' · ' : '') + date + "</div>" +
+      "</div>" +
+    "</a>";
+  }).join('');
+  section.style.display = 'block';
+}
+
 function renderWatchlist() {
   let watchlist = JSON.parse(localStorage.getItem("watchlist") || "[]");
   let empty = document.getElementById("watchlist-empty");
   let items = document.getElementById("watchlist-items");
-  if (watchlist.length === 0) { empty.style.display = "flex"; items.innerHTML = ""; return; }
+  if (watchlist.length === 0) { empty.style.display = "flex"; items.innerHTML = ""; document.getElementById('wl-news-section').style.display = 'none'; return; }
   empty.style.display = "none";
+  loadWatchlistNews(watchlist.map(function(w) { return w.ticker; }));
 
   // Sort bar
   let sortBar = document.getElementById('wl-sort-bar');
@@ -2646,6 +2713,7 @@ function renderPortfolio() {
 
     if (totalValue > 0) savePortfolioValueHistory(totalValue);
     renderPortfolioChart(stockData, totalValue);
+    renderSectorAllocation(stockData, totalValue);
     let portAiBtn = document.getElementById('port-ai-btn');
     if (portAiBtn) portAiBtn.style.display = 'block';
     let exportBtn = document.getElementById('port-export-btn');
@@ -2963,9 +3031,95 @@ function savePortfolioValueHistory(value) {
 function switchPortfolioChart(view) {
   document.querySelectorAll('.port-chart-btn').forEach(function(b) { b.classList.remove('active'); });
   document.querySelector('.port-chart-btn[data-view="' + view + '"]').classList.add('active');
-  document.getElementById('portfolio-pie-view').style.display  = view === 'pie'  ? 'block' : 'none';
-  document.getElementById('portfolio-line-view').style.display = view === 'line' ? 'block' : 'none';
+  document.getElementById('portfolio-pie-view').style.display     = view === 'pie'     ? 'block' : 'none';
+  document.getElementById('portfolio-line-view').style.display    = view === 'line'    ? 'block' : 'none';
+  document.getElementById('portfolio-sectors-view').style.display = view === 'sectors' ? 'block' : 'none';
   if (view === 'line') renderPortfolioLineChart();
+}
+
+// Build reverse ticker→sector lookup from SECTOR_TICKERS
+var _tickerSectorMap = (function() {
+  var map = {};
+  Object.keys(SECTOR_TICKERS).forEach(function(sector) {
+    SECTOR_TICKERS[sector].forEach(function(s) { map[s.t] = sector; });
+  });
+  return map;
+})();
+
+var SECTOR_COLORS = {
+  'Technology':  '#6366f1',
+  'Healthcare':  '#10b981',
+  'Financials':  '#f59e0b',
+  'Energy':      '#ef4444',
+  'Consumer':    '#ec4899',
+  'Industrials': '#8b5cf6',
+  'Real Estate': '#14b8a6',
+  'Utilities':   '#64748b',
+  'Other':       '#94a3b8',
+};
+
+function renderSectorAllocation(stockData, totalValue) {
+  var el = document.getElementById('portfolio-sectors-bars');
+  if (!el || totalValue <= 0) return;
+
+  // Group by sector
+  var sectorMap = {};
+  stockData.forEach(function(s) {
+    var sector = _tickerSectorMap[s.ticker] || 'Other';
+    if (!sectorMap[sector]) sectorMap[sector] = { value: 0, tickers: [] };
+    sectorMap[sector].value += s.value;
+    sectorMap[sector].tickers.push(s.ticker);
+  });
+
+  var sectors = Object.keys(sectorMap).map(function(name) {
+    return { name: name, value: sectorMap[name].value, tickers: sectorMap[name].tickers, pct: (sectorMap[name].value / totalValue) * 100 };
+  }).sort(function(a, b) { return b.pct - a.pct; });
+
+  var maxPct = sectors[0] ? sectors[0].pct : 1;
+
+  // Diversification grade
+  var numSectors = sectors.length;
+  var topPct = sectors[0] ? sectors[0].pct : 0;
+  var numHoldings = stockData.length;
+  var grade, gradeColor, gradeNote;
+  if (numSectors >= 4 && topPct < 50 && numHoldings >= 5) {
+    grade = 'A'; gradeColor = '#16a34a';
+    gradeNote = 'Well diversified — spread across ' + numSectors + ' sectors.';
+  } else if (numSectors >= 3 && topPct < 65) {
+    grade = 'B'; gradeColor = '#16a34a';
+    gradeNote = 'Decent spread. Consider adding stocks from other sectors.';
+  } else if (numSectors >= 2 && topPct < 80) {
+    grade = 'C'; gradeColor = '#d97706';
+    gradeNote = 'Moderate concentration. A bad week in ' + sectors[0].name + ' could hurt significantly.';
+  } else {
+    grade = 'D'; gradeColor = '#dc2626';
+    gradeNote = 'High concentration in ' + sectors[0].name + '. Consider diversifying.';
+  }
+
+  el.innerHTML =
+    '<div class="divers-grade-row">' +
+      '<div class="divers-grade-badge" style="color:' + gradeColor + ';border-color:' + gradeColor + ';">' + grade + '</div>' +
+      '<div class="divers-grade-info">' +
+        '<div class="divers-grade-title">Diversification Grade</div>' +
+        '<div class="divers-grade-note">' + gradeNote + '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="sector-alloc-explainer">How your money is spread across sectors. Owning stocks in different sectors reduces risk — if one sector has a bad day, others may hold up.</div>' +
+    sectors.map(function(s) {
+      var color = SECTOR_COLORS[s.name] || SECTOR_COLORS['Other'];
+      var barWidth = (s.pct / maxPct) * 100;
+      var warning = s.pct > 60 ? ' <span class="sector-alloc-warn">High concentration</span>' : '';
+      return '<div class="sector-alloc-row">' +
+        '<div class="sector-alloc-meta">' +
+          '<span class="sector-alloc-name">' + s.name + warning + '</span>' +
+          '<span class="sector-alloc-tickers">' + s.tickers.join(', ') + '</span>' +
+        '</div>' +
+        '<div class="sector-alloc-bar-wrap">' +
+          '<div class="sector-alloc-bar-fill" style="width:' + barWidth + '%;background:' + color + ';"></div>' +
+        '</div>' +
+        '<span class="sector-alloc-pct">' + s.pct.toFixed(1) + '%</span>' +
+      '</div>';
+    }).join('');
 }
 
 function renderPortfolioLineChart() {

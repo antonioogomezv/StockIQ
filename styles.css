@@ -1360,6 +1360,102 @@ button:active { transform: translateY(0); }
 }
 .sector-stock-btn:hover { background: var(--accent-blue); color: #fff; border-color: var(--accent-blue); }
 
+/* Sector allocation (portfolio) */
+.sector-alloc-explainer {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+  line-height: 1.5;
+}
+.sector-alloc-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.sector-alloc-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 110px;
+  flex-shrink: 0;
+}
+.sector-alloc-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sector-alloc-warn {
+  font-size: 10px;
+  font-weight: 700;
+  color: #d97706;
+  background: rgba(217,119,6,0.1);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+.sector-alloc-tickers {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: var(--mono);
+}
+.sector-alloc-bar-wrap {
+  flex: 1;
+  height: 8px;
+  background: var(--surface2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.sector-alloc-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+.sector-alloc-pct {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  min-width: 38px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.divers-grade-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.divers-grade-badge {
+  font-size: 32px;
+  font-weight: 800;
+  border: 3px solid;
+  border-radius: 12px;
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-family: var(--mono);
+}
+.divers-grade-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.divers-grade-note {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
 /* Earnings card */
 #earnings-card { margin-bottom: 18px; }
 .earnings-card-inner {
@@ -1414,6 +1510,32 @@ button:active { transform: translateY(0); }
   font-size: 11px;
   font-weight: 700;
 }
+
+/* Watchlist news feed */
+#wl-news-section { margin-top: 28px; }
+#wl-news-section h2 { margin-bottom: 16px; }
+.wl-news-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  text-decoration: none;
+}
+.wl-news-item:last-child { border-bottom: none; }
+.wl-news-item:hover { opacity: 0.75; }
+.wl-news-ticker {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent-blue);
+  background: rgba(14,165,233,0.1);
+  border-radius: 5px;
+  padding: 2px 6px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.wl-news-right { flex: 1; min-width: 0; }
 
 /* Portfolio search */
 #port-search-wrap {
