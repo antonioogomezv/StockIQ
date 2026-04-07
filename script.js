@@ -1587,24 +1587,63 @@ function loadFromWatchlist(ticker) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
+var TRENDING_POOL = [
+  // Technology
+  {symbol:'AAPL',name:'Apple'},{symbol:'MSFT',name:'Microsoft'},{symbol:'NVDA',name:'NVIDIA'},
+  {symbol:'GOOGL',name:'Alphabet'},{symbol:'META',name:'Meta'},{symbol:'AMZN',name:'Amazon'},
+  {symbol:'AMD',name:'AMD'},{symbol:'INTC',name:'Intel'},{symbol:'ORCL',name:'Oracle'},
+  {symbol:'CRM',name:'Salesforce'},{symbol:'AVGO',name:'Broadcom'},{symbol:'TSLA',name:'Tesla'},
+  {symbol:'NFLX',name:'Netflix'},{symbol:'ADBE',name:'Adobe'},{symbol:'QCOM',name:'Qualcomm'},
+  // Healthcare
+  {symbol:'JNJ',name:'Johnson & Johnson'},{symbol:'UNH',name:'UnitedHealth'},{symbol:'LLY',name:'Eli Lilly'},
+  {symbol:'PFE',name:'Pfizer'},{symbol:'ABBV',name:'AbbVie'},{symbol:'MRK',name:'Merck'},
+  {symbol:'TMO',name:'Thermo Fisher'},{symbol:'AMGN',name:'Amgen'},{symbol:'GILD',name:'Gilead'},
+  {symbol:'CVS',name:'CVS Health'},
+  // Financials
+  {symbol:'JPM',name:'JPMorgan'},{symbol:'BAC',name:'Bank of America'},{symbol:'WFC',name:'Wells Fargo'},
+  {symbol:'GS',name:'Goldman Sachs'},{symbol:'MS',name:'Morgan Stanley'},{symbol:'BLK',name:'BlackRock'},
+  {symbol:'AXP',name:'Amex'},{symbol:'V',name:'Visa'},{symbol:'MA',name:'Mastercard'},
+  // Energy
+  {symbol:'XOM',name:'ExxonMobil'},{symbol:'CVX',name:'Chevron'},{symbol:'COP',name:'ConocoPhillips'},
+  {symbol:'OXY',name:'Occidental'},{symbol:'SLB',name:'SLB'},{symbol:'EOG',name:'EOG Resources'},
+  {symbol:'MPC',name:'Marathon Petroleum'},{symbol:'HAL',name:'Halliburton'},
+  // Consumer
+  {symbol:'HD',name:'Home Depot'},{symbol:'MCD',name:"McDonald's"},{symbol:'NKE',name:'Nike'},
+  {symbol:'SBUX',name:'Starbucks'},{symbol:'TGT',name:'Target'},{symbol:'LOW',name:"Lowe's"},
+  {symbol:'CMG',name:'Chipotle'},{symbol:'BKNG',name:'Booking Holdings'},
+  {symbol:'GM',name:'General Motors'},{symbol:'F',name:'Ford'},
+  // Industrials
+  {symbol:'CAT',name:'Caterpillar'},{symbol:'RTX',name:'RTX'},{symbol:'HON',name:'Honeywell'},
+  {symbol:'UPS',name:'UPS'},{symbol:'BA',name:'Boeing'},{symbol:'GE',name:'GE Aerospace'},
+  {symbol:'LMT',name:'Lockheed Martin'},{symbol:'FDX',name:'FedEx'},
+  // Other
+  {symbol:'NEE',name:'NextEra Energy'},{symbol:'DIS',name:'Disney'},
+  {symbol:'KO',name:'Coca-Cola'},{symbol:'PEP',name:'PepsiCo'},
+  {symbol:'WMT',name:'Walmart'},{symbol:'COST',name:'Costco'},
+  {symbol:'PLD',name:'Prologis'},{symbol:'AMT',name:'American Tower'},
+];
+
+function _seededShuffle(arr, seed) {
+  var result = arr.slice();
+  for (var i = result.length - 1; i > 0; i--) {
+    seed = ((seed * 1664525) + 1013904223) & 0x7fffffff;
+    var j = seed % (i + 1);
+    var tmp = result[i]; result[i] = result[j]; result[j] = tmp;
+  }
+  return result;
+}
+
 function loadTrendingTickers(forceRefresh) {
-  let tickers = [
-    { symbol: 'AAPL', name: 'Apple Inc.' },
-    { symbol: 'NVDA', name: 'NVIDIA Corp.' },
-    { symbol: 'TSLA', name: 'Tesla Inc.' },
-    { symbol: 'MSFT', name: 'Microsoft Corp.' },
-    { symbol: 'AMZN', name: 'Amazon.com Inc.' },
-    { symbol: 'GOOGL', name: 'Alphabet Inc.' },
-    { symbol: 'META', name: 'Meta Platforms' },
-    { symbol: 'JPM', name: 'JPMorgan Chase' },
-  ];
+  var dayIndex = Math.floor(Date.now() / 86400000);
+  var cacheKey = 'trending-cache-' + dayIndex;
+  var tickers = _seededShuffle(TRENDING_POOL, dayIndex).slice(0, 15);
 
   let list = document.getElementById('trending-list');
   if (!list) return;
 
-  // Check cache (5 min TTL) — skip if forcing refresh
+  // Check cache (5 min TTL within the same day) — skip if forcing refresh
   if (!forceRefresh) {
-    let cached = localStorage.getItem('trending-cache');
+    let cached = localStorage.getItem(cacheKey);
     if (cached) {
       let parsed = JSON.parse(cached);
       if (Date.now() - parsed.ts < 300000) { allTrendingData = parsed.data; renderTrending(parsed.data); return; }
@@ -1634,7 +1673,7 @@ function loadTrendingTickers(forceRefresh) {
   Promise.all(promises).then(function(results) {
     let valid = results.filter(function(r) { return r && r.price > 0; });
     valid.sort(function(a, b) { return Math.abs(b.changePct) - Math.abs(a.changePct); });
-    localStorage.setItem('trending-cache', JSON.stringify({ ts: Date.now(), data: valid }));
+    localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data: valid }));
     allTrendingData = valid;
     renderTrending(valid);
   });
