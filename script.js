@@ -719,9 +719,27 @@ function displayData(data) {
   renderScoreExplainer(totalScore);
   renderContextualTerms(pe, beta, margin, growth, rsi, ma50, currentRatio, interestCoverage);
   renderNewsSection(news, ticker, companyName);
-  setTimeout(function() {
-    showStockQuiz(ticker, companyName, pe, beta, margin, growth, rsi, totalScore, currentRatio);
-  }, 1200);
+  renderQuizCTA(ticker, companyName, pe, beta, margin, growth, rsi, totalScore, currentRatio);
+}
+
+function renderQuizCTA(ticker, companyName, pe, beta, margin, growth, rsi, totalScore, currentRatio) {
+  var el = document.getElementById('quiz-cta');
+  if (!el) return;
+  // Only show if there are enough data points to build questions
+  var qs = buildStockQuiz(ticker, companyName, pe, beta, margin, growth, rsi, totalScore, currentRatio);
+  if (qs.length === 0) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.innerHTML =
+    '<div class="quiz-cta-inner">' +
+      '<div class="quiz-cta-left">' +
+        '<span class="quiz-cta-icon">🎯</span>' +
+        '<div>' +
+          '<div class="quiz-cta-title">Test your knowledge</div>' +
+          '<div class="quiz-cta-sub">Ready? Answer ' + qs.length + ' quick questions about ' + companyName + '.</div>' +
+        '</div>' +
+      '</div>' +
+      '<button class="quiz-cta-btn" onclick="showStockQuiz(\'' + ticker + '\',\'' + companyName.replace(/'/g, "\\'") + '\',' + pe + ',' + beta + ',' + margin + ',' + growth + ',' + (rsi === null ? 'null' : rsi) + ',' + totalScore + ',' + currentRatio + ')">Start Quiz →</button>' +
+    '</div>';
 }
 
 function renderCompanyAbout(profile, dividend) {

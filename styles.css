@@ -1765,6 +1765,51 @@ button:active { transform: translateY(0); }
   border-radius: 10px;
 }
 
+/* ── Quiz CTA card ── */
+#quiz-cta { margin: 4px 0 14px; }
+.quiz-cta-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface2);
+}
+.quiz-cta-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.quiz-cta-icon { font-size: 22px; flex-shrink: 0; }
+.quiz-cta-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+.quiz-cta-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.quiz-cta-btn {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: 9999px;
+  background: var(--accent-green);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  box-shadow: none;
+  width: auto;
+  transition: opacity 0.12s;
+}
+.quiz-cta-btn:hover { opacity: 0.85; transform: none; }
+
 /* ── Dictionary search ── */
 #dict-search-wrap {
   padding: 12px 16px 8px;
