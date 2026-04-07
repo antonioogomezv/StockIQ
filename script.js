@@ -122,15 +122,27 @@ function mxHistorical(emisoraSerie, inicio, final) {
 }
 
 function mxFinancials(emisora) {
-  return dbFetch('financieros', { emisora: emisora, financiero: 'resultado_acumulado' });
+  // Compute most recently completed quarter: today is April 2026 → Q4 2025 = "4T_2025"
+  var now = new Date();
+  var y = now.getFullYear();
+  var m = now.getMonth() + 1; // 1-12
+  var q, qy;
+  if (m <= 3)      { q = 4; qy = y - 1; }
+  else if (m <= 6) { q = 1; qy = y; }
+  else if (m <= 9) { q = 2; qy = y; }
+  else             { q = 3; qy = y; }
+  var periodo = q + 'T_' + qy;
+  return dbFetch('financieros', { emisora: emisora, financiero: 'resultado_acumulado', periodo: periodo });
 }
 
 function mxEmisoras() {
-  return dbFetch('emisoras', { bolsa: 'BMV,BIVA' });
+  // Dashboard example shows no extra params beyond token
+  return dbFetch('emisoras', {});
 }
 
 function mxTop() {
-  return dbFetch('top', { variables: 'suben,bajan', bolsa: 'BMV', cantidad: '8', mercado: 'local' });
+  // Dashboard example: cantidad=5, mercado=local
+  return dbFetch('top', { variables: 'suben,bajan', bolsa: 'BMV', cantidad: '5', mercado: 'local' });
 }
 
 function mxIndices() {
