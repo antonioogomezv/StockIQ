@@ -1769,6 +1769,91 @@ function loadMarketOverview() {
   });
 }
 
+var SECTOR_TICKERS = {
+  'Technology':  [{t:'AAPL',n:'Apple'},{t:'MSFT',n:'Microsoft'},{t:'NVDA',n:'NVIDIA'},{t:'GOOGL',n:'Alphabet'},{t:'META',n:'Meta'},{t:'AVGO',n:'Broadcom'},{t:'ORCL',n:'Oracle'},{t:'CRM',n:'Salesforce'},{t:'AMD',n:'AMD'},{t:'INTC',n:'Intel'}],
+  'Healthcare':  [{t:'JNJ',n:'Johnson & Johnson'},{t:'UNH',n:'UnitedHealth'},{t:'LLY',n:'Eli Lilly'},{t:'PFE',n:'Pfizer'},{t:'ABBV',n:'AbbVie'},{t:'MRK',n:'Merck'},{t:'TMO',n:'Thermo Fisher'},{t:'ABT',n:'Abbott'},{t:'DHR',n:'Danaher'},{t:'AMGN',n:'Amgen'}],
+  'Financials':  [{t:'BRK.B',n:'Berkshire Hathaway'},{t:'JPM',n:'JPMorgan Chase'},{t:'BAC',n:'Bank of America'},{t:'WFC',n:'Wells Fargo'},{t:'GS',n:'Goldman Sachs'},{t:'MS',n:'Morgan Stanley'},{t:'BLK',n:'BlackRock'},{t:'AXP',n:'American Express'},{t:'C',n:'Citigroup'},{t:'SCHW',n:'Charles Schwab'}],
+  'Energy':      [{t:'XOM',n:'ExxonMobil'},{t:'CVX',n:'Chevron'},{t:'COP',n:'ConocoPhillips'},{t:'SLB',n:'SLB'},{t:'EOG',n:'EOG Resources'},{t:'MPC',n:'Marathon Petroleum'},{t:'PSX',n:'Phillips 66'},{t:'OXY',n:'Occidental'},{t:'VLO',n:'Valero Energy'},{t:'HAL',n:'Halliburton'}],
+  'Consumer':    [{t:'AMZN',n:'Amazon'},{t:'TSLA',n:'Tesla'},{t:'HD',n:'Home Depot'},{t:'MCD',n:"McDonald's"},{t:'NKE',n:'Nike'},{t:'SBUX',n:'Starbucks'},{t:'TGT',n:'Target'},{t:'LOW',n:"Lowe's"},{t:'BKNG',n:'Booking Holdings'},{t:'CMG',n:'Chipotle'}],
+  'Industrials': [{t:'CAT',n:'Caterpillar'},{t:'RTX',n:'RTX Corp'},{t:'HON',n:'Honeywell'},{t:'UPS',n:'UPS'},{t:'BA',n:'Boeing'},{t:'GE',n:'GE Aerospace'},{t:'LMT',n:'Lockheed Martin'},{t:'DE',n:'John Deere'},{t:'MMM',n:'3M'},{t:'FDX',n:'FedEx'}],
+  'Real Estate': [{t:'PLD',n:'Prologis'},{t:'AMT',n:'American Tower'},{t:'EQIX',n:'Equinix'},{t:'SPG',n:'Simon Property'},{t:'O',n:'Realty Income'},{t:'WELL',n:'Welltower'},{t:'DLR',n:'Digital Realty'},{t:'PSA',n:'Public Storage'},{t:'EXR',n:'Extra Space Storage'},{t:'AVB',n:'AvalonBay'}],
+  'Utilities':   [{t:'NEE',n:'NextEra Energy'},{t:'SO',n:'Southern Company'},{t:'DUK',n:'Duke Energy'},{t:'AEP',n:'AEP'},{t:'SRE',n:'Sempra'},{t:'D',n:'Dominion Energy'},{t:'PCG',n:'PG&E'},{t:'EXC',n:'Exelon'},{t:'XEL',n:'Xcel Energy'},{t:'ED',n:'Consolidated Edison'}],
+};
+
+var _sectorPanelState = {};
+
+function showSectorStocks(name) {
+  // Save current visibility state of main sections
+  ['search-section','results-section','chart-section','news-section'].forEach(function(id) {
+    var el = document.getElementById(id);
+    _sectorPanelState[id] = el ? el.style.display : '';
+    if (el) el.style.display = 'none';
+  });
+
+  // Highlight active sector row
+  document.querySelectorAll('.sector-row').forEach(function(r) {
+    r.classList.toggle('sector-row-active', r.dataset.sector === name);
+  });
+
+  var panel = document.getElementById('sector-stocks-panel');
+  panel.style.display = 'block';
+  document.getElementById('sector-stocks-title').textContent = name;
+
+  var tickers = SECTOR_TICKERS[name] || [];
+  var list = document.getElementById('sector-stocks-list');
+  list.innerHTML = tickers.map(function(s) {
+    return '<div class="sector-stock-row" data-ticker="' + s.t + '">' +
+      '<div class="sector-stock-left">' +
+        '<span class="sector-stock-ticker">' + s.t + '</span>' +
+        '<span class="sector-stock-name">' + s.n + '</span>' +
+      '</div>' +
+      '<div class="sector-stock-right">' +
+        '<span class="sector-stock-price">—</span>' +
+        '<span class="sector-stock-chg">—</span>' +
+        '<button class="sector-stock-btn" onclick="closeSectorPanel(false);quickSearch(\'' + s.t + '\')">Analyze →</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  // Fetch quotes staggered
+  var delay = 0;
+  tickers.forEach(function(s) {
+    var d = delay; delay += 120;
+    setTimeout(function() {
+      fetch('https://finnhub.io/api/v1/quote?symbol=' + s.t + '&token=' + finnhubKey)
+        .then(function(r) { return r.json(); })
+        .then(function(q) {
+          var row = list.querySelector('[data-ticker="' + s.t + '"]');
+          if (!row) return;
+          var price = q.c || 0;
+          var dp = q.dp || 0;
+          var up = dp >= 0;
+          var color = up ? 'var(--accent-green, #16a34a)' : '#dc2626';
+          row.querySelector('.sector-stock-price').textContent = price > 0 ? '$' + price.toFixed(2) : '—';
+          var chgEl = row.querySelector('.sector-stock-chg');
+          chgEl.textContent = price > 0 ? (up ? '+' : '') + dp.toFixed(2) + '%' : '—';
+          chgEl.style.color = price > 0 ? color : '';
+        })
+        .catch(function() {});
+    }, d);
+  });
+}
+
+function closeSectorPanel(goBack) {
+  document.getElementById('sector-stocks-panel').style.display = 'none';
+  document.querySelectorAll('.sector-row').forEach(function(r) { r.classList.remove('sector-row-active'); });
+  if (goBack) {
+    Object.keys(_sectorPanelState).forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.style.display = _sectorPanelState[id];
+    });
+  } else {
+    var s = document.getElementById('search-section');
+    if (s) s.style.display = '';
+  }
+  _sectorPanelState = {};
+}
+
 function loadSectors() {
   let sectors = [
     { name: 'Technology',    etf: 'XLK' },
@@ -1816,7 +1901,7 @@ function renderSectors(data) {
     let sign = up ? '+' : '';
     let barWidth = allZero ? 50 : Math.round((Math.abs(s.changePct) / maxAbs) * 100);
     let changeLabel = allZero ? '—' : sign + s.changePct.toFixed(2) + '%';
-    return '<div class="sector-row">' +
+    return '<div class="sector-row" data-sector="' + s.name + '" onclick="showSectorStocks(\'' + s.name + '\')" title="Browse ' + s.name + ' stocks">' +
       '<span class="sector-name">' + s.name + '</span>' +
       '<div class="sector-bar-wrap"><div class="sector-bar-fill" style="width:' + barWidth + '%;background:' + color + ';"></div></div>' +
       '<span class="sector-change" style="color:' + color + ';">' + changeLabel + '</span>' +
