@@ -3485,14 +3485,18 @@ footer {
 
 #portfolio-chart-toggle {
   display: flex;
-  gap: 4px;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .port-chart-btn {
   background: none;
-  border: 1px solid var(--border);
+  border: none;
+  border-right: 1px solid var(--border);
   color: var(--text-muted);
-  border-radius: 6px;
+  border-radius: 0;
   font-size: 11px;
   font-weight: 700;
   font-family: var(--sans);
@@ -3503,12 +3507,13 @@ footer {
   transition: all 0.15s;
 }
 
-.port-chart-btn:hover { color: var(--text); transform: none; }
+.port-chart-btn:last-child { border-right: none; }
+.port-chart-btn:hover { color: var(--text); background: var(--surface2); transform: none; }
 
 .port-chart-btn.active {
-  background: rgba(22,163,74,0.1);
-  border-color: var(--accent-green);
-  color: var(--accent-green);
+  background: var(--surface2);
+  color: var(--text);
+  font-weight: 700;
 }
 
 #portfolio-chart-wrap {
