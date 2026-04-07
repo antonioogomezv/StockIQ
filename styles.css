@@ -15,9 +15,9 @@
   --push: #d97706;
   --text: #1a202c;
   --text-muted: #64748b;
-  --mono: 'DM Mono', monospace;
-  --sans: 'Inter', sans-serif;
-  --display: 'Space Grotesk', sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'DM Sans', system-ui, sans-serif;
+  --display: 'Space Grotesk', system-ui, sans-serif;
 }
 
 [data-theme="dark"] {
