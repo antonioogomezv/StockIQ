@@ -1780,6 +1780,103 @@ var SECTOR_TICKERS = {
   'Utilities':   [{t:'NEE',n:'NextEra Energy'},{t:'SO',n:'Southern Company'},{t:'DUK',n:'Duke Energy'},{t:'AEP',n:'AEP'},{t:'SRE',n:'Sempra'},{t:'D',n:'Dominion Energy'},{t:'PCG',n:'PG&E'},{t:'EXC',n:'Exelon'},{t:'XEL',n:'Xcel Energy'},{t:'ED',n:'Consolidated Edison'}],
 };
 
+var SECTOR_META = {
+  'Technology': {
+    etf: 'XLK',
+    sp500Count: '~65',
+    description: 'The Technology sector includes companies that design and manufacture electronics, software, semiconductors, and IT services. It is the largest sector in the S&P 500 by market cap and is driven by innovation, R&D spending, and global adoption of digital products and cloud infrastructure.',
+    characteristics: 'High growth, higher valuations (P/E), sensitive to interest rates — rising rates compress future earnings multiples. Tends to lead the market in bull runs.',
+    examples: 'Apple, Microsoft, NVIDIA, Alphabet, Meta',
+    cyclicality: 'Mixed — software is defensive; hardware is cyclical',
+  },
+  'Healthcare': {
+    etf: 'XLV',
+    sp500Count: '~60',
+    description: 'The Healthcare sector covers companies involved in medical devices, pharmaceuticals, biotech, health insurance, and hospital systems. Demand for healthcare is largely independent of the economic cycle, making it one of the most defensive sectors.',
+    characteristics: 'Defensive and recession-resistant. Driven by aging demographics, drug pipelines, and FDA approval cycles. Biotech is high-risk/high-reward within the sector.',
+    examples: 'Johnson & Johnson, UnitedHealth, Eli Lilly, Pfizer, Merck',
+    cyclicality: 'Defensive — people need healthcare regardless of the economy',
+  },
+  'Financials': {
+    etf: 'XLF',
+    sp500Count: '~70',
+    description: 'The Financials sector includes banks, insurance companies, asset managers, and payment networks. It is closely tied to interest rates — banks earn more when rates are high. It also acts as a barometer for overall economic health.',
+    characteristics: 'Highly sensitive to interest rates and credit cycles. Benefits from rising rates (wider net interest margins). Vulnerable in recessions due to loan defaults.',
+    examples: 'JPMorgan Chase, Berkshire Hathaway, Goldman Sachs, Visa, BlackRock',
+    cyclicality: 'Cyclical — closely tied to economic and rate cycles',
+  },
+  'Energy': {
+    etf: 'XLE',
+    sp500Count: '~25',
+    description: 'The Energy sector includes oil & gas exploration, production, refining, and services. Its performance is tightly linked to global commodity prices — especially crude oil and natural gas — which are driven by supply/demand, geopolitics, and OPEC decisions.',
+    characteristics: 'Highly cyclical and commodity-driven. Strong cash flow generators when oil prices are high. Increasingly impacted by the energy transition and ESG investing trends.',
+    examples: 'ExxonMobil, Chevron, ConocoPhillips, EOG Resources, SLB',
+    cyclicality: 'Cyclical — moves with oil prices and global demand',
+  },
+  'Consumer': {
+    etf: 'XLY',
+    sp500Count: '~55',
+    description: 'The Consumer Discretionary sector covers goods and services people buy when they have extra money — retail, restaurants, autos, travel, and e-commerce. It includes some of the largest companies in the world by market cap and is highly sensitive to consumer confidence and spending.',
+    characteristics: 'Very cyclical — thrives in economic expansions, suffers in downturns as consumers cut discretionary spending. Amazon and Tesla dominate the sector weighting.',
+    examples: 'Amazon, Tesla, Home Depot, McDonald\'s, Nike',
+    cyclicality: 'Cyclical — tied to consumer confidence and disposable income',
+  },
+  'Industrials': {
+    etf: 'XLI',
+    sp500Count: '~75',
+    description: 'The Industrials sector includes aerospace & defense, machinery, transportation, construction, and conglomerates. It is the most diverse sector in the S&P 500 and serves as a proxy for overall economic activity — when factories build and goods are shipped, the economy is growing.',
+    characteristics: 'Cyclical, tracks GDP growth. Defense subsector is more defensive due to government contracts. Supply chain disruptions and commodity costs are key risks.',
+    examples: 'Caterpillar, Boeing, Honeywell, UPS, Lockheed Martin',
+    cyclicality: 'Cyclical — tracks manufacturing and economic activity',
+  },
+  'Real Estate': {
+    etf: 'XLRE',
+    sp500Count: '~30',
+    description: 'The Real Estate sector is dominated by Real Estate Investment Trusts (REITs) — companies that own income-producing properties like offices, data centers, warehouses, and apartments. REITs are required to distribute at least 90% of taxable income as dividends, making them popular income investments.',
+    characteristics: 'Sensitive to interest rates — rising rates increase borrowing costs and make dividend yields less attractive vs bonds. Provides income and inflation protection. Subsectors include industrial REITs (data centers, logistics) and residential REITs.',
+    examples: 'Prologis, American Tower, Equinix, Simon Property, Realty Income',
+    cyclicality: 'Interest rate sensitive — inversely correlated with rate hikes',
+  },
+  'Utilities': {
+    etf: 'XLU',
+    sp500Count: '~30',
+    description: 'The Utilities sector includes electric, gas, and water companies that operate as regulated monopolies. They provide essential services with predictable, regulated revenue. Known for high, stable dividends and low growth — the classic "safe haven" in market downturns.',
+    characteristics: 'Highly defensive and income-focused. Sensitive to interest rates — when rates rise, utility dividends become less attractive vs bonds. Benefiting from the AI data center energy boom.',
+    examples: 'NextEra Energy, Southern Company, Duke Energy, Sempra, Dominion Energy',
+    cyclicality: 'Defensive — essential services, stable cash flows',
+  },
+};
+
+function renderSectorAbout(name, changePct) {
+  var el = document.getElementById('sector-about');
+  if (!el) return;
+  var m = SECTOR_META[name];
+  if (!m) { el.style.display = 'none'; return; }
+
+  var up = changePct >= 0;
+  var color = changePct === 0 ? 'var(--text-muted)' : (up ? 'var(--accent-green, #16a34a)' : '#dc2626');
+  var sign = up ? '+' : '';
+  var perfText = changePct !== 0 ? "<span style='color:" + color + ";font-weight:600;'>" + sign + changePct.toFixed(2) + "% today</span>" : '<span style="color:var(--text-muted);">Market closed</span>';
+
+  var items = [
+    { label: 'Benchmark ETF', value: m.etf },
+    { label: 'S&P 500 Companies', value: m.sp500Count },
+    { label: 'Today\'s Performance', value: perfText },
+    { label: 'Cyclicality', value: m.cyclicality },
+  ];
+
+  el.innerHTML =
+    '<h2>ABOUT THIS SECTOR</h2>' +
+    '<p class="company-description">' + m.description + '</p>' +
+    '<p class="company-description" style="margin-top:8px;"><strong style="color:var(--text);">Key traits:</strong> ' + m.characteristics + '</p>' +
+    '<div class="about-grid" style="margin-top:14px;">' +
+    items.map(function(i) {
+      return "<div class='about-item'><div class='about-label'>" + i.label + "</div><div class='about-value'>" + i.value + "</div></div>";
+    }).join('') +
+    '</div>';
+  el.style.display = 'block';
+}
+
 var _sectorPanelState = {};
 
 function showSectorStocks(name) {
@@ -1798,6 +1895,18 @@ function showSectorStocks(name) {
   var panel = document.getElementById('sector-stocks-panel');
   panel.style.display = 'block';
   document.getElementById('sector-stocks-title').textContent = name;
+
+  // Render about using cached sector changePct if available
+  var cachedSectors = localStorage.getItem('sectors-cache');
+  var sectorChangePct = 0;
+  if (cachedSectors) {
+    try {
+      var parsed = JSON.parse(cachedSectors);
+      var match = (parsed.data || []).find(function(s) { return s.name === name; });
+      if (match) sectorChangePct = match.changePct || 0;
+    } catch(e) {}
+  }
+  renderSectorAbout(name, sectorChangePct);
 
   var tickers = SECTOR_TICKERS[name] || [];
   var list = document.getElementById('sector-stocks-list');
