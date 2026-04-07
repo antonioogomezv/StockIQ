@@ -122,17 +122,18 @@ function mxHistorical(emisoraSerie, inicio, final) {
 }
 
 function mxFinancials(emisora) {
-  // Compute most recently completed quarter: today is April 2026 → Q4 2025 = "4T_2025"
+  // Compute most recently completed quarter: April 2026 → Q4 2025 = "4T_2025"
   var now = new Date();
   var y = now.getFullYear();
-  var m = now.getMonth() + 1; // 1-12
+  var m = now.getMonth() + 1;
   var q, qy;
   if (m <= 3)      { q = 4; qy = y - 1; }
   else if (m <= 6) { q = 1; qy = y; }
   else if (m <= 9) { q = 2; qy = y; }
   else             { q = 3; qy = y; }
   var periodo = q + 'T_' + qy;
-  return dbFetch('financieros', { emisora: emisora, financiero: 'resultado_acumulado', periodo: periodo });
+  // param is "financieros" (plural), emisora must be base name without serie
+  return dbFetch('financieros', { emisora: emisora, financieros: 'resultado_acumulado', periodo: periodo });
 }
 
 function mxEmisoras() {
@@ -162,74 +163,91 @@ function mxDivisas() {
 // Field names marked with comments may need adjustment once tested against live API responses.
 
 function adaptMXQuote(raw) {
-  let item = Array.isArray(raw) ? raw[0] : raw;
-  if (!item) return {};
+  // real format: { "WALMEX*": { "bmv": { u, p, a, x, n, c, m, v }, "biva": {...} } }
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+  let keys = Object.keys(raw).filter(function(k) { return k !== 'Error'; });
+  if (!keys.length) return {};
+  let entry = raw[keys[0]];
+  let bmv = (entry && entry.bmv) || (entry && entry.biva) || {};
   return {
-    c:  item.ultimo  || item.precio   || item.p    || item.cierre  || 0,  // current price
-    d:  item.cambio  || item.variacion || item.dif  || 0,                  // change amount
-    dp: item.porcentaje || item.var_pct || item.pct || 0,                  // change %
-    h:  item.maximo  || item.alto     || item.max  || 0,                   // day high
-    l:  item.minimo  || item.bajo     || item.min  || 0,                   // day low
-    o:  item.apertura || item.open    || 0,                                 // open
-    pc: item.anterior || item.cierre_ant || item.prev || 0                  // prev close
+    c:  bmv.u || 0,   // último (current price)
+    d:  bmv.c || 0,   // cambio absoluto ($)
+    dp: bmv.m || 0,   // cambio porcentual (%)
+    h:  bmv.x || 0,   // máximo
+    l:  bmv.n || 0,   // mínimo
+    o:  bmv.a || 0,   // apertura
+    pc: bmv.p || 0    // precio anterior (prev close)
   };
 }
 
 function adaptMXProfile(raw, ticker) {
-  let item = Array.isArray(raw) ? raw[0] : raw;
-  if (!item) return { name: ticker, ticker: ticker, exchange: 'BMV', finnhubIndustry: '', country: 'Mexico' };
+  // raw is a flat item from getMXEmisoras: { emisoraSerie, emisora, serie, razon_social, bolsa }
+  if (!raw) return { name: ticker, ticker: ticker, exchange: 'BMV', finnhubIndustry: '', country: 'Mexico' };
   return {
-    name:            item.nombre      || item.name        || item.razon_social || ticker,
+    name:            raw.razon_social || ticker,
     ticker:          ticker,
-    exchange:        item.bolsa       || 'BMV',
-    finnhubIndustry: item.sector      || item.giro        || item.industria    || '',
+    exchange:        raw.bolsa || 'BMV',
+    finnhubIndustry: '',
     country:         'Mexico',
-    weburl:          item.url         || item.pagina      || '',
-    logo:            item.logo        || item.imagen      || '',
-    description:     item.descripcion || item.description || ''
+    weburl:          '',
+    logo:            '',
+    description:     ''
   };
 }
 
 function adaptMXMetrics(raw) {
-  // DataBursatil /financieros may return multiple periods; pick first
-  let item = Array.isArray(raw) ? raw[0] : raw;
-  if (!item) return {};
+  // real format: { "resultado_acumulado": { "2024-01-01_2024-12-31": { "revenue": ["label", val], ... } } }
+  if (!raw || !raw.resultado_acumulado) return {};
+  let periods = raw.resultado_acumulado;
+  let periodKey = Object.keys(periods)[0];
+  if (!periodKey) return {};
+  let d = periods[periodKey];
+  function val(field) { return Array.isArray(d[field]) ? (d[field][1] || 0) : 0; }
+  let revenue   = val('revenue');
+  let netProfit = val('profitloss');
+  let eps       = val('basicearningslosspershare') || val('basicearningslosspersharefromcontinuingoperations');
+  let margin    = revenue > 0 ? (netProfit / revenue) * 100 : 0;
   return {
-    peBasicExclExtraTTM:        item.pe              || item.precio_utilidad     || 0,
-    netProfitMarginTTM:         item.margen_neto     || item.margen              || 0,
-    revenueGrowthTTMYoy:        item.crecimiento     || item.crec_ventas         || 0,
-    beta:                       item.beta            || 1,
-    roeAnnual:                  item.roe             || 0,
-    'totalDebt/totalEquityAnnual': item.deuda_capital || item.dt_capital         || 0,
-    currentRatioAnnual:         item.razon_corriente || item.current_ratio       || 0,
-    netInterestCoverageAnnual:  item.cobertura_int   || item.interest_coverage   || 0,
-    '52WeekHigh':               item.max_52s         || item.maximo_52           || 0,
-    '52WeekLow':                item.min_52s         || item.minimo_52           || 0
+    peBasicExclExtraTTM:           0,
+    netProfitMarginTTM:            margin,
+    revenueGrowthTTMYoy:           0,
+    beta:                          1,
+    roeAnnual:                     0,
+    'totalDebt/totalEquityAnnual': 0,
+    currentRatioAnnual:            0,
+    netInterestCoverageAnnual:     0,
+    '52WeekHigh':                  0,
+    '52WeekLow':                   0,
+    epsBasic:                      eps,
+    revenueTotal:                  revenue,
+    netIncome:                     netProfit
   };
 }
 
 function adaptMXHistorical(raw) {
-  // Returns array in Polygon-like format: [{ t (ms), c (close), v (volume) }]
-  let items = Array.isArray(raw) ? raw : (raw && raw.datos ? raw.datos : []);
-  return items.map(function(d) {
-    let dateStr = d.fecha || d.date || d.dia || '';
+  // real format: { "2026-01-01": [precio_cierre, volumen_pesos], ... }
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return [];
+  return Object.keys(raw).map(function(dateStr) {
+    let vals = raw[dateStr];
     return {
-      t: dateStr ? new Date(dateStr).getTime() : 0,
-      c: d.cierre || d.close || d.precio || d.ultimo || 0,
-      v: d.volumen || d.volume || d.vol   || 0
+      t: new Date(dateStr + 'T12:00:00').getTime(),
+      c: Array.isArray(vals) ? (vals[0] || 0) : 0,
+      v: Array.isArray(vals) ? (vals[1] || 0) : 0
     };
-  }).filter(function(d) { return d.t > 0 && d.c > 0; });
+  }).filter(function(d) { return d.t > 0 && d.c > 0; })
+    .sort(function(a, b) { return a.t - b.t; });
 }
 
 function adaptMXNews(raw) {
-  let items = Array.isArray(raw) ? raw : (raw && raw.noticias ? raw.noticias : []);
+  // real format: [{ "n": titulo, "c": contenido, "f": url }, ...]
+  let items = Array.isArray(raw) ? raw : [];
   return items.slice(0, 20).map(function(n) {
     return {
-      headline: n.titulo    || n.title    || n.headline || '',
-      summary:  n.resumen   || n.summary  || n.cuerpo   || '',
-      url:      n.url       || n.link     || '',
-      datetime: n.fecha ? new Date(n.fecha).getTime() / 1000 : 0,
-      source:   n.fuente    || n.source   || 'DataBursatil'
+      headline: n.n || '',
+      summary:  n.c || '',
+      url:      n.f || '',
+      datetime: 0,
+      source:   'DataBursatil'
     };
   }).filter(function(n) { return n.headline; });
 }
@@ -271,7 +289,26 @@ function switchMarket(market) {
 function getMXEmisoras(callback) {
   if (_mxEmisorasCache) { callback(_mxEmisorasCache); return; }
   mxEmisoras().then(function(data) {
-    let list = Array.isArray(data) ? data : (data && data.datos ? data.datos : []);
+    // real format: { "WALMEX": { "*": { razon_social, bolsa, estatus, ... } }, ... }
+    let list = [];
+    if (data && typeof data === 'object' && !Array.isArray(data)) {
+      Object.keys(data).forEach(function(emisora) {
+        if (emisora === 'null') return;
+        let seriesObj = data[emisora];
+        if (!seriesObj || typeof seriesObj !== 'object') return;
+        Object.keys(seriesObj).forEach(function(serie) {
+          let info = seriesObj[serie] || {};
+          if (info.estatus === 'SUSPENDIDA') return;
+          list.push({
+            emisoraSerie: emisora + serie,   // e.g. "WALMEX*" or "CEMEXCPO"
+            emisora:      emisora,
+            serie:        serie,
+            razon_social: info.razon_social || emisora,
+            bolsa:        info.bolsa || 'BMV'
+          });
+        });
+      });
+    }
     _mxEmisorasCache = list;
     callback(list);
   }).catch(function() { callback([]); });
@@ -291,14 +328,12 @@ function onSearchInput() {
       let q = query.toUpperCase();
       getMXEmisoras(function(list) {
         let matches = list.filter(function(e) {
-          let sym  = (e.emisora || e.ticker || e.simbolo || '').toUpperCase();
-          let name = (e.nombre  || e.name   || '').toUpperCase();
-          return sym.includes(q) || name.includes(q);
+          return e.emisoraSerie.includes(q) || (e.razon_social || '').toUpperCase().includes(q);
         }).slice(0, 5);
         if (matches.length === 0) { dropdown.style.display = 'none'; return; }
         dropdown.innerHTML = matches.map(function(e) {
-          let sym  = escHtml(e.emisora || e.ticker || e.simbolo || '');
-          let name = escHtml(e.nombre  || e.name   || '');
+          let sym  = escHtml(e.emisoraSerie);
+          let name = escHtml(e.razon_social || '');
           return "<div class='autocomplete-item' onmousedown='selectAutocomplete(\"" + sym + "\")'>" +
             "<span class='autocomplete-ticker'>" + sym + "</span>" +
             "<span class='autocomplete-name'>" + name + "</span>" +
@@ -355,14 +390,12 @@ function onPortTickerInput() {
       let q = query.toUpperCase();
       getMXEmisoras(function(list) {
         let matches = list.filter(function(e) {
-          let sym  = (e.emisora || e.ticker || e.simbolo || '').toUpperCase();
-          let name = (e.nombre  || e.name   || '').toUpperCase();
-          return sym.includes(q) || name.includes(q);
+          return e.emisoraSerie.includes(q) || (e.razon_social || '').toUpperCase().includes(q);
         }).slice(0, 5);
         if (matches.length === 0) { dropdown.style.display = 'none'; return; }
         dropdown.innerHTML = matches.map(function(e) {
-          let sym  = escHtml(e.emisora || e.ticker || e.simbolo || '');
-          let name = escHtml(e.nombre  || e.name   || '');
+          let sym  = escHtml(e.emisoraSerie);
+          let name = escHtml(e.razon_social || '');
           return "<div class='autocomplete-item' onmousedown='selectPortAutocomplete(\"" + sym + "\")'>" +
             "<span class='autocomplete-ticker'>" + sym + "</span>" +
             "<span class='autocomplete-name'>" + name + "</span>" +
@@ -557,24 +590,26 @@ function _searchStockMX(query) {
   let from90 = new Date(today); from90.setDate(today.getDate() - 90);
   let from90Str = from90.toISOString().split("T")[0];
 
+  // Look up the base emisora (without serie) for financieros, and get profile info from cache
+  // e.g. query="WALMEX*" → baseEmisora="WALMEX"; query="CEMEXCPO" → baseEmisora="CEMEX"
+  let emisInfoFromCache = _mxEmisorasCache
+    ? _mxEmisorasCache.find(function(e) { return e.emisoraSerie === query; }) || null
+    : null;
+  let baseEmisora = emisInfoFromCache ? emisInfoFromCache.emisora : query.replace(/[^A-Z0-9]/g, '').replace(/\*$/, '');
+
   Promise.all([
     mxQuote(query).catch(function() { return {}; }),
-    mxEmisoras().catch(function() { return []; }),
     mxNoticias().catch(function() { return []; }),
-    mxFinancials(query).catch(function() { return {}; }),
-    mxHistorical(query, from90Str, toDate).catch(function() { return []; })
+    mxFinancials(baseEmisora).catch(function() { return {}; }),
+    mxHistorical(query, from90Str, toDate).catch(function() { return {}; })
   ]).then(function(results) {
-    let rawQuote     = results[0];
-    let rawEmisoras  = results[1];
-    let rawNoticias  = results[2];
-    let rawFinancials = results[3];
-    let rawHistorical = results[4];
+    let rawQuote      = results[0];
+    let rawNoticias   = results[1];
+    let rawFinancials = results[2];
+    let rawHistorical = results[3];
 
-    // Find this emisora's info from the full list
-    let emisList = Array.isArray(rawEmisoras) ? rawEmisoras : (rawEmisoras && rawEmisoras.datos ? rawEmisoras.datos : []);
-    let emisInfo = emisList.find(function(e) {
-      return (e.emisora || e.ticker || e.simbolo || '').toUpperCase() === query;
-    }) || {};
+    // Use profile from emisoras cache if available; fall back to minimal info
+    let emisInfo = emisInfoFromCache;
 
     let quote   = adaptMXQuote(rawQuote);
     let profile = adaptMXProfile(emisInfo, query);
@@ -582,9 +617,9 @@ function _searchStockMX(query) {
     let metrics = adaptMXMetrics(rawFinancials);
     let bars    = adaptMXHistorical(rawHistorical);
 
-    if (!quote.c && !profile.name) {
+    if (!quote.c) {
       document.getElementById("loading").style.display = "none";
-      showToast("\"" + query + "\" no encontrado en BMV/BIVA. Verifica el ticker (ej. WALMEX, CEMEXCPO).");
+      showToast("\"" + query + "\" no encontrado en BMV/BIVA. Verifica el ticker (ej. WALMEX*, CEMEXCPO).");
       return;
     }
 
@@ -1950,16 +1985,17 @@ function loadTrendingTickers(forceRefresh) {
 
   if (activeMarket === 'MX') {
     mxTop().then(function(raw) {
-      let suben = raw.suben || raw.altas || [];
-      let bajan = raw.bajan || raw.bajas || [];
+      // real format: { "SUBEN": [{"e": "FPLUS16", "u": 5.5, "c": 3.77}, ...], "BAJAN": [...] }
+      let suben = raw.SUBEN || raw.suben || [];
+      let bajan = raw.BAJAN || raw.bajan || [];
       let combined = suben.concat(bajan).slice(0, 8);
       let results = combined.map(function(e) {
         return {
-          symbol:    e.emisora   || e.ticker    || e.simbolo || '',
-          name:      e.nombre    || e.name      || e.razon   || '',
-          price:     e.precio    || e.ultimo    || e.p       || 0,
-          change:    e.cambio    || e.variacion || 0,
-          changePct: e.porcentaje || e.pct      || e.var_pct || 0
+          symbol:    e.e || '',   // emisora_serie
+          name:      e.e || '',   // no company name in top endpoint
+          price:     e.u || 0,   // último
+          change:    0,
+          changePct: e.c || 0    // cambio porcentual
         };
       }).filter(function(r) { return r.symbol && r.price > 0; });
       localStorage.setItem('trending-cache', JSON.stringify({ ts: Date.now(), data: results }));
@@ -2107,15 +2143,16 @@ function loadMarketOverview() {
     _rebuildTickerClone();
 
     // Fetch MX indices
+    // real format: { "IPC": { "e": "Indice...", "u": price, "c": pct_change, "m": abs_change }, ... }
     mxIndices().then(function(raw) {
-      let items = Array.isArray(raw) ? raw : (raw && raw.indices ? raw.indices : []);
-      items.forEach(function(idx) {
-        let name = (idx.indice || idx.nombre || idx.name || '').toUpperCase();
-        let price = idx.valor || idx.precio || idx.ultimo || 0;
-        let pct   = idx.porcentaje || idx.var_pct || idx.variacion_pct || 0;
-        let key   = name.includes('IPC') && !name.includes('INMEX') ? 'ipc' : name.includes('INMEX') ? 'inmex' : null;
-        if (!key) return;
-        let priceStr = 'MX$' + Number(price).toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      if (!raw || typeof raw !== 'object') return;
+      [['IPC', 'ipc'], ['FTSEBIVA', 'inmex']].forEach(function(pair) {
+        let code = pair[0], key = pair[1];
+        let idx = raw[code];
+        if (!idx) return;
+        let price = idx.u || 0;
+        let pct   = idx.c || 0;
+        let priceStr = Number(price).toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         let arrow = pct >= 0 ? "▲" : "▼";
         let sign  = pct >= 0 ? "+" : "";
         let changeStr = arrow + " " + sign + Number(pct).toFixed(2) + "%";
@@ -2126,15 +2163,13 @@ function loadMarketOverview() {
     }).catch(function() {});
 
     // Fetch USD/MXN from divisas
+    // real format: { "USDMXN": { "u": 17.78, "c": pct_change, "m": abs_change }, ... }
     mxDivisas().then(function(raw) {
-      let items = Array.isArray(raw) ? raw : (raw && raw.divisas ? raw.divisas : []);
-      let usdmxn = items.find(function(d) {
-        let par = (d.par || d.cruce || d.nombre || '').toUpperCase();
-        return par.includes('USD') && par.includes('MXN');
-      });
+      if (!raw || typeof raw !== 'object') return;
+      let usdmxn = raw['USDMXN'];
       if (!usdmxn) return;
-      let price = usdmxn.precio || usdmxn.ultimo || usdmxn.valor || 0;
-      let pct   = usdmxn.porcentaje || usdmxn.var_pct || 0;
+      let price = usdmxn.u || 0;
+      let pct   = usdmxn.c || 0;
       let priceStr  = '$' + Number(price).toFixed(4);
       let arrow = pct >= 0 ? "▲" : "▼";
       let sign  = pct >= 0 ? "+" : "";
