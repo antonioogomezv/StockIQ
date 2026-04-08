@@ -4647,5 +4647,6 @@ auth.onAuthStateChanged(function(user) {
     showTab('analyze');
     initTheme();
     handleUrlParams();
+    _appReady = true; // allow real-time Firestore updates to re-render
   });
 });

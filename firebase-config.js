@@ -24,6 +24,7 @@ function userRef() {
 }
 
 let _firestoreUnsub = null;
+let _appReady = false;
 
 // Load user data once at login, then keep listening for real-time changes
 function loadFirestoreUserData(callback) {
@@ -56,17 +57,22 @@ function loadFirestoreUserData(callback) {
 }
 
 // Apply incoming Firestore data to localStorage and re-render live sections
+// Only re-renders if app is fully initialized (_appReady = true)
 function _applyFirestoreData(data) {
   if (data.portfolios) {
     localStorage.setItem('portfolios', JSON.stringify(data.portfolios));
     if (data.activePortfolioId) localStorage.setItem('activePortfolioId', data.activePortfolioId);
-    if (typeof renderPortfolio === 'function') renderPortfolio();
-    if (typeof renderPortfolioTabs === 'function') renderPortfolioTabs();
+    if (_appReady) {
+      if (typeof renderPortfolioTabs === 'function') renderPortfolioTabs();
+      if (typeof renderPortfolio === 'function') renderPortfolio();
+    }
   }
   if (data.watchlist) {
     localStorage.setItem('watchlist', JSON.stringify(data.watchlist));
-    if (typeof renderWatchlist === 'function') renderWatchlist();
-    if (typeof loadMarketOverview === 'function') loadMarketOverview();
+    if (_appReady) {
+      if (typeof renderWatchlist === 'function') renderWatchlist();
+      if (typeof loadMarketOverview === 'function') loadMarketOverview();
+    }
   }
   if (data.priceAlerts) localStorage.setItem('price-alerts', JSON.stringify(data.priceAlerts));
   if (data.stockNotes) localStorage.setItem('stock-notes', JSON.stringify(data.stockNotes));
