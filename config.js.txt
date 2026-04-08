@@ -1,0 +1,3 @@
+window.FINNHUB_KEY   = "d77ij3pr01qp6aflopvgd77ij3pr01qp6afloq00";
+window.POLYGON_KEY   = "2sQvptLhc369ihhqpuL9IAVaoNCxB0UU";
+window.ANTHROPIC_KEY = "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";
