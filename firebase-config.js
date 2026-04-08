@@ -23,24 +23,58 @@ function userRef() {
   return db.collection('users').doc(uid);
 }
 
-// Load all user data from Firestore into local variables
+let _firestoreUnsub = null;
+
+// Load user data once at login, then keep listening for real-time changes
 function loadFirestoreUserData(callback) {
   let ref = userRef();
   if (!ref) { if (callback) callback({}); return; }
-  let done = false;
-  // 4 second timeout — proceed with empty data if Firestore is slow
+
+  // Unsubscribe any previous listener
+  if (_firestoreUnsub) { _firestoreUnsub(); _firestoreUnsub = null; }
+
+  let firstCall = true;
   let timer = setTimeout(function() {
-    if (!done) { done = true; if (callback) callback({}); }
+    if (firstCall) { firstCall = false; if (callback) callback({}); }
   }, 4000);
-  ref.get().then(function(doc) {
-    if (!done) {
-      done = true;
+
+  _firestoreUnsub = ref.onSnapshot(function(doc) {
+    let data = doc.exists ? doc.data() : {};
+    if (firstCall) {
+      // First snapshot = initial load, pass to callback (replaces old ref.get)
+      firstCall = false;
       clearTimeout(timer);
-      if (callback) callback(doc.exists ? doc.data() : {});
+      if (callback) callback(data);
+    } else {
+      // Subsequent snapshots = change from another device — sync silently
+      _applyFirestoreData(data);
     }
-  }).catch(function() {
-    if (!done) { done = true; clearTimeout(timer); if (callback) callback({}); }
+  }, function() {
+    // Error handler
+    if (firstCall) { firstCall = false; clearTimeout(timer); if (callback) callback({}); }
   });
+}
+
+// Apply incoming Firestore data to localStorage and re-render live sections
+function _applyFirestoreData(data) {
+  if (data.portfolios) {
+    localStorage.setItem('portfolios', JSON.stringify(data.portfolios));
+    if (data.activePortfolioId) localStorage.setItem('activePortfolioId', data.activePortfolioId);
+    if (typeof renderPortfolio === 'function') renderPortfolio();
+    if (typeof renderPortfolioTabs === 'function') renderPortfolioTabs();
+  }
+  if (data.watchlist) {
+    localStorage.setItem('watchlist', JSON.stringify(data.watchlist));
+    if (typeof renderWatchlist === 'function') renderWatchlist();
+    if (typeof loadMarketOverview === 'function') loadMarketOverview();
+  }
+  if (data.priceAlerts) localStorage.setItem('price-alerts', JSON.stringify(data.priceAlerts));
+  if (data.stockNotes) localStorage.setItem('stock-notes', JSON.stringify(data.stockNotes));
+}
+
+// Call this on sign-out to stop listening
+function unsubscribeFirestore() {
+  if (_firestoreUnsub) { _firestoreUnsub(); _firestoreUnsub = null; }
 }
 
 // Merge-save a field to the user document

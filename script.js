@@ -4550,6 +4550,7 @@ function checkAnthropicRateLimit() {
 // ── END spend limits ─────────────────────────────────────────
 
 function logout() {
+  unsubscribeFirestore();
   auth.signOut().then(function() {
     userProfile = null;
     location.reload();
