@@ -16,6 +16,16 @@
 </head>
 <body>
 
+<!-- APP LOADING SCREEN — shown while Firebase initialises -->
+<div id="app-loading">
+  <div class="app-loading-inner">
+    <div class="app-loading-logo">Stock<span>IQ</span></div>
+    <div class="app-loading-spinner"></div>
+    <div class="app-loading-msg" id="app-loading-msg">Loading…</div>
+    <button id="app-loading-retry" style="display:none;" onclick="location.reload()">Retry</button>
+  </div>
+</div>
+
 <!-- SIGN UP / LOGIN -->
 <div id="auth-overlay">
   <div id="auth-wrapper">

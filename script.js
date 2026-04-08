@@ -4799,9 +4799,27 @@ function resetPassword() {
 }
 
 // ── INIT — Firebase auth state drives everything ──
+// ── App loading screen helpers ────────────────────────
+function hideAppLoading() {
+  let el = document.getElementById('app-loading');
+  if (!el) return;
+  el.classList.add('hidden');
+  setTimeout(function() { el.style.display = 'none'; }, 320);
+}
+
+// If Firebase auth never fires within 10s, show retry
+let _authTimeout = setTimeout(function() {
+  let msgEl = document.getElementById('app-loading-msg');
+  let retryEl = document.getElementById('app-loading-retry');
+  if (msgEl) msgEl.textContent = 'Taking longer than expected…';
+  if (retryEl) retryEl.style.display = 'block';
+}, 10000);
+
 auth.onAuthStateChanged(function(user) {
+  clearTimeout(_authTimeout);
   if (!user) {
-    // Not logged in
+    // Not logged in — show auth overlay, hide loading screen
+    hideAppLoading();
     document.getElementById('auth-overlay').style.display = 'flex';
     document.getElementById('quiz-overlay').style.display = 'none';
     return;
@@ -4879,5 +4897,6 @@ auth.onAuthStateChanged(function(user) {
     initTheme();
     handleUrlParams();
     _appReady = true; // allow real-time Firestore updates to re-render
+    hideAppLoading();
   });
 });
