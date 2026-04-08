@@ -768,41 +768,15 @@
         </div>
         <div id="search-history" style="display:none;"></div>
         <div id="screener-toggle-row">
-          <button id="screener-toggle-btn" onclick="toggleScreener()">🔍 Stock Screener</button>
+          <button id="screener-toggle-btn" onclick="toggleScreener()">🔍 Discover Stocks</button>
         </div>
         <div id="screener-panel" style="display:none;">
-          <div id="screener-filters">
-            <div class="screener-filter-group">
-              <label class="screener-filter-label">SIGNAL</label>
-              <div class="screener-chips">
-                <button class="screener-chip active" data-filter="signal" data-val="all" onclick="setScreenerFilter('signal','all')">All</button>
-                <button class="screener-chip" data-filter="signal" data-val="Strong" onclick="setScreenerFilter('signal','Strong')">Strong</button>
-                <button class="screener-chip" data-filter="signal" data-val="Watch" onclick="setScreenerFilter('signal','Watch')">Watch</button>
-                <button class="screener-chip" data-filter="signal" data-val="Risky" onclick="setScreenerFilter('signal','Risky')">Risky</button>
-              </div>
-            </div>
-            <div class="screener-filter-group">
-              <label class="screener-filter-label">SECTOR</label>
-              <div class="screener-chips">
-                <button class="screener-chip active" data-filter="sector" data-val="all" onclick="setScreenerFilter('sector','all')">All</button>
-                <button class="screener-chip" data-filter="sector" data-val="Technology" onclick="setScreenerFilter('sector','Technology')">Tech</button>
-                <button class="screener-chip" data-filter="sector" data-val="Healthcare" onclick="setScreenerFilter('sector','Healthcare')">Health</button>
-                <button class="screener-chip" data-filter="sector" data-val="Financials" onclick="setScreenerFilter('sector','Financials')">Finance</button>
-                <button class="screener-chip" data-filter="sector" data-val="Energy" onclick="setScreenerFilter('sector','Energy')">Energy</button>
-                <button class="screener-chip" data-filter="sector" data-val="Consumer" onclick="setScreenerFilter('sector','Consumer')">Consumer</button>
-                <button class="screener-chip" data-filter="sector" data-val="Industrials" onclick="setScreenerFilter('sector','Industrials')">Industrial</button>
-                <button class="screener-chip" data-filter="sector" data-val="Other" onclick="setScreenerFilter('sector','Other')">Other</button>
-              </div>
-            </div>
-            <div class="screener-filter-group">
-              <label class="screener-filter-label">SORT BY</label>
-              <div class="screener-chips">
-                <button class="screener-chip active" data-filter="sort" data-val="score" onclick="setScreenerFilter('sort','score')">Score</button>
-                <button class="screener-chip" data-filter="sort" data-val="gainers" onclick="setScreenerFilter('sort','gainers')">Gainers</button>
-                <button class="screener-chip" data-filter="sort" data-val="losers" onclick="setScreenerFilter('sort','losers')">Losers</button>
-              </div>
-            </div>
+          <div id="screener-header">
+            <div id="screener-title">What are you looking for?</div>
+            <div id="screener-subtitle">Pick a goal — we'll find real stocks that match and explain why.</div>
           </div>
+          <div id="screener-goals"></div>
+          <div id="screener-learn-box" style="display:none;"></div>
           <div id="screener-status"></div>
           <div id="screener-results"></div>
         </div>

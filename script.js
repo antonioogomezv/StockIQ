@@ -2292,9 +2292,92 @@ var SCREENER_POOL = [
 ];
 
 var _screenerOpen = false;
-var _screenerFilters = { signal: 'all', sector: 'all', sort: 'score' };
-var _screenerData = []; // cached results with scores
+var _screenerData = [];
 var _screenerLoaded = false;
+var _screenerGoal = null;
+
+var SCREENER_GOALS = [
+  {
+    id: 'safe',
+    emoji: '🛡️',
+    label: 'Safe & Stable',
+    desc: 'Companies that move less than the market and have solid fundamentals.',
+    learn: { term: 'Beta', explain: 'Beta measures how much a stock swings compared to the market. Beta below 1.0 means it moves less — useful if you want to sleep at night. A beta of 0.5 means if the market drops 10%, this stock typically drops only 5%.' },
+    filter: function(s) { return s.beta > 0 && s.beta < 1.0 && s.score >= 55; },
+    sort: function(a, b) { return a.beta - b.beta; },
+    reason: function(s) { return 'Beta ' + s.beta.toFixed(2) + ' — moves ' + Math.round((1 - s.beta) * 100) + '% less than the market'; }
+  },
+  {
+    id: 'growth',
+    emoji: '🚀',
+    label: 'High Growth',
+    desc: 'Companies growing revenue fast — expanding their business quickly.',
+    learn: { term: 'Revenue Growth', explain: 'Revenue growth shows how much more a company is selling compared to last year. Above 10% is considered strong. Above 20% is exceptional — the company is expanding fast. Growth stocks often have higher valuations because investors expect future profits.' },
+    filter: function(s) { return s.growth > 10; },
+    sort: function(a, b) { return b.growth - a.growth; },
+    reason: function(s) { return 'Revenue grew ' + s.growth.toFixed(1) + '% vs last year'; }
+  },
+  {
+    id: 'value',
+    emoji: '💰',
+    label: 'Good Value',
+    desc: 'Stocks priced cheap relative to what the company actually earns.',
+    learn: { term: 'P/E Ratio', explain: 'The P/E ratio tells you how much you pay for every $1 of profit. A P/E of 15 means you pay $15 for $1 of earnings — considered cheap. A P/E of 50 means you\'re paying a premium expecting big future growth. Lower P/E can mean better value, but always check why it\'s low.' },
+    filter: function(s) { return s.pe > 0 && s.pe < 20 && s.score >= 50; },
+    sort: function(a, b) { return a.pe - b.pe; },
+    reason: function(s) { return 'P/E of ' + s.pe.toFixed(1) + ' — you pay $' + s.pe.toFixed(0) + ' for every $1 of earnings'; }
+  },
+  {
+    id: 'profitable',
+    emoji: '💵',
+    label: 'Very Profitable',
+    desc: 'Companies that keep a large portion of every dollar they earn.',
+    learn: { term: 'Profit Margin', explain: 'Profit margin is how many cents a company keeps from every dollar of revenue. A 25% margin means for every $100 in sales, $25 is profit. High margins mean the company has pricing power and is hard to compete with. Most retail companies have thin margins (2–5%). Software companies often exceed 20–30%.' },
+    filter: function(s) { return s.margin > 20; },
+    sort: function(a, b) { return b.margin - a.margin; },
+    reason: function(s) { return 'Keeps ' + s.margin.toFixed(1) + '% of every dollar as profit'; }
+  },
+  {
+    id: 'gaining',
+    emoji: '📈',
+    label: 'Gaining Today',
+    desc: 'Stocks moving up today — momentum can signal positive news or sentiment.',
+    learn: { term: 'Price Movement', explain: 'A stock moving up more than 1% in a single day often signals buying momentum — investors are excited. This could be due to good earnings, an analyst upgrade, or broader market optimism. But remember: short-term price moves don\'t always reflect long-term value.' },
+    filter: function(s) { return s.changePct > 1; },
+    sort: function(a, b) { return b.changePct - a.changePct; },
+    reason: function(s) { return '+' + s.changePct.toFixed(2) + '% today — strong buying momentum'; }
+  },
+  {
+    id: 'tech',
+    emoji: '💻',
+    label: 'Technology',
+    desc: 'Software, hardware, semiconductors, and the internet giants.',
+    learn: { term: 'Market Cap', explain: 'Technology is the largest sector in the S&P 500 by market cap — the total value of all shares. It\'s driven by innovation and tends to grow faster than other sectors, but can also fall faster when investors get scared. Companies like Apple and Microsoft are worth over $3 trillion each.' },
+    filter: function(s) { return s.sector === 'Technology'; },
+    sort: function(a, b) { return b.score - a.score; },
+    reason: function(s) { return 'Score ' + s.score + '/100 — ' + s.signal.toLowerCase() + ' fundamentals'; }
+  },
+  {
+    id: 'healthcare',
+    emoji: '🏥',
+    label: 'Healthcare',
+    desc: 'Pharma, biotech, hospitals — defensive stocks that hold up in downturns.',
+    learn: { term: 'Beta', explain: 'Healthcare is considered a defensive sector — people need medicine regardless of the economy. That\'s why healthcare stocks tend to have low betas (below 1.0). They don\'t soar in bull markets, but they protect your portfolio when everything else is falling.' },
+    filter: function(s) { return s.sector === 'Healthcare'; },
+    sort: function(a, b) { return b.score - a.score; },
+    reason: function(s) { return 'Score ' + s.score + '/100 — ' + s.signal.toLowerCase() + ' fundamentals'; }
+  },
+  {
+    id: 'energy',
+    emoji: '⚡',
+    label: 'Energy',
+    desc: 'Oil, gas, and utilities — tied to commodity prices and global demand.',
+    learn: { term: 'Revenue Growth', explain: 'Energy companies\' revenues are heavily tied to oil and gas prices. When oil prices rise, their revenue and profits surge — even if they\'re selling the same amount. This makes energy stocks cyclical: they do well when the economy is booming and commodity demand is high.' },
+    filter: function(s) { return s.sector === 'Energy'; },
+    sort: function(a, b) { return b.score - a.score; },
+    reason: function(s) { return 'Score ' + s.score + '/100 — ' + s.signal.toLowerCase() + ' fundamentals'; }
+  },
+];
 
 function toggleScreener() {
   _screenerOpen = !_screenerOpen;
@@ -2303,16 +2386,43 @@ function toggleScreener() {
   if (!panel) return;
   panel.style.display = _screenerOpen ? 'block' : 'none';
   btn.classList.toggle('active', _screenerOpen);
+  if (_screenerOpen) renderScreenerGoals();
   if (_screenerOpen && !_screenerLoaded) loadScreener();
 }
 
-function setScreenerFilter(type, val) {
-  _screenerFilters[type] = val;
-  // Update active chip in group
-  document.querySelectorAll('.screener-chip[data-filter="' + type + '"]').forEach(function(c) {
-    c.classList.toggle('active', c.dataset.val === val);
-  });
-  renderScreener();
+function renderScreenerGoals() {
+  var el = document.getElementById('screener-goals');
+  if (!el) return;
+  el.innerHTML = SCREENER_GOALS.map(function(g) {
+    return '<button class="screener-goal-btn' + (_screenerGoal === g.id ? ' active' : '') + '" onclick="selectScreenerGoal(\'' + g.id + '\')">' +
+      '<span class="screener-goal-emoji">' + g.emoji + '</span>' +
+      '<span class="screener-goal-label">' + g.label + '</span>' +
+    '</button>';
+  }).join('');
+}
+
+function selectScreenerGoal(id) {
+  _screenerGoal = _screenerGoal === id ? null : id;
+  renderScreenerGoals();
+  // Show learn box
+  var learnEl = document.getElementById('screener-learn-box');
+  if (!learnEl) return;
+  if (!_screenerGoal) { learnEl.style.display = 'none'; renderScreenerResults(); return; }
+  var goal = SCREENER_GOALS.find(function(g) { return g.id === id; });
+  if (!goal) return;
+  learnEl.style.display = 'block';
+  learnEl.innerHTML =
+    '<div class="screener-learn-inner">' +
+      '<div class="screener-learn-top">' +
+        '<div class="screener-learn-desc">' + goal.desc + '</div>' +
+      '</div>' +
+      '<div class="screener-learn-concept">' +
+        '<span class="screener-learn-key">Key concept:</span> ' +
+        '<strong>' + goal.learn.term + '</strong> — ' + goal.learn.explain +
+        '<button class="screener-learn-link" onclick="openTerm(\'' + goal.learn.term + '\')">Full definition →</button>' +
+      '</div>' +
+    '</div>';
+  renderScreenerResults();
 }
 
 function loadScreener() {
@@ -2320,20 +2430,17 @@ function loadScreener() {
   var resultsEl = document.getElementById('screener-results');
   if (!statusEl || !resultsEl) return;
 
-  // Check cache (10 min TTL)
   var cached = localStorage.getItem('screener-cache');
   if (cached) {
     var p = JSON.parse(cached);
     if (Date.now() - p.ts < 600000) {
       _screenerData = p.data;
       _screenerLoaded = true;
-      renderScreener();
       return;
     }
   }
 
-  statusEl.innerHTML = '<div class="screener-loading">Loading scores for ' + SCREENER_POOL.length + ' stocks… this takes about 30 seconds.</div>';
-  resultsEl.innerHTML = '';
+  statusEl.innerHTML = '<div class="screener-loading">Fetching live data for ' + SCREENER_POOL.length + ' stocks… takes ~30 seconds.</div>';
 
   var results = [];
   var total = SCREENER_POOL.length;
@@ -2356,27 +2463,28 @@ function loadScreener() {
               var beta   = metrics['beta'] || 0;
               var margin = metrics['netProfitMarginTTM'] || 0;
               var growth = metrics['revenueGrowthTTMYoy'] || 0;
+              var dividend = metrics['dividendYieldIndicatedAnnual'] || 0;
               var score  = calcQuickScore(pe, beta, margin, growth, q.dp || 0, q.c, metrics['52WeekHigh'] || 0);
               var signal = score >= 65 ? 'Strong' : score >= 50 ? 'Watch' : 'Risky';
               results.push({
                 symbol: stock.symbol, name: stock.name, sector: stock.sector,
                 price: q.c || q.pc || 0, changePct: q.dp || 0,
                 score: score, signal: signal,
-                pe: pe, beta: beta, margin: margin
+                pe: pe, beta: beta, margin: margin, growth: growth, dividend: dividend
               });
               done++;
-              if (statusEl) statusEl.innerHTML = '<div class="screener-loading">Scoring stocks… ' + done + ' / ' + total + '</div>';
+              if (statusEl) statusEl.innerHTML = '<div class="screener-loading">Loading… ' + done + ' / ' + total + '</div>';
               if (done === total) {
                 _screenerData = results;
                 _screenerLoaded = true;
                 localStorage.setItem('screener-cache', JSON.stringify({ ts: Date.now(), data: results }));
-                if (statusEl) statusEl.innerHTML = '<div class="screener-loading">Done! Cooling down API… tap a stock in a moment.</div>';
+                if (statusEl) statusEl.innerHTML = '<div class="screener-loading">Almost ready…</div>';
                 setTimeout(function() {
                   if (statusEl) statusEl.innerHTML = '';
-                  renderScreener();
+                  renderScreenerResults();
                 }, 4000);
               }
-            }).catch(function() { done++; if (done === total && _screenerData.length === 0) { _screenerData = results; _screenerLoaded = true; renderScreener(); } });
+            }).catch(function() { done++; });
         }).catch(function() { done++; });
     }, d);
   });
@@ -2384,29 +2492,23 @@ function loadScreener() {
 
 function calcQuickScore(pe, beta, margin, growth, changePct, price, high52) {
   var score = 50;
-  // P/E
   if (pe > 0 && pe < 20) score += 8;
   else if (pe > 0 && pe < 35) score += 4;
   else if (pe > 35) score -= 4;
-  // Beta
   if (beta > 0 && beta < 1) score += 6;
   else if (beta >= 1 && beta < 1.5) score += 3;
   else if (beta >= 1.5) score -= 3;
-  // Margin
   if (margin > 20) score += 10;
   else if (margin > 10) score += 6;
   else if (margin > 0) score += 2;
   else if (margin < 0) score -= 8;
-  // Growth
   if (growth > 15) score += 8;
   else if (growth > 0) score += 4;
   else score -= 4;
-  // Price movement
   if (changePct > 1) score += 3;
   else if (changePct < -2) score -= 3;
-  // 52wk position
   if (price > 0 && high52 > 0) {
-    var pct = (price / high52);
+    var pct = price / high52;
     if (pct > 0.9) score += 5;
     else if (pct > 0.75) score += 2;
     else score -= 3;
@@ -2414,55 +2516,49 @@ function calcQuickScore(pe, beta, margin, growth, changePct, price, high52) {
   return Math.max(10, Math.min(100, Math.round(score)));
 }
 
-function renderScreener() {
+function renderScreenerResults() {
   var el = document.getElementById('screener-results');
   if (!el) return;
-  var data = _screenerData.slice();
+  if (!_screenerLoaded) return; // still loading
 
-  // Filter
-  if (_screenerFilters.signal !== 'all') {
-    data = data.filter(function(s) { return s.signal === _screenerFilters.signal; });
-  }
-  if (_screenerFilters.sector !== 'all') {
-    data = data.filter(function(s) { return s.sector === _screenerFilters.sector; });
-  }
+  if (!_screenerGoal) { el.innerHTML = ''; return; }
 
-  // Sort
-  if (_screenerFilters.sort === 'score') {
-    data.sort(function(a, b) { return b.score - a.score; });
-  } else if (_screenerFilters.sort === 'gainers') {
-    data.sort(function(a, b) { return b.changePct - a.changePct; });
-  } else {
-    data.sort(function(a, b) { return a.changePct - b.changePct; });
-  }
+  var goal = SCREENER_GOALS.find(function(g) { return g.id === _screenerGoal; });
+  if (!goal) return;
+
+  var data = _screenerData.filter(goal.filter).sort(goal.sort).slice(0, 12);
 
   if (data.length === 0) {
-    el.innerHTML = '<div class="screener-empty">No stocks match these filters.</div>';
+    el.innerHTML = '<div class="screener-empty">No stocks matched right now — market conditions change daily. Try another goal.</div>';
     return;
   }
 
-  el.innerHTML = '<div class="screener-count">' + data.length + ' stocks</div>' +
-    '<div class="screener-table">' +
-      '<div class="screener-header">' +
-        '<span>Ticker</span><span>Price</span><span>Change</span><span>Score</span>' +
-      '</div>' +
-      data.map(function(s) {
-        var up = s.changePct >= 0;
-        var scoreColor = s.score >= 65 ? 'var(--accent-green)' : s.score >= 50 ? 'var(--accent-gold)' : 'var(--loss)';
-        var changeColor = up ? 'var(--accent-green)' : 'var(--loss)';
-        return '<div class="screener-row" onclick="quickSearch(\'' + escHtml(s.symbol) + '\')">' +
-          '<div class="screener-row-info">' +
-            '<div class="screener-row-ticker">' + escHtml(s.symbol) + '</div>' +
-            '<div class="screener-row-meta">' + escHtml(s.name) + ' · <span class="screener-sector-tag">' + escHtml(s.sector) + '</span></div>' +
+  el.innerHTML =
+    '<div class="screener-count">' + data.length + ' matches</div>' +
+    '<div class="screener-cards">' +
+    data.map(function(s) {
+      var up = s.changePct >= 0;
+      var scoreColor = s.score >= 65 ? 'var(--accent-green)' : s.score >= 50 ? 'var(--accent-gold)' : 'var(--loss)';
+      var changeColor = up ? 'var(--accent-green)' : 'var(--loss)';
+      var reason = goal.reason(s);
+      return '<div class="screener-card" onclick="quickSearch(\'' + escHtml(s.symbol) + '\')">' +
+        '<div class="screener-card-top">' +
+          '<div class="screener-card-left">' +
+            '<div class="screener-card-ticker">' + escHtml(s.symbol) + '</div>' +
+            '<div class="screener-card-name">' + escHtml(s.name) + '</div>' +
           '</div>' +
-          '<div class="screener-row-price">$' + (s.price > 0 ? s.price.toFixed(2) : '—') + '</div>' +
-          '<div class="screener-row-change" style="color:' + changeColor + ';">' + (up ? '+' : '') + s.changePct.toFixed(2) + '%</div>' +
-          '<div class="screener-row-score" style="color:' + scoreColor + ';">' +
-            '<span class="screener-score-num">' + s.score + '</span>' +
-            '<span class="screener-signal-badge" style="color:' + scoreColor + ';">' + s.signal + '</span>' +
+          '<div class="screener-card-right">' +
+            '<div class="screener-card-price">$' + (s.price > 0 ? s.price.toFixed(2) : '—') + '</div>' +
+            '<div class="screener-card-change" style="color:' + changeColor + ';">' + (up ? '+' : '') + s.changePct.toFixed(2) + '%</div>' +
           '</div>' +
-        '</div>';
-      }).join('') +
+        '</div>' +
+        '<div class="screener-card-reason">' + reason + '</div>' +
+        '<div class="screener-card-bottom">' +
+          '<span class="screener-card-score" style="color:' + scoreColor + ';">' + s.score + '/100 · ' + s.signal + '</span>' +
+          '<span class="screener-card-sector">' + escHtml(s.sector) + '</span>' +
+        '</div>' +
+      '</div>';
+    }).join('') +
     '</div>';
 }
 
