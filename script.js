@@ -3474,13 +3474,13 @@ function renderPortfolio() {
     let fmt = function(n) { return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
     document.getElementById('port-total-gain').textContent = (totalGain >= 0 ? '+$' : '-$') + fmt(Math.abs(totalGain));
     document.getElementById('port-total-gain').style.color = gainColor;
-    document.getElementById('port-total-pct').textContent = (totalGainPct >= 0 ? '+' : '') + totalGainPct.toFixed(2) + '% since purchase';
+    document.getElementById('port-total-pct').textContent = (totalGainPct >= 0 ? '+' : '') + totalGainPct.toFixed(2) + '% vs buy price';
     let prevValue = totalValue - totalDayChange;
     let totalDayChangePct = prevValue > 0 ? (totalDayChange / prevValue) * 100 : 0;
     document.getElementById('port-today-change').textContent = (totalDayChange >= 0 ? '+$' : '-$') + fmt(Math.abs(totalDayChange));
     document.getElementById('port-today-change').style.color = dayColor;
     let todayPctEl = document.getElementById('port-today-pct');
-    if (todayPctEl) { todayPctEl.textContent = (totalDayChangePct >= 0 ? '+' : '') + totalDayChangePct.toFixed(2) + '% today'; todayPctEl.style.color = dayColor; }
+    if (todayPctEl) { todayPctEl.textContent = (totalDayChangePct >= 0 ? '+' : '') + totalDayChangePct.toFixed(2) + '% vs yesterday'; todayPctEl.style.color = dayColor; }
     let gainCard = document.getElementById('port-gain-card');
     let todayCard = document.getElementById('port-today-card');
     if (gainCard) { gainCard.classList.remove('metric-up','metric-down'); gainCard.classList.add(totalGain >= 0 ? 'metric-up' : 'metric-down'); }
