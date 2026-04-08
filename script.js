@@ -3208,6 +3208,7 @@ function setActivePortfolio(id) {
   localStorage.setItem('activePortfolioId', id);
   saveToFirestore({ activePortfolioId: id });
   _spyBenchmark = null;
+  if (holdingsChartInstance) { holdingsChartInstance.destroy(); holdingsChartInstance = null; }
   // Reset AI section — it belongs to the previous portfolio
   let aiSection = document.getElementById('port-ai-section');
   if (aiSection) aiSection.style.display = 'none';
@@ -3520,6 +3521,7 @@ function renderPortfolio() {
 
     if (totalValue > 0) savePortfolioValueHistory(totalValue);
     renderPortfolioChart(stockData, totalValue);
+    renderHoldingsChart();
     renderSectorAllocation(stockData, totalValue);
     let portAiBtn = document.getElementById('port-ai-btn');
     if (portAiBtn) portAiBtn.style.display = 'block';
@@ -3961,6 +3963,188 @@ function renderSectorAllocation(stockData, totalValue) {
         '<span class="sector-alloc-pct">' + s.pct.toFixed(1) + '%</span>' +
       '</div>';
     }).join('');
+}
+
+// ── Holdings Summary Chart ────────────────────────────
+let holdingsChartInstance = null;
+let hsCurrentRange = '6M';
+
+function setHsRange(range) {
+  hsCurrentRange = range;
+  document.querySelectorAll('.hs-range-btn').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.range === range);
+  });
+  renderHoldingsChart();
+}
+
+function renderHoldingsChart() {
+  let active = getActivePortfolio();
+  let history = active ? (active.valueHistory || []) : [];
+  let canvas = document.getElementById('holdingsChart');
+  let emptyEl = document.getElementById('holdings-chart-empty');
+  if (!canvas) return;
+
+  // Filter by range
+  let now = new Date();
+  let filtered = history;
+  let days = { '1M': 30, '3M': 90, '6M': 180, '1Y': 365 };
+  if (days[hsCurrentRange]) {
+    let cutoff = new Date(now.getTime() - days[hsCurrentRange] * 86400000);
+    filtered = history.filter(function(h) { return new Date(h.date) >= cutoff; });
+    if (filtered.length === 0) filtered = history;
+  }
+
+  if (filtered.length < 2) {
+    canvas.style.display = 'none';
+    if (emptyEl) emptyEl.style.display = 'block';
+    return;
+  }
+  canvas.style.display = 'block';
+  if (emptyEl) emptyEl.style.display = 'none';
+
+  // Convert to % return from first point in range
+  let base = filtered[0].value;
+  let labels = filtered.map(function(h) { return h.date; });
+  let pcts = filtered.map(function(h) { return base > 0 ? ((h.value - base) / base * 100) : 0; });
+  let isUp = pcts[pcts.length - 1] >= 0;
+  let lineColor = isUp ? '#16a34a' : '#dc2626';
+  let fillColor = isUp ? 'rgba(22,163,74,0.08)' : 'rgba(220,38,38,0.08)';
+
+  if (holdingsChartInstance) holdingsChartInstance.destroy();
+  holdingsChartInstance = new Chart(canvas.getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: pcts,
+        borderColor: lineColor,
+        backgroundColor: fillColor,
+        borderWidth: 2,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        tension: 0.3,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) { return (ctx.parsed.y >= 0 ? '+' : '') + ctx.parsed.y.toFixed(2) + '%'; }
+          }
+        }
+      },
+      scales: {
+        x: { display: false },
+        y: {
+          grid: { color: 'rgba(148,163,184,0.1)' },
+          ticks: {
+            font: { size: 10 },
+            callback: function(v) { return (v >= 0 ? '+' : '') + v.toFixed(1) + '%'; }
+          }
+        }
+      }
+    }
+  });
+}
+
+// ── Tooltip for Holdings Summary ─────────────────────
+let _hsTipOpen = false;
+function showHsTip(event, type) {
+  event.stopPropagation();
+  let popup = document.getElementById('hs-tooltip-popup');
+  if (!popup) return;
+  let tips = {
+    day: '<strong>Day Change</strong><br>How much your portfolio gained or lost compared to <em>yesterday\'s closing prices</em>. Positive means the market moved in your favour today.',
+    unrealized: '<strong>Unrealized G/L</strong><br>The gain or loss on stocks you <em>still own</em>, compared to what you paid. It\'s "unrealized" because you haven\'t sold yet — it could still go up or down.',
+    realized: '<strong>Realized G/L</strong><br>Profit or loss from stocks you have <em>already sold</em>. This is locked in and won\'t change with the market.',
+    score: '<strong>Avg Score</strong><br>The average StockIQ health score across your holdings (0–100). 65+ = Strong, 50–64 = Watch, below 50 = Risky.'
+  };
+  popup.innerHTML = tips[type] || '';
+  let rect = event.target.getBoundingClientRect();
+  popup.style.display = 'block';
+  popup.style.top = (rect.bottom + 8 + window.scrollY) + 'px';
+  popup.style.left = Math.min(rect.left, window.innerWidth - 280) + 'px';
+  if (!_hsTipOpen) {
+    _hsTipOpen = true;
+    setTimeout(function() {
+      document.addEventListener('click', function close() {
+        popup.style.display = 'none';
+        _hsTipOpen = false;
+        document.removeEventListener('click', close);
+      });
+    }, 10);
+  }
+}
+
+// ── AI Portfolio Explainer ─────────────────────────────
+function explainPortfolio() {
+  let active = getActivePortfolio();
+  if (!active) return;
+  let gainEl = document.getElementById('port-total-gain');
+  let dayEl = document.getElementById('port-today-change');
+  let realizedEl = document.getElementById('port-realized-gain');
+  let scoreEl = document.getElementById('port-avg-score');
+  let costEl = document.getElementById('port-total-cost');
+  let stocks = active.stocks || [];
+  let closed = active.closedPositions || [];
+
+  // Build context string
+  let stockList = stocks.map(function(s) {
+    let sh = (s.lots || []).reduce(function(a, l) { return a + l.shares; }, 0);
+    let cost = (s.lots || []).reduce(function(a, l) { return a + l.shares * l.price; }, 0);
+    let avg = sh > 0 ? cost / sh : 0;
+    return s.ticker + ' (' + sh.toFixed(2) + ' shares, avg $' + avg.toFixed(2) + ')';
+  }).join(', ');
+
+  let prompt = 'You are a friendly financial educator helping a beginner understand their portfolio.\n\n' +
+    'Portfolio snapshot:\n' +
+    '- Market Value: ' + (gainEl ? document.getElementById('port-total-value').textContent : '$?') + '\n' +
+    '- Cost Basis: ' + (costEl ? costEl.textContent : '?') + '\n' +
+    '- Unrealized G/L: ' + (gainEl ? gainEl.textContent + ' ' + document.getElementById('port-total-pct').textContent : '?') + '\n' +
+    '- Day Change: ' + (dayEl ? dayEl.textContent + ' ' + document.getElementById('port-today-pct').textContent : '?') + '\n' +
+    '- Realized G/L: ' + (realizedEl ? realizedEl.textContent : '?') + '\n' +
+    '- Avg Score: ' + (scoreEl ? scoreEl.textContent : '?') + '\n' +
+    '- Holdings: ' + (stockList || 'none') + '\n' +
+    '- Closed positions: ' + closed.length + '\n\n' +
+    'In plain English (3–5 short paragraphs), explain what each of these numbers means for THIS specific portfolio. ' +
+    'Start with what Market Value vs Cost Basis means, then Unrealized G/L, then Day Change, then Realized G/L, then the score. ' +
+    'Be encouraging, educational, and concise. Do not give investment advice.';
+
+  // Show modal with loading state
+  let existing = document.getElementById('holdings-explain-modal');
+  if (existing) existing.remove();
+  let modal = document.createElement('div');
+  modal.id = 'holdings-explain-modal';
+  modal.innerHTML =
+    '<div class="holdings-explain-content">' +
+      '<button class="holdings-explain-close" onclick="document.getElementById(\'holdings-explain-modal\').remove()">✕</button>' +
+      '<h3>✨ Understanding Your Portfolio</h3>' +
+      '<div id="holdings-explain-body" style="color:var(--text-muted);font-size:13px;">Generating explanation…</div>' +
+    '</div>';
+  document.body.appendChild(modal);
+  modal.addEventListener('click', function(e) { if (e.target === modal) modal.remove(); });
+
+  // Call Anthropic API
+  fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+    body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 600, messages: [{ role: 'user', content: prompt }] })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    let text = data.content && data.content[0] ? data.content[0].text : 'Could not generate explanation.';
+    let bodyEl = document.getElementById('holdings-explain-body');
+    if (bodyEl) bodyEl.innerHTML = parseMarkdown(text);
+  })
+  .catch(function() {
+    let bodyEl = document.getElementById('holdings-explain-body');
+    if (bodyEl) bodyEl.textContent = 'Could not generate explanation. Check your connection and try again.';
+  });
 }
 
 function renderPortfolioLineChart() {

@@ -872,34 +872,65 @@
       <!-- Portfolio switcher tabs -->
       <div id="portfolio-tabs-bar"></div>
 
-      <!-- Top metrics row — hidden until portfolio has data -->
+      <!-- Holdings Summary — hidden until portfolio has data -->
       <div id="portfolio-summary" style="display:none;">
-        <div class="port-metrics">
-          <div class="port-metric">
-            <div class="port-metric-label">Market Value</div>
-            <div class="port-metric-value" id="port-total-value">$0</div>
-            <div class="port-metric-sub" id="port-total-cost" style="color:var(--text-muted);">Cost $0</div>
+        <div class="holdings-summary-card">
+          <div class="holdings-summary-header">
+            <span class="holdings-summary-title">Holdings Summary</span>
+            <button class="holdings-explain-btn" onclick="explainPortfolio()">✨ Explain with AI</button>
           </div>
-          <div class="port-metric" id="port-gain-card">
-            <div class="port-metric-label">Unrealized G/L</div>
-            <div class="port-metric-value" id="port-total-gain">$0</div>
-            <div class="port-metric-sub" id="port-total-pct">0%</div>
-          </div>
-          <div class="port-metric" id="port-today-card">
-            <div class="port-metric-label">Day Change</div>
-            <div class="port-metric-value" id="port-today-change">$0</div>
-            <div class="port-metric-sub" id="port-today-pct">0%</div>
-          </div>
-          <div class="port-metric" id="port-realized-card">
-            <div class="port-metric-label">Realized G/L</div>
-            <div class="port-metric-value" id="port-realized-gain">$0</div>
-            <div class="port-metric-sub" id="port-realized-sub" style="color:var(--text-muted);">from closed positions</div>
-          </div>
-          <div class="port-metric">
-            <div class="port-metric-label">Avg Score</div>
-            <div class="port-metric-value" id="port-avg-score">—</div>
+          <div class="holdings-summary-body">
+            <!-- Left: key metrics -->
+            <div class="holdings-left">
+              <div class="holdings-big-value" id="port-total-value">$0</div>
+              <div class="holdings-market-bar-row">
+                <span class="holdings-dot">●</span>
+                <span>Market Value</span>
+                <div class="holdings-bar-track"><div class="holdings-bar-fill" id="holdings-bar-fill"></div></div>
+              </div>
+              <div class="holdings-divider"></div>
+              <div class="holdings-metric-row">
+                <span>Day Change <button class="hs-tip-btn" onclick="showHsTip(event,'day')">ⓘ</button></span>
+                <span id="port-today-change" style="font-weight:600;">—</span>
+              </div>
+              <div class="holdings-metric-row">
+                <span id="port-today-pct" style="font-size:11px;color:var(--text-muted);padding-left:16px;"></span>
+              </div>
+              <div class="holdings-metric-row" style="margin-top:6px;">
+                <span>Unrealized G/L <button class="hs-tip-btn" onclick="showHsTip(event,'unrealized')">ⓘ</button></span>
+                <span id="port-total-gain" style="font-weight:600;">—</span>
+              </div>
+              <div class="holdings-metric-row">
+                <span id="port-total-pct" style="font-size:11px;color:var(--text-muted);padding-left:16px;"></span>
+              </div>
+              <div class="holdings-metric-row" style="margin-top:6px;">
+                <span>Realized G/L <button class="hs-tip-btn" onclick="showHsTip(event,'realized')">ⓘ</button></span>
+                <span id="port-realized-gain" style="font-weight:600;">—</span>
+              </div>
+              <div class="holdings-metric-row" style="margin-top:6px;">
+                <span>Avg Score <button class="hs-tip-btn" onclick="showHsTip(event,'score')">ⓘ</button></span>
+                <span id="port-avg-score" style="font-weight:600;">—</span>
+              </div>
+              <div id="port-total-cost" style="font-size:11px;color:var(--text-muted);margin-top:8px;"></div>
+            </div>
+            <!-- Right: performance chart -->
+            <div class="holdings-right">
+              <div class="holdings-chart-ranges">
+                <button class="hs-range-btn" data-range="1M" onclick="setHsRange('1M')">1M</button>
+                <button class="hs-range-btn" data-range="3M" onclick="setHsRange('3M')">3M</button>
+                <button class="hs-range-btn active" data-range="6M" onclick="setHsRange('6M')">6M</button>
+                <button class="hs-range-btn" data-range="1Y" onclick="setHsRange('1Y')">1Y</button>
+                <button class="hs-range-btn" data-range="all" onclick="setHsRange('all')">All</button>
+              </div>
+              <canvas id="holdingsChart"></canvas>
+              <div id="holdings-chart-empty" style="display:none;text-align:center;padding:32px 16px;font-size:13px;color:var(--text-muted);">
+                <strong>Chart builds over time</strong><br>Each day you open the app adds a data point. Come back tomorrow to see your first trend.
+              </div>
+            </div>
           </div>
         </div>
+        <!-- Tooltip popup -->
+        <div id="hs-tooltip-popup" style="display:none;"></div>
         <div id="port-benchmark" style="display:none;"></div>
       </div>
 
