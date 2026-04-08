@@ -3470,17 +3470,29 @@ function renderPortfolio() {
     let avgScore = scores.length > 0 ? Math.round(scores.reduce(function(a, b) { return a + b; }, 0) / scores.length) : null;
     let gainColor = totalGain >= 0 ? '#16a34a' : '#dc2626';
     let dayColor = totalDayChange >= 0 ? '#16a34a' : '#dc2626';
-    document.getElementById('port-total-value').textContent = '$' + totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     let fmt = function(n) { return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+    document.getElementById('port-total-value').textContent = '$' + fmt(totalValue);
+    let costEl = document.getElementById('port-total-cost');
+    if (costEl) costEl.textContent = 'Cost $' + fmt(totalCost);
     document.getElementById('port-total-gain').textContent = (totalGain >= 0 ? '+$' : '-$') + fmt(Math.abs(totalGain));
     document.getElementById('port-total-gain').style.color = gainColor;
-    document.getElementById('port-total-pct').textContent = (totalGainPct >= 0 ? '+' : '') + totalGainPct.toFixed(2) + '% vs buy price';
+    document.getElementById('port-total-pct').textContent = (totalGainPct >= 0 ? '+' : '') + totalGainPct.toFixed(2) + '% vs cost';
     let prevValue = totalValue - totalDayChange;
     let totalDayChangePct = prevValue > 0 ? (totalDayChange / prevValue) * 100 : 0;
     document.getElementById('port-today-change').textContent = (totalDayChange >= 0 ? '+$' : '-$') + fmt(Math.abs(totalDayChange));
     document.getElementById('port-today-change').style.color = dayColor;
     let todayPctEl = document.getElementById('port-today-pct');
     if (todayPctEl) { todayPctEl.textContent = (totalDayChangePct >= 0 ? '+' : '') + totalDayChangePct.toFixed(2) + '% vs yesterday'; todayPctEl.style.color = dayColor; }
+    // Realized G/L from closed positions
+    let closed = active ? (active.closedPositions || []) : [];
+    let totalRealized = closed.reduce(function(sum, c) { return sum + (c.realizedGain || 0); }, 0);
+    let realizedEl = document.getElementById('port-realized-gain');
+    let realizedCard = document.getElementById('port-realized-card');
+    if (realizedEl) {
+      realizedEl.textContent = (totalRealized >= 0 ? '+$' : '-$') + fmt(Math.abs(totalRealized));
+      realizedEl.style.color = totalRealized >= 0 ? '#16a34a' : '#dc2626';
+    }
+    if (realizedCard) { realizedCard.classList.remove('metric-up','metric-down'); realizedCard.classList.add(totalRealized >= 0 ? 'metric-up' : 'metric-down'); }
     let gainCard = document.getElementById('port-gain-card');
     let todayCard = document.getElementById('port-today-card');
     if (gainCard) { gainCard.classList.remove('metric-up','metric-down'); gainCard.classList.add(totalGain >= 0 ? 'metric-up' : 'metric-down'); }
@@ -3776,7 +3788,7 @@ function renderPortfolioRows(data) {
     list.innerHTML = '<div style="text-align:center;padding:24px 0;font-size:13px;color:var(--text-muted);">No stocks match your search.</div>';
     return;
   }
-  list.innerHTML = '<div class="port-stock-header"><div>Stock</div><div>Value</div><div class="hide-mobile">Gain/Loss</div><div class="hide-mobile">Today</div><div>Signal</div></div>' +
+  list.innerHTML = '<div class="port-stock-header"><div>Stock</div><div>Mkt Value</div><div class="hide-mobile">Cost</div><div class="hide-mobile">Unrealized G/L</div><div class="hide-mobile">Day Change</div><div>Signal</div></div>' +
     data.map(function(s) {
       let gc = s.gain >= 0 ? '#16a34a' : '#dc2626';
       let dc = s.dayChangeAmt >= 0 ? '#16a34a' : '#dc2626';
@@ -3815,9 +3827,10 @@ function renderPortfolioRows(data) {
               '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">now $' + s.currentPrice.toFixed(2) + '</div>' +
             '</div>' +
           '</div>' +
-          '<div>$' + s.value.toFixed(2) + '</div>' +
+          '<div><div>$' + s.value.toFixed(2) + '</div></div>' +
+          '<div class="hide-mobile" style="color:var(--text-muted);font-size:13px;">$' + s.cost.toFixed(2) + '</div>' +
           '<div class="hide-mobile" style="color:' + gc + ';">' + (s.gain >= 0 ? '+' : '') + '$' + s.gain.toFixed(2) + '<br><span style="font-size:11px;">' + (s.gainPct >= 0 ? '+' : '') + s.gainPct.toFixed(1) + '%</span></div>' +
-          '<div class="hide-mobile" style="color:' + dc + ';">' + (s.dayChangeAmt >= 0 ? '+' : '') + '$' + s.dayChangeAmt.toFixed(2) + '</div>' +
+          '<div class="hide-mobile" style="color:' + dc + ';">' + (s.dayChangeAmt >= 0 ? '+' : '') + '$' + s.dayChangeAmt.toFixed(2) + '<br><span style="font-size:11px;color:' + dc + ';">' + (s.dayChangeAmt >= 0 ? '+' : '') + (s.currentPrice > 0 ? ((s.dayChangeAmt / (s.value - s.dayChangeAmt)) * 100).toFixed(2) : '0.00') + '%</span></div>' +
           '<div style="display:flex;align-items:center;gap:8px;"><span id="port-signal-' + s.ticker + '">' + portSignal(s.score) + '</span>' +
             '<button onclick="event.stopPropagation();openSellModal(' + escHtml(JSON.stringify(s.ticker)) + ',' + s.currentPrice + ',' + s.shares + ')" class="sell-btn">Sell</button>' +
             '<button onclick="event.stopPropagation();removeFromPortfolio(' + escHtml(JSON.stringify(s.ticker)) + ')" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:16px;padding:0;">✕</button>' +

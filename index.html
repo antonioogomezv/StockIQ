@@ -876,18 +876,24 @@
       <div id="portfolio-summary" style="display:none;">
         <div class="port-metrics">
           <div class="port-metric">
-            <div class="port-metric-label">Total Value</div>
+            <div class="port-metric-label">Market Value</div>
             <div class="port-metric-value" id="port-total-value">$0</div>
+            <div class="port-metric-sub" id="port-total-cost" style="color:var(--text-muted);">Cost $0</div>
           </div>
           <div class="port-metric" id="port-gain-card">
-            <div class="port-metric-label">Since Purchase</div>
+            <div class="port-metric-label">Unrealized G/L</div>
             <div class="port-metric-value" id="port-total-gain">$0</div>
             <div class="port-metric-sub" id="port-total-pct">0%</div>
           </div>
           <div class="port-metric" id="port-today-card">
-            <div class="port-metric-label">Since Yesterday</div>
+            <div class="port-metric-label">Day Change</div>
             <div class="port-metric-value" id="port-today-change">$0</div>
             <div class="port-metric-sub" id="port-today-pct">0%</div>
+          </div>
+          <div class="port-metric" id="port-realized-card">
+            <div class="port-metric-label">Realized G/L</div>
+            <div class="port-metric-value" id="port-realized-gain">$0</div>
+            <div class="port-metric-sub" id="port-realized-sub" style="color:var(--text-muted);">from closed positions</div>
           </div>
           <div class="port-metric">
             <div class="port-metric-label">Avg Score</div>
