@@ -3504,6 +3504,7 @@ function renderPortfolio() {
     if (searchWrap) searchWrap.style.display = 'block';
     renderPortfolioRows(stockData);
     renderClosedPositions();
+    fetchMissingPortfolioScores(stockData);
 
     if (totalValue > 0) savePortfolioValueHistory(totalValue);
     renderPortfolioChart(stockData, totalValue);
@@ -3586,6 +3587,30 @@ function portSignal(score) {
   let cls = score >= 65 ? 'buy' : score >= 50 ? 'hold' : 'sell';
   let txt = score >= 65 ? 'Strong' : score >= 50 ? 'Watch' : 'Risky';
   return '<span class="signal-pill ' + cls + '">' + txt + '</span>';
+}
+
+function fetchMissingPortfolioScores(stockData) {
+  let missing = stockData.filter(function(s) { return !s.score; });
+  missing.forEach(function(s, i) {
+    setTimeout(function() {
+      fetch('https://finnhub.io/api/v1/stock/metric?symbol=' + encodeURIComponent(s.ticker) + '&metric=all&token=' + finnhubKey)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          let m = data.metric || {};
+          let pe = m['peNormalizedAnnual'] || m['peTTM'] || 0;
+          let week52High = m['52WeekHigh'] || 0;
+          let changePct = s.currentPrice > 0 && s.buyPrice > 0
+            ? ((s.currentPrice - s.buyPrice) / s.buyPrice) * 100 : 0;
+          let result = calculateScore(changePct, week52High, s.currentPrice, pe, m, 5, null, null);
+          let score = result.total;
+          saveScoreHistory(s.ticker, score);
+          // Update the signal pill in the DOM without re-rendering the whole list
+          let el = document.getElementById('port-signal-' + s.ticker);
+          if (el) el.innerHTML = portSignal(score);
+        })
+        .catch(function() {});
+    }, 400 * (i + 1)); // stagger 400ms per ticker
+  });
 }
 
 function openSellModal(ticker, currentPrice, totalShares) {
@@ -3793,7 +3818,7 @@ function renderPortfolioRows(data) {
           '<div>$' + s.value.toFixed(2) + '</div>' +
           '<div class="hide-mobile" style="color:' + gc + ';">' + (s.gain >= 0 ? '+' : '') + '$' + s.gain.toFixed(2) + '<br><span style="font-size:11px;">' + (s.gainPct >= 0 ? '+' : '') + s.gainPct.toFixed(1) + '%</span></div>' +
           '<div class="hide-mobile" style="color:' + dc + ';">' + (s.dayChangeAmt >= 0 ? '+' : '') + '$' + s.dayChangeAmt.toFixed(2) + '</div>' +
-          '<div style="display:flex;align-items:center;gap:8px;">' + portSignal(s.score) +
+          '<div style="display:flex;align-items:center;gap:8px;"><span id="port-signal-' + s.ticker + '">' + portSignal(s.score) + '</span>' +
             '<button onclick="event.stopPropagation();openSellModal(' + escHtml(JSON.stringify(s.ticker)) + ',' + s.currentPrice + ',' + s.shares + ')" class="sell-btn">Sell</button>' +
             '<button onclick="event.stopPropagation();removeFromPortfolio(' + escHtml(JSON.stringify(s.ticker)) + ')" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:16px;padding:0;">✕</button>' +
           '</div>' +
