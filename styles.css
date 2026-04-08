@@ -2083,7 +2083,6 @@ button:active { transform: translateY(0); }
 }
 .screener-goal-btn:hover { border-color: var(--accent-green); transform: none; }
 .screener-goal-btn.active { background: var(--accent-green); color: #fff; border-color: var(--accent-green); }
-.screener-goal-emoji { font-size: 16px; }
 .screener-goal-label { white-space: nowrap; }
 
 #screener-learn-box {
