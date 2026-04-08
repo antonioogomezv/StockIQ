@@ -3446,12 +3446,12 @@ function renderPortfolio() {
       .then(function(r) { return r.json(); })
       .then(function(q) {
         let currentPrice = q.c || avgPrice; // fall back to buy price if rate-limited
-        let dayChange = q.dp || 0;
         let value = currentPrice * totalShares;
         let cost = totalLotCost;
         let gain = value - cost;
         let gainPct = cost > 0 ? ((gain / cost) * 100) : 0;
-        let dayChangeAmt = (currentPrice * (dayChange / 100)) * totalShares;
+        // q.d is the exact $ change from previous close — avoids rounding errors from dp%
+        let dayChangeAmt = (q.d || 0) * totalShares;
         totalValue += value; totalCost += cost; totalDayChange += dayChangeAmt;
         let histScore = JSON.parse(localStorage.getItem('history_score_' + item.ticker) || '[]');
         let score = histScore.length > 0 ? histScore[histScore.length - 1].score : null;
@@ -3619,7 +3619,7 @@ function openSellModal(ticker, currentPrice, totalShares) {
 
   wrapper.appendChild(modal);
 
-  // Live preview
+  // Live preview — uses FIFO to match what confirmSell will actually record
   function updatePreview() {
     let sh = parseFloat(document.getElementById('sell-shares-' + ticker).value) || 0;
     let sp = parseFloat(document.getElementById('sell-price-' + ticker).value) || 0;
@@ -3629,11 +3629,20 @@ function openSellModal(ticker, currentPrice, totalShares) {
     let portfolio = active ? migratePortfolio(active.stocks || []) : [];
     let item = portfolio.find(function(i) { return i.ticker === ticker; });
     if (!item) return;
-    let totalCost = item.lots.reduce(function(sum, l) { return sum + l.shares * l.price; }, 0);
     let totalSh = item.lots.reduce(function(sum, l) { return sum + l.shares; }, 0);
-    let avgCost = totalSh > 0 ? totalCost / totalSh : 0;
-    let realizedGain = (sp - avgCost) * sh;
-    let realizedPct = avgCost > 0 ? ((sp - avgCost) / avgCost * 100) : 0;
+    // FIFO preview — same logic as confirmSell
+    let sharesToSell = sh;
+    let realizedGain = 0;
+    let weightedCost = 0;
+    let lots = item.lots.slice();
+    for (let i = 0; i < lots.length && sharesToSell > 0; i++) {
+      let lotSell = Math.min(lots[i].shares, sharesToSell);
+      realizedGain += (sp - lots[i].price) * lotSell;
+      weightedCost += lots[i].price * lotSell;
+      sharesToSell -= lotSell;
+    }
+    let avgCostSold = sh > 0 ? weightedCost / sh : 0;
+    let realizedPct = avgCostSold > 0 ? ((sp - avgCostSold) / avgCostSold * 100) : 0;
     let color = realizedGain >= 0 ? '#16a34a' : '#dc2626';
     let remaining = totalSh - sh;
     preview.innerHTML = '<span style="color:' + color + ';font-weight:600;">' +
