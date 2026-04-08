@@ -2342,7 +2342,7 @@ function loadScreener() {
 
   SCREENER_POOL.forEach(function(stock) {
     var d = delay;
-    delay += 180;
+    delay += 250;
     setTimeout(function() {
       var key = window.FINNHUB_KEY || window.finnhubKey || '';
       fetch('https://finnhub.io/api/v1/quote?symbol=' + stock.symbol + '&token=' + key)
@@ -2370,8 +2370,11 @@ function loadScreener() {
                 _screenerData = results;
                 _screenerLoaded = true;
                 localStorage.setItem('screener-cache', JSON.stringify({ ts: Date.now(), data: results }));
-                statusEl.innerHTML = '';
-                renderScreener();
+                if (statusEl) statusEl.innerHTML = '<div class="screener-loading">Done! Cooling down API… tap a stock in a moment.</div>';
+                setTimeout(function() {
+                  if (statusEl) statusEl.innerHTML = '';
+                  renderScreener();
+                }, 4000);
               }
             }).catch(function() { done++; if (done === total && _screenerData.length === 0) { _screenerData = results; _screenerLoaded = true; renderScreener(); } });
         }).catch(function() { done++; });
