@@ -37,7 +37,7 @@ function loadFirestoreUserData(callback) {
   let firstCall = true;
   let timer = setTimeout(function() {
     if (firstCall) { firstCall = false; if (callback) callback({}); }
-  }, 4000);
+  }, 10000);
 
   _firestoreUnsub = ref.onSnapshot(function(doc) {
     let data = doc.exists ? doc.data() : {};
