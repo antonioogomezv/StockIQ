@@ -2218,6 +2218,251 @@ function loadTrendingTickers(forceRefresh) {
 let currentTrendingFilter = 'all';
 let allTrendingData = [];
 
+// ── STOCK SCREENER ─────────────────────────────────────────────────────────
+
+var SCREENER_POOL = [
+  {symbol:'AAPL',name:'Apple',sector:'Technology'},
+  {symbol:'MSFT',name:'Microsoft',sector:'Technology'},
+  {symbol:'NVDA',name:'NVIDIA',sector:'Technology'},
+  {symbol:'GOOGL',name:'Alphabet',sector:'Technology'},
+  {symbol:'META',name:'Meta',sector:'Technology'},
+  {symbol:'AMZN',name:'Amazon',sector:'Technology'},
+  {symbol:'AMD',name:'AMD',sector:'Technology'},
+  {symbol:'INTC',name:'Intel',sector:'Technology'},
+  {symbol:'ORCL',name:'Oracle',sector:'Technology'},
+  {symbol:'CRM',name:'Salesforce',sector:'Technology'},
+  {symbol:'AVGO',name:'Broadcom',sector:'Technology'},
+  {symbol:'TSLA',name:'Tesla',sector:'Technology'},
+  {symbol:'NFLX',name:'Netflix',sector:'Technology'},
+  {symbol:'ADBE',name:'Adobe',sector:'Technology'},
+  {symbol:'QCOM',name:'Qualcomm',sector:'Technology'},
+  {symbol:'JNJ',name:'Johnson & Johnson',sector:'Healthcare'},
+  {symbol:'UNH',name:'UnitedHealth',sector:'Healthcare'},
+  {symbol:'LLY',name:'Eli Lilly',sector:'Healthcare'},
+  {symbol:'PFE',name:'Pfizer',sector:'Healthcare'},
+  {symbol:'ABBV',name:'AbbVie',sector:'Healthcare'},
+  {symbol:'MRK',name:'Merck',sector:'Healthcare'},
+  {symbol:'TMO',name:'Thermo Fisher',sector:'Healthcare'},
+  {symbol:'AMGN',name:'Amgen',sector:'Healthcare'},
+  {symbol:'GILD',name:'Gilead',sector:'Healthcare'},
+  {symbol:'CVS',name:'CVS Health',sector:'Healthcare'},
+  {symbol:'JPM',name:'JPMorgan',sector:'Financials'},
+  {symbol:'BAC',name:'Bank of America',sector:'Financials'},
+  {symbol:'WFC',name:'Wells Fargo',sector:'Financials'},
+  {symbol:'GS',name:'Goldman Sachs',sector:'Financials'},
+  {symbol:'MS',name:'Morgan Stanley',sector:'Financials'},
+  {symbol:'BLK',name:'BlackRock',sector:'Financials'},
+  {symbol:'AXP',name:'American Express',sector:'Financials'},
+  {symbol:'V',name:'Visa',sector:'Financials'},
+  {symbol:'MA',name:'Mastercard',sector:'Financials'},
+  {symbol:'XOM',name:'ExxonMobil',sector:'Energy'},
+  {symbol:'CVX',name:'Chevron',sector:'Energy'},
+  {symbol:'COP',name:'ConocoPhillips',sector:'Energy'},
+  {symbol:'OXY',name:'Occidental',sector:'Energy'},
+  {symbol:'SLB',name:'SLB',sector:'Energy'},
+  {symbol:'EOG',name:'EOG Resources',sector:'Energy'},
+  {symbol:'MPC',name:'Marathon Petroleum',sector:'Energy'},
+  {symbol:'HAL',name:'Halliburton',sector:'Energy'},
+  {symbol:'HD',name:'Home Depot',sector:'Consumer'},
+  {symbol:'MCD',name:"McDonald's",sector:'Consumer'},
+  {symbol:'NKE',name:'Nike',sector:'Consumer'},
+  {symbol:'SBUX',name:'Starbucks',sector:'Consumer'},
+  {symbol:'TGT',name:'Target',sector:'Consumer'},
+  {symbol:'LOW',name:"Lowe's",sector:'Consumer'},
+  {symbol:'CMG',name:'Chipotle',sector:'Consumer'},
+  {symbol:'BKNG',name:'Booking Holdings',sector:'Consumer'},
+  {symbol:'GM',name:'General Motors',sector:'Consumer'},
+  {symbol:'F',name:'Ford',sector:'Consumer'},
+  {symbol:'CAT',name:'Caterpillar',sector:'Industrials'},
+  {symbol:'RTX',name:'RTX',sector:'Industrials'},
+  {symbol:'HON',name:'Honeywell',sector:'Industrials'},
+  {symbol:'UPS',name:'UPS',sector:'Industrials'},
+  {symbol:'BA',name:'Boeing',sector:'Industrials'},
+  {symbol:'GE',name:'GE Aerospace',sector:'Industrials'},
+  {symbol:'LMT',name:'Lockheed Martin',sector:'Industrials'},
+  {symbol:'FDX',name:'FedEx',sector:'Industrials'},
+  {symbol:'NEE',name:'NextEra Energy',sector:'Other'},
+  {symbol:'DIS',name:'Disney',sector:'Other'},
+  {symbol:'KO',name:'Coca-Cola',sector:'Other'},
+  {symbol:'PEP',name:'PepsiCo',sector:'Other'},
+  {symbol:'WMT',name:'Walmart',sector:'Other'},
+  {symbol:'COST',name:'Costco',sector:'Other'},
+  {symbol:'PLD',name:'Prologis',sector:'Other'},
+  {symbol:'AMT',name:'American Tower',sector:'Other'},
+];
+
+var _screenerOpen = false;
+var _screenerFilters = { signal: 'all', sector: 'all', sort: 'score' };
+var _screenerData = []; // cached results with scores
+var _screenerLoaded = false;
+
+function toggleScreener() {
+  _screenerOpen = !_screenerOpen;
+  var panel = document.getElementById('screener-panel');
+  var btn   = document.getElementById('screener-toggle-btn');
+  if (!panel) return;
+  panel.style.display = _screenerOpen ? 'block' : 'none';
+  btn.classList.toggle('active', _screenerOpen);
+  if (_screenerOpen && !_screenerLoaded) loadScreener();
+}
+
+function setScreenerFilter(type, val) {
+  _screenerFilters[type] = val;
+  // Update active chip in group
+  document.querySelectorAll('.screener-chip[data-filter="' + type + '"]').forEach(function(c) {
+    c.classList.toggle('active', c.dataset.val === val);
+  });
+  renderScreener();
+}
+
+function loadScreener() {
+  var statusEl  = document.getElementById('screener-status');
+  var resultsEl = document.getElementById('screener-results');
+  if (!statusEl || !resultsEl) return;
+
+  // Check cache (10 min TTL)
+  var cached = localStorage.getItem('screener-cache');
+  if (cached) {
+    var p = JSON.parse(cached);
+    if (Date.now() - p.ts < 600000) {
+      _screenerData = p.data;
+      _screenerLoaded = true;
+      renderScreener();
+      return;
+    }
+  }
+
+  statusEl.innerHTML = '<div class="screener-loading">Loading scores for ' + SCREENER_POOL.length + ' stocks… this takes about 30 seconds.</div>';
+  resultsEl.innerHTML = '';
+
+  var results = [];
+  var total = SCREENER_POOL.length;
+  var done = 0;
+  var delay = 0;
+
+  SCREENER_POOL.forEach(function(stock) {
+    var d = delay;
+    delay += 180;
+    setTimeout(function() {
+      var key = window.FINNHUB_KEY || window.finnhubKey || '';
+      fetch('https://finnhub.io/api/v1/quote?symbol=' + stock.symbol + '&token=' + key)
+        .then(function(r) { return r.json(); })
+        .then(function(q) {
+          fetch('https://finnhub.io/api/v1/stock/metric?symbol=' + stock.symbol + '&metric=all&token=' + key)
+            .then(function(r) { return r.json(); })
+            .then(function(m) {
+              var metrics = m.metric || {};
+              var pe     = metrics['peBasicExclExtraTTM'] || metrics['peTTM'] || 0;
+              var beta   = metrics['beta'] || 0;
+              var margin = metrics['netProfitMarginTTM'] || 0;
+              var growth = metrics['revenueGrowthTTMYoy'] || 0;
+              var score  = calcQuickScore(pe, beta, margin, growth, q.dp || 0, q.c, metrics['52WeekHigh'] || 0);
+              var signal = score >= 65 ? 'Strong' : score >= 50 ? 'Watch' : 'Risky';
+              results.push({
+                symbol: stock.symbol, name: stock.name, sector: stock.sector,
+                price: q.c || q.pc || 0, changePct: q.dp || 0,
+                score: score, signal: signal,
+                pe: pe, beta: beta, margin: margin
+              });
+              done++;
+              if (statusEl) statusEl.innerHTML = '<div class="screener-loading">Scoring stocks… ' + done + ' / ' + total + '</div>';
+              if (done === total) {
+                _screenerData = results;
+                _screenerLoaded = true;
+                localStorage.setItem('screener-cache', JSON.stringify({ ts: Date.now(), data: results }));
+                statusEl.innerHTML = '';
+                renderScreener();
+              }
+            }).catch(function() { done++; if (done === total && _screenerData.length === 0) { _screenerData = results; _screenerLoaded = true; renderScreener(); } });
+        }).catch(function() { done++; });
+    }, d);
+  });
+}
+
+function calcQuickScore(pe, beta, margin, growth, changePct, price, high52) {
+  var score = 50;
+  // P/E
+  if (pe > 0 && pe < 20) score += 8;
+  else if (pe > 0 && pe < 35) score += 4;
+  else if (pe > 35) score -= 4;
+  // Beta
+  if (beta > 0 && beta < 1) score += 6;
+  else if (beta >= 1 && beta < 1.5) score += 3;
+  else if (beta >= 1.5) score -= 3;
+  // Margin
+  if (margin > 20) score += 10;
+  else if (margin > 10) score += 6;
+  else if (margin > 0) score += 2;
+  else if (margin < 0) score -= 8;
+  // Growth
+  if (growth > 15) score += 8;
+  else if (growth > 0) score += 4;
+  else score -= 4;
+  // Price movement
+  if (changePct > 1) score += 3;
+  else if (changePct < -2) score -= 3;
+  // 52wk position
+  if (price > 0 && high52 > 0) {
+    var pct = (price / high52);
+    if (pct > 0.9) score += 5;
+    else if (pct > 0.75) score += 2;
+    else score -= 3;
+  }
+  return Math.max(10, Math.min(100, Math.round(score)));
+}
+
+function renderScreener() {
+  var el = document.getElementById('screener-results');
+  if (!el) return;
+  var data = _screenerData.slice();
+
+  // Filter
+  if (_screenerFilters.signal !== 'all') {
+    data = data.filter(function(s) { return s.signal === _screenerFilters.signal; });
+  }
+  if (_screenerFilters.sector !== 'all') {
+    data = data.filter(function(s) { return s.sector === _screenerFilters.sector; });
+  }
+
+  // Sort
+  if (_screenerFilters.sort === 'score') {
+    data.sort(function(a, b) { return b.score - a.score; });
+  } else if (_screenerFilters.sort === 'gainers') {
+    data.sort(function(a, b) { return b.changePct - a.changePct; });
+  } else {
+    data.sort(function(a, b) { return a.changePct - b.changePct; });
+  }
+
+  if (data.length === 0) {
+    el.innerHTML = '<div class="screener-empty">No stocks match these filters.</div>';
+    return;
+  }
+
+  el.innerHTML = '<div class="screener-count">' + data.length + ' stocks</div>' +
+    '<div class="screener-table">' +
+      '<div class="screener-header">' +
+        '<span>Ticker</span><span>Price</span><span>Change</span><span>Score</span>' +
+      '</div>' +
+      data.map(function(s) {
+        var up = s.changePct >= 0;
+        var scoreColor = s.score >= 65 ? 'var(--accent-green)' : s.score >= 50 ? 'var(--accent-gold)' : 'var(--loss)';
+        var changeColor = up ? 'var(--accent-green)' : 'var(--loss)';
+        return '<div class="screener-row" onclick="quickSearch(\'' + escHtml(s.symbol) + '\')">' +
+          '<div class="screener-row-info">' +
+            '<div class="screener-row-ticker">' + escHtml(s.symbol) + '</div>' +
+            '<div class="screener-row-meta">' + escHtml(s.name) + ' · <span class="screener-sector-tag">' + escHtml(s.sector) + '</span></div>' +
+          '</div>' +
+          '<div class="screener-row-price">$' + (s.price > 0 ? s.price.toFixed(2) : '—') + '</div>' +
+          '<div class="screener-row-change" style="color:' + changeColor + ';">' + (up ? '+' : '') + s.changePct.toFixed(2) + '%</div>' +
+          '<div class="screener-row-score" style="color:' + scoreColor + ';">' +
+            '<span class="screener-score-num">' + s.score + '</span>' +
+            '<span class="screener-signal-badge" style="color:' + scoreColor + ';">' + s.signal + '</span>' +
+          '</div>' +
+        '</div>';
+      }).join('') +
+    '</div>';
+}
+
 function setTrendingFilter(filter) {
   currentTrendingFilter = filter;
   document.querySelectorAll('.trend-filter-btn').forEach(function(b) {
