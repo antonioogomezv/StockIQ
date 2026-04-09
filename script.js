@@ -2684,7 +2684,7 @@ function renderScreenerResults() {
     if (_screenerSector && s.sector !== _screenerSector) return false;
     if (!goal.skipScoreFilter && s.score < 45) return false;
     return true;
-  }).sort(goal.sort).slice(0, 8);
+  }).sort(goal.sort).slice(0, 10);
 
   if (data.length === 0) {
     el.innerHTML = '<div class="screener-empty">No stocks matched right now — market conditions change daily. Try another goal.</div>';
@@ -2692,7 +2692,7 @@ function renderScreenerResults() {
   }
 
   el.innerHTML =
-    '<div class="screener-count">Top ' + data.length + ' picks</div>' +
+    '<div class="screener-count">Top ' + data.length + ' match' + (data.length === 1 ? '' : 'es') + '</div>' +
     '<div class="screener-cards">' +
     data.map(function(s) {
       var up = s.changePct >= 0;
