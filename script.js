@@ -3857,7 +3857,7 @@ function renderPortfolioRows(data) {
             '<div>' +
               '<div style="font-weight:600;font-size:14px;">' + s.ticker + '</div>' +
               '<div style="font-size:11px;color:#64748b;">' + s.shares.toFixed(s.shares % 1 === 0 ? 0 : 2) + ' shares · avg $' + s.buyPrice.toFixed(2) + (hasMultiple ? ' · ' + s.lots.length + ' lots' : '') + '</div>' +
-              '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">now $' + s.currentPrice.toFixed(2) + '</div>' +
+              '<div style="font-size:11px;margin-top:2px;"><span style="color:var(--text-muted);">now $' + s.currentPrice.toFixed(2) + '</span> <span style="color:' + dc + ';">' + (s.dayChangeAmt >= 0 ? '+' : '') + '$' + s.dayChangeAmt.toFixed(2) + ' today</span></div>' +
             '</div>' +
           '</div>' +
           '<div><div>$' + s.value.toFixed(2) + '</div></div>' +
