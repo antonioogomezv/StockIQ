@@ -2380,7 +2380,7 @@ var SCREENER_GOALS = [
     label: 'Safe & Stable',
     desc: 'Companies that move less than the market and have solid fundamentals.',
     learn: { term: 'Beta', explain: 'Beta measures how much a stock swings compared to the market. Beta below 1.0 means it moves less — useful if you want to sleep at night. A beta of 0.5 means if the market drops 10%, this stock typically drops only 5%.' },
-    filter: function(s) { return s.beta > 0 && s.beta < 1.0 && s.score >= 55; },
+    filter: function(s) { return s.beta > 0 && s.beta < 1.2; },
     sort: function(a, b) { return a.beta - b.beta; },
     reason: function(s) { return 'Beta ' + s.beta.toFixed(2) + ' — moves ' + Math.round((1 - s.beta) * 100) + '% less than the market'; }
   },
@@ -2389,7 +2389,7 @@ var SCREENER_GOALS = [
     label: 'High Growth',
     desc: 'Companies growing revenue fast — expanding their business quickly.',
     learn: { term: 'Revenue Growth', explain: 'Revenue growth shows how much more a company is selling compared to last year. Above 10% is considered strong. Above 20% is exceptional — the company is expanding fast. Growth stocks often have higher valuations because investors expect future profits.' },
-    filter: function(s) { return s.growth > 10; },
+    filter: function(s) { return s.growth > 5; },
     sort: function(a, b) { return b.growth - a.growth; },
     reason: function(s) { return 'Revenue grew ' + s.growth.toFixed(1) + '% vs last year'; }
   },
@@ -2398,7 +2398,7 @@ var SCREENER_GOALS = [
     label: 'Good Value',
     desc: 'Stocks priced cheap relative to what the company actually earns.',
     learn: { term: 'P/E Ratio', explain: 'The P/E ratio tells you how much you pay for every $1 of profit. A P/E of 15 means you pay $15 for $1 of earnings — considered cheap. A P/E of 50 means you\'re paying a premium expecting big future growth. Lower P/E can mean better value, but always check why it\'s low.' },
-    filter: function(s) { return s.pe > 0 && s.pe < 20 && s.score >= 50; },
+    filter: function(s) { return s.pe > 0 && s.pe < 25; },
     sort: function(a, b) { return a.pe - b.pe; },
     reason: function(s) { return 'P/E of ' + s.pe.toFixed(1) + ' — you pay $' + s.pe.toFixed(0) + ' for every $1 of earnings'; }
   },
@@ -2407,7 +2407,7 @@ var SCREENER_GOALS = [
     label: 'Very Profitable',
     desc: 'Companies that keep a large portion of every dollar they earn.',
     learn: { term: 'Profit Margin', explain: 'Profit margin is how many cents a company keeps from every dollar of revenue. A 25% margin means for every $100 in sales, $25 is profit. High margins mean the company has pricing power and is hard to compete with. Most retail companies have thin margins (2–5%). Software companies often exceed 20–30%.' },
-    filter: function(s) { return s.margin > 20; },
+    filter: function(s) { return s.margin > 10; },
     sort: function(a, b) { return b.margin - a.margin; },
     reason: function(s) { return 'Keeps ' + s.margin.toFixed(1) + '% of every dollar as profit'; }
   },
@@ -2416,16 +2416,16 @@ var SCREENER_GOALS = [
     label: 'Gaining Today',
     desc: 'Stocks moving up today — momentum can signal positive news or sentiment.',
     learn: { term: 'Price Movement', explain: 'A stock moving up more than 1% in a single day often signals buying momentum — investors are excited. This could be due to good earnings, an analyst upgrade, or broader market optimism. But remember: short-term price moves don\'t always reflect long-term value.' },
-    filter: function(s) { return s.changePct > 1; },
+    filter: function(s) { return s.changePct > 0; },
     sort: function(a, b) { return b.changePct - a.changePct; },
-    reason: function(s) { return '+' + s.changePct.toFixed(2) + '% today — strong buying momentum'; }
+    reason: function(s) { return '+' + s.changePct.toFixed(2) + '% today — gaining momentum'; }
   },
   {
     id: 'dividend',
     label: 'Pays Dividends',
     desc: 'Companies that pay you cash just for owning their stock — no selling required.',
     learn: { term: 'Dividend', explain: 'A dividend is a cash payment a company sends to shareholders, usually every quarter. If a company pays a 3% dividend yield and you own $10,000 of its stock, you receive $300/year automatically. Dividends are common in mature, profitable companies like Coca-Cola or JPMorgan. They reward you for holding, not just for the stock going up.' },
-    filter: function(s) { return s.dividend > 0.5; },
+    filter: function(s) { return s.dividend > 0; },
     sort: function(a, b) { return b.dividend - a.dividend; },
     reason: function(s) { return s.dividend.toFixed(2) + '% dividend yield — pays you to hold it'; }
   },
@@ -2434,7 +2434,7 @@ var SCREENER_GOALS = [
     label: 'Near 52-Week Low',
     desc: 'Stocks trading far below their yearly high — potential value or a warning sign.',
     learn: { term: '52-Week Range', explain: 'The 52-week range shows the lowest and highest price a stock has traded at over the past year. A stock near its 52-week low has fallen significantly — sometimes because the business is struggling, sometimes because the whole market sold off unfairly. Learning to tell the difference is one of the most valuable skills in investing.' },
-    filter: function(s) { return s.price > 0 && s.week52High > 0 && (s.price / s.week52High) < 0.75; },
+    filter: function(s) { return s.price > 0 && s.week52High > 0 && (s.price / s.week52High) < 0.85; },
     sort: function(a, b) { return (a.price / a.week52High) - (b.price / b.week52High); },
     reason: function(s) { return Math.round((1 - s.price / s.week52High) * 100) + '% below its 52-week high of $' + s.week52High.toFixed(0); },
     skipScoreFilter: true
@@ -2444,7 +2444,7 @@ var SCREENER_GOALS = [
     label: 'Strong Moat',
     desc: 'Companies so dominant in their industry that competitors struggle to beat them.',
     learn: { term: 'Profit Margin', explain: 'A "moat" is Warren Buffett\'s term for a durable competitive advantage — something that protects a company from competition. High profit margins are one of the strongest signals of a moat: if a company keeps 25%+ of every dollar it earns, it means customers can\'t easily switch to a cheaper alternative. Think Apple, Visa, or Google.' },
-    filter: function(s) { return s.margin > 20 && s.score >= 60; },
+    filter: function(s) { return s.margin > 15 && s.score >= 50; },
     sort: function(a, b) { return b.margin - a.margin; },
     reason: function(s) { return s.margin.toFixed(1) + '% profit margin — hard to compete with'; }
   },
@@ -2710,6 +2710,7 @@ function renderScreenerResults() {
   var goal = SCREENER_GOALS.find(function(g) { return g.id === _screenerGoal; });
   if (!goal) return;
 
+  var sectorFallback = false;
   var data = _screenerData.filter(function(s) {
     if (!goal.filter(s)) return false;
     if (_screenerSector && s.sector !== _screenerSector) return false;
@@ -2717,13 +2718,23 @@ function renderScreenerResults() {
     return true;
   }).sort(goal.sort).slice(0, 10);
 
+  // If no results with sector filter, fall back to all sectors
+  if (data.length === 0 && _screenerSector) {
+    sectorFallback = true;
+    data = _screenerData.filter(function(s) {
+      if (!goal.filter(s)) return false;
+      if (!goal.skipScoreFilter && s.score < 45) return false;
+      return true;
+    }).sort(goal.sort).slice(0, 10);
+  }
+
   if (data.length === 0) {
     el.innerHTML = '<div class="screener-empty">No stocks matched right now — market conditions change daily. Try another goal.</div>';
     return;
   }
 
   el.innerHTML =
-    '<div class="screener-count">Top ' + data.length + ' match' + (data.length === 1 ? '' : 'es') + '</div>' +
+    '<div class="screener-count">' + (sectorFallback ? 'No ' + _screenerSector + ' matches — showing best across all sectors' : 'Top ' + data.length + ' match' + (data.length === 1 ? '' : 'es')) + '</div>' +
     '<div class="screener-cards">' +
     data.map(function(s) {
       var up = s.changePct >= 0;
