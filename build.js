@@ -1,19 +1,8 @@
 const fs = require('fs');
 
-// Generate config.js from env vars
-const finnhub   = process.env.FINNHUB_KEY   || '';
-const polygon   = process.env.POLYGON_KEY   || '';
-const anthropic = process.env.ANTHROPIC_KEY || '';
-
-console.log('Building config.js...');
-console.log('FINNHUB_KEY present:', finnhub.length > 0);
-console.log('POLYGON_KEY present:', polygon.length > 0);
-console.log('ANTHROPIC_KEY present:', anthropic.length > 0);
-
-fs.writeFileSync('config.js', `window.FINNHUB_KEY   = "${finnhub}";
-window.POLYGON_KEY   = "${polygon}";
-window.ANTHROPIC_KEY = "${anthropic}";
-`);
+// Keys are now server-side only (netlify/functions) — config.js is empty
+console.log('Building config.js (keys are server-side now)...');
+fs.writeFileSync('config.js', `// API calls are proxied through Netlify functions — no keys in browser.\n`);
 console.log('config.js generated successfully.');
 
 // Update sw.js cache version with timestamp so users always get latest

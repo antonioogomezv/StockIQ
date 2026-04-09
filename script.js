@@ -49,6 +49,40 @@ function parseMarkdown(text) {
     .replace(/\n/g, "<br>");
 }
 
+// API calls are proxied through Netlify functions — keys never reach the browser
+var _isNetlify = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+
+function finnhubUrl(path, params) {
+  if (_isNetlify) {
+    var q = Object.keys(params || {}).map(function(k) { return k + '=' + encodeURIComponent(params[k]); }).join('&');
+    return '/.netlify/functions/finnhub?_path=' + encodeURIComponent(path) + (q ? '&' + q : '');
+  }
+  var key = window.FINNHUB_KEY || '';
+  var q = Object.keys(params || {}).map(function(k) { return k + '=' + encodeURIComponent(params[k]); }).join('&');
+  return 'https://finnhub.io' + path + '?token=' + key + (q ? '&' + q : '');
+}
+
+function polygonUrl(path, params) {
+  if (_isNetlify) {
+    var q = Object.keys(params || {}).map(function(k) { return k + '=' + encodeURIComponent(params[k]); }).join('&');
+    return '/.netlify/functions/polygon?_path=' + encodeURIComponent(path) + (q ? '&' + q : '');
+  }
+  var key = window.POLYGON_KEY || '';
+  var q = Object.keys(params || {}).map(function(k) { return k + '=' + encodeURIComponent(params[k]); }).join('&');
+  return 'https://api.polygon.io' + path + '?apiKey=' + key + (q ? '&' + q : '');
+}
+
+function anthropicFetch(body) {
+  if (_isNetlify) {
+    return fetch('/.netlify/functions/anthropic', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  }
+  return fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': window.ANTHROPIC_KEY || '', 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+    body: JSON.stringify(body)
+  });
+}
+
 let finnhubKey   = window.FINNHUB_KEY;
 let polygonKey   = window.POLYGON_KEY;
 let anthropicKey = window.ANTHROPIC_KEY;
@@ -103,7 +137,7 @@ function onSearchInput() {
   clearTimeout(_autocompleteTimer);
   if (query.length < 2) { dropdown.style.display = 'none'; return; }
   _autocompleteTimer = setTimeout(function() {
-    fetch('https://finnhub.io/api/v1/search?q=' + encodeURIComponent(query) + '&token=' + finnhubKey)
+    fetch(finnhubUrl('/api/v1/search', {q: query}))
       .then(function(r) { return r.json(); })
       .then(function(data) {
         if (!data.result || data.result.length === 0) { dropdown.style.display = 'none'; return; }
@@ -139,7 +173,7 @@ function onPortTickerInput() {
   clearTimeout(_portAutocompleteTimer);
   if (query.length < 2) { dropdown.style.display = 'none'; return; }
   _portAutocompleteTimer = setTimeout(function() {
-    fetch('https://finnhub.io/api/v1/search?q=' + encodeURIComponent(query) + '&token=' + finnhubKey)
+    fetch(finnhubUrl('/api/v1/search', {q: query}))
       .then(function(r) { return r.json(); })
       .then(function(data) {
         if (!data.result || data.result.length === 0) { dropdown.style.display = 'none'; return; }
@@ -177,7 +211,7 @@ function onPortDateChange() {
 
   // Try the selected date first, then fall back up to 5 days for weekends/holidays
   function tryDate(dateStr, triesLeft) {
-    fetch('https://api.polygon.io/v1/open-close/' + ticker + '/' + dateStr + '?adjusted=true&apiKey=' + polygonKey)
+    fetch(polygonUrl('/v1/open-close/' + ticker + '/' + dateStr, {adjusted: 'true'}))
       .then(function(r) { return r.json(); })
       .then(function(data) {
         if (data.close) {
@@ -210,7 +244,7 @@ function selectPortAutocomplete(ticker) {
   let priceEl = document.getElementById('port-price');
   priceEl.value = '';
   if (loadingEl) loadingEl.style.display = 'inline';
-  fetch('https://finnhub.io/api/v1/quote?symbol=' + encodeURIComponent(ticker) + '&token=' + finnhubKey)
+  fetch(finnhubUrl('/api/v1/quote', {symbol: ticker}))
     .then(function(r) { return r.json(); })
     .then(function(data) {
       if (loadingEl) loadingEl.style.display = 'none';
@@ -282,7 +316,7 @@ function searchStock() {
 
   if (cache[query]) { displayData(cache[query]); return; }
 
-  fetch("https://finnhub.io/api/v1/search?q=" + query + "&token=" + finnhubKey)
+  fetch(finnhubUrl("/api/v1/search", {q: query}))
     .then(function(r) { return r.json(); })
     .then(function(searchData) {
       let ticker = query;
@@ -300,7 +334,7 @@ function searchStock() {
       let _cacheValid = _cachedEntry && _cachedEntry.ts && (Date.now() - _cachedEntry.ts < 86400000);
       let historyPromise = _cacheValid
         ? Promise.resolve(_cachedEntry.data)
-        : fetch("https://api.polygon.io/v2/aggs/ticker/" + ticker + "/range/1/day/" + fromDate90Str + "/" + toDate + "?apiKey=" + polygonKey).then(function(r) { return r.json(); });
+        : fetch(polygonUrl("/v2/aggs/ticker/" + ticker + "/range/1/day/" + fromDate90Str + "/" + toDate, {})).then(function(r) { return r.json(); });
 
       let earningsFrom = toDate;
       let earningsTo = new Date(today); earningsTo.setDate(today.getDate() + 90);
@@ -308,13 +342,13 @@ function searchStock() {
 
       // Load core data first (no chart) — show results immediately
       Promise.all([
-        fetch("https://finnhub.io/api/v1/quote?symbol=" + ticker + "&token=" + finnhubKey).then(function(r) { return r.json(); }),
-        fetch("https://finnhub.io/api/v1/stock/profile2?symbol=" + ticker + "&token=" + finnhubKey).then(function(r) { return r.json(); }),
-        fetch("https://finnhub.io/api/v1/company-news?symbol=" + ticker + "&from=" + fromDate30Str + "&to=" + toDate + "&token=" + finnhubKey).then(function(r) { return r.json(); }),
-        fetch("https://finnhub.io/api/v1/stock/metric?symbol=" + ticker + "&metric=all&token=" + finnhubKey).then(function(r) { return r.json(); }),
-        fetch("https://finnhub.io/api/v1/calendar/earnings?symbol=" + ticker + "&from=" + earningsFrom + "&to=" + earningsToStr + "&token=" + finnhubKey).then(function(r) { return r.json(); }).catch(function() { return {}; }),
-        fetch("https://finnhub.io/api/v1/stock/earnings?symbol=" + ticker + "&limit=1&token=" + finnhubKey).then(function(r) { return r.json(); }).catch(function() { return []; }),
-        fetch("https://api.polygon.io/v3/reference/tickers/" + ticker + "?apiKey=" + polygonKey).then(function(r) { return r.json(); }).catch(function() { return {}; })
+        fetch(finnhubUrl("/api/v1/quote", {symbol: ticker})).then(function(r) { return r.json(); }),
+        fetch(finnhubUrl("/api/v1/stock/profile2", {symbol: ticker})).then(function(r) { return r.json(); }),
+        fetch(finnhubUrl("/api/v1/company-news", {symbol: ticker, from: fromDate30Str, to: toDate})).then(function(r) { return r.json(); }),
+        fetch(finnhubUrl("/api/v1/stock/metric", {symbol: ticker, metric: "all"})).then(function(r) { return r.json(); }),
+        fetch(finnhubUrl("/api/v1/calendar/earnings", {symbol: ticker, from: earningsFrom, to: earningsToStr})).then(function(r) { return r.json(); }).catch(function() { return {}; }),
+        fetch(finnhubUrl("/api/v1/stock/earnings", {symbol: ticker, limit: "1"})).then(function(r) { return r.json(); }).catch(function() { return []; }),
+        fetch(polygonUrl("/v3/reference/tickers/" + ticker, {})).then(function(r) { return r.json(); }).catch(function() { return {}; })
       ]).then(function(results) {
         let quote      = results[0];
         let profile    = results[1];
@@ -1550,20 +1584,11 @@ function getAIExplanation(ticker, companyName, totalScore, changePct, pe, margin
     (ma50 !== null ? "50-day MA: $" + ma50.toFixed(2) + ". " : "") +
     "Latest headline: \"" + topHeadline + "\". Overall signal: " + (totalScore >= 65 ? "Strong" : totalScore >= 50 ? "Watch" : "Risky") + ".";
 
-  fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": anthropicKey,
-      "anthropic-version": "2023-06-01",
-      "anthropic-dangerous-direct-browser-access": "true"
-    },
-    body: JSON.stringify({
+  anthropicFetch({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 500,
       messages: [{ role: "user", content: prompt }]
     })
-  })
   .then(function(r) { return r.json(); })
   .then(function(data) {
     if (data.content && data.content[0] && data.content[0].text) {
@@ -1815,7 +1840,7 @@ function quickAddToPortfolio() {
   if (!currentTicker) return;
   showTab('portfolio');
   document.getElementById('port-ticker').value = currentTicker;
-  fetch('https://finnhub.io/api/v1/quote?symbol=' + encodeURIComponent(currentTicker) + '&token=' + finnhubKey)
+  fetch(finnhubUrl('/api/v1/quote', {symbol: currentTicker}))
     .then(function(r) { return r.json(); })
     .then(function(q) { if (q.c) document.getElementById('port-price').value = q.c.toFixed(2); });
   document.getElementById('port-shares').focus();
@@ -1873,7 +1898,7 @@ function loadWatchlistNews(tickers) {
   // Fetch news for up to 5 tickers, merge and deduplicate
   var limit = tickers.slice(0, 5);
   var promises = limit.map(function(t) {
-    return fetch('https://finnhub.io/api/v1/company-news?symbol=' + t + '&from=' + fromStr + '&to=' + toStr + '&token=' + finnhubKey)
+    return fetch(finnhubUrl('/api/v1/company-news', {symbol: t, from: fromStr, to: toStr}))
       .then(function(r) { return r.json(); })
       .then(function(news) {
         return (Array.isArray(news) ? news : []).slice(0, 5).map(function(a) {
@@ -1991,7 +2016,7 @@ function renderWatchlist() {
 
   // Fetch live quotes in parallel
   Promise.all(watchlist.map(function(item) {
-    return fetch('https://finnhub.io/api/v1/quote?symbol=' + encodeURIComponent(item.ticker) + '&token=' + finnhubKey)
+    return fetch(finnhubUrl('/api/v1/quote', {symbol: item.ticker}))
       .then(function(r) { return r.json(); })
       .then(function(q) { return { ticker: item.ticker, price: q.c || null, changePct: q.dp || 0, prevClose: q.pc || 0 }; })
       .catch(function() { return { ticker: item.ticker, price: null, changePct: 0, prevClose: 0 }; });
@@ -2076,7 +2101,7 @@ function openAlertInput(ticker, currentPrice) {
   container.appendChild(div);
   document.getElementById('alert-val-' + ticker).focus();
   // Fetch 52-week range from Finnhub metrics
-  fetch('https://finnhub.io/api/v1/stock/metric?symbol=' + encodeURIComponent(ticker) + '&metric=all&token=' + finnhubKey)
+  fetch(finnhubUrl('/api/v1/stock/metric', {symbol: ticker, metric: 'all'}))
     .then(function(r) { return r.json(); })
     .then(function(data) {
       let m = data.metric || {};
@@ -2195,7 +2220,7 @@ function loadTrendingTickers(forceRefresh) {
     delay += 200;
     return new Promise(function(resolve) {
       setTimeout(function() {
-        fetch('https://finnhub.io/api/v1/quote?symbol=' + t.symbol + '&token=' + finnhubKey)
+        fetch(finnhubUrl('/api/v1/quote', {symbol: t.symbol}))
           .then(function(r) { return r.json(); })
           .then(function(q) {
             let price = q.c > 0 ? q.c : q.pc;
@@ -2574,7 +2599,7 @@ function loadScreener() {
         var d = delay; delay += 250;
         return new Promise(function(resolve) {
           setTimeout(function() {
-            fetch('https://finnhub.io/api/v1/stock/metric?symbol=' + stock.symbol + '&metric=all&token=' + finnhubKey)
+            fetch(finnhubUrl('/api/v1/stock/metric', {symbol: stock.symbol, metric: 'all'}))
               .then(function(r) { return r.json(); })
               .then(function(m) {
                 var metrics = m.metric || {};
@@ -2603,7 +2628,7 @@ function loadScreener() {
       var d = delay; delay += 120;
       return new Promise(function(resolve) {
         setTimeout(function() {
-          fetch('https://finnhub.io/api/v1/quote?symbol=' + sym + '&token=' + finnhubKey)
+          fetch(finnhubUrl('/api/v1/quote', {symbol: sym}))
             .then(function(r) { return r.json(); })
             .then(function(q) {
               priceMap[sym] = { price: q.c || q.pc || 0, changePct: q.dp || 0 };
@@ -2832,7 +2857,7 @@ function loadMarketOverview() {
 
   // Fetch index prices — update ALL matching elements (original + clone)
   indices.forEach(function(index) {
-    fetch("https://finnhub.io/api/v1/quote?symbol=" + index.ticker + "&token=" + finnhubKey)
+    fetch(finnhubUrl("/api/v1/quote", {symbol: index.ticker}))
       .then(function(r) { return r.json(); })
       .then(function(data) {
         let price = data.c;
@@ -2852,7 +2877,7 @@ function loadMarketOverview() {
   // Fetch watchlist prices — staggered, update ALL matching elements (original + clone)
   watchlist.forEach(function(item, i) {
     setTimeout(function() {
-      fetch("https://finnhub.io/api/v1/quote?symbol=" + encodeURIComponent(item.ticker) + "&token=" + finnhubKey)
+      fetch(finnhubUrl("/api/v1/quote", {symbol: item.ticker}))
         .then(function(r) { return r.json(); })
         .then(function(data) {
           let price = data.c;
@@ -3031,7 +3056,7 @@ function showSectorStocks(name) {
   tickers.forEach(function(s) {
     var d = delay; delay += 120;
     setTimeout(function() {
-      fetch('https://finnhub.io/api/v1/quote?symbol=' + s.t + '&token=' + finnhubKey)
+      fetch(finnhubUrl('/api/v1/quote', {symbol: s.t}))
         .then(function(r) { return r.json(); })
         .then(function(q) {
           var row = list.querySelector('[data-ticker="' + s.t + '"]');
@@ -3086,7 +3111,7 @@ function loadSectors() {
     let d = delay; delay += 150;
     return new Promise(function(resolve) {
       setTimeout(function() {
-        fetch('https://finnhub.io/api/v1/quote?symbol=' + s.etf + '&token=' + finnhubKey)
+        fetch(finnhubUrl('/api/v1/quote', {symbol: s.etf}))
           .then(function(r) { return r.json(); })
           .then(function(q) { resolve({ name: s.name, etf: s.etf, changePct: q.dp || 0, marketOpen: q.c > 0 }); })
           .catch(function() { resolve(null); });
@@ -3313,16 +3338,7 @@ function toggleDef(item, term) {
   let stockCtx = currentName ? "They just looked at " + currentName + ". " : "";
   let prompt = "You are StockIQ. Explain \"" + term + "\" in 2-3 sentences for a first-time investor aged 18-25. " +
     profileCtx + stockCtx + "Plain English only. No bullet points. Make it feel relatable.";
-  fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": anthropicKey,
-      "anthropic-version": "2023-06-01",
-      "anthropic-dangerous-direct-browser-access": "true"
-    },
-    body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 150, messages: [{ role: "user", content: prompt }] })
-  })
+  anthropicFetch({ model: "claude-haiku-4-5-20251001", max_tokens: 150, messages: [{ role: "user", content: prompt }] })
   .then(function(r) { return r.json(); })
   .then(function(data) {
     if (data.content && data.content[0] && data.content[0].text) {
@@ -3499,8 +3515,8 @@ function createDemoPortfolio(profileType, budget) {
     return new Promise(function(resolve) { setTimeout(resolve, idx * 80); })
       .then(function() {
         return Promise.all([
-          fetch('https://finnhub.io/api/v1/quote?symbol=' + ticker + '&token=' + finnhubKey).then(function(r) { return r.json(); }).catch(function() { return {}; }),
-          fetch('https://finnhub.io/api/v1/stock/metric?symbol=' + ticker + '&metric=all&token=' + finnhubKey).then(function(r) { return r.json(); }).catch(function() { return {}; })
+          fetch(finnhubUrl('/api/v1/quote', {symbol: ticker})).then(function(r) { return r.json(); }).catch(function() { return {}; }),
+          fetch(finnhubUrl('/api/v1/stock/metric', {symbol: ticker, metric: 'all'})).then(function(r) { return r.json(); }).catch(function() { return {}; })
         ]);
       })
       .then(function(results) {
@@ -3537,7 +3553,7 @@ function createDemoPortfolio(profileType, budget) {
       Promise.all(fallbackTickers.map(function(ticker, idx) {
         return new Promise(function(resolve) { setTimeout(resolve, idx * 120); })
           .then(function() {
-            return fetch('https://finnhub.io/api/v1/quote?symbol=' + ticker + '&token=' + finnhubKey).then(function(r) { return r.json(); }).catch(function() { return {}; });
+            return fetch(finnhubUrl('/api/v1/quote', {symbol: ticker})).then(function(r) { return r.json(); }).catch(function() { return {}; });
           })
           .then(function(q) { return { ticker: ticker, price: q.c || 0, score: 0, beta: 1 }; });
       })).then(buildPortfolio);
@@ -3643,7 +3659,7 @@ function renderPortfolio() {
     let avgPrice = totalShares > 0 ? totalLotCost / totalShares : 0;
     // Stagger requests 120ms apart to avoid Finnhub rate limiting
     let p = new Promise(function(resolve) { setTimeout(resolve, idx * 120); })
-      .then(function() { return fetch('https://finnhub.io/api/v1/quote?symbol=' + item.ticker + '&token=' + finnhubKey); })
+      .then(function() { return fetch(finnhubUrl('/api/v1/quote', {symbol: item.ticker})); })
       .then(function(r) { return r.json(); })
       .then(function(q) {
         let currentPrice = q.c || avgPrice; // fall back to buy price if rate-limited
@@ -3782,8 +3798,8 @@ function fetchSpyBenchmark(portfolio, callback) {
   // Use a 7-day window to handle weekends/holidays
   let toDate = new Date(earliest.getTime() + 7 * 86400000).toISOString().split('T')[0];
   Promise.all([
-    fetch('https://finnhub.io/api/v1/quote?symbol=SPY&token=' + finnhubKey).then(function(r) { return r.json(); }).catch(function() { return {}; }),
-    fetch('https://api.polygon.io/v2/aggs/ticker/SPY/range/1/day/' + fromDate + '/' + toDate + '?apiKey=' + polygonKey).then(function(r) { return r.json(); }).catch(function() { return {}; })
+    fetch(finnhubUrl('/api/v1/quote', {symbol: 'SPY'})).then(function(r) { return r.json(); }).catch(function() { return {}; }),
+    fetch(polygonUrl('/v2/aggs/ticker/SPY/range/1/day/' + fromDate + '/' + toDate, {})).then(function(r) { return r.json(); }).catch(function() { return {}; })
   ]).then(function(results) {
     let currentSPY = results[0].c || 0;
     let hist = results[1];
@@ -3807,7 +3823,7 @@ function fetchMissingPortfolioScores(stockData) {
   let missing = stockData.filter(function(s) { return !s.score; });
   missing.forEach(function(s, i) {
     setTimeout(function() {
-      fetch('https://finnhub.io/api/v1/stock/metric?symbol=' + encodeURIComponent(s.ticker) + '&metric=all&token=' + finnhubKey)
+      fetch(finnhubUrl('/api/v1/stock/metric', {symbol: s.ticker, metric: 'all'}))
         .then(function(r) { return r.json(); })
         .then(function(data) {
           let m = data.metric || {};
@@ -4330,11 +4346,7 @@ function explainPortfolio() {
   modal.addEventListener('click', function(e) { if (e.target === modal) modal.remove(); });
 
   // Call Anthropic API
-  fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json', 'anthropic-dangerous-direct-browser-access': 'true' },
-    body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 600, messages: [{ role: 'user', content: prompt }] })
-  })
+  anthropicFetch({ model: 'claude-haiku-4-5-20251001', max_tokens: 600, messages: [{ role: 'user', content: prompt }] })
   .then(function(r) { return r.json(); })
   .then(function(data) {
     let text = data.content && data.content[0] ? data.content[0].text : 'Could not generate explanation.';
@@ -4505,20 +4517,11 @@ function analyzePortfolioWithAI() {
     profileCtx +
     'Portfolio holdings: ' + holdingsSummary + '.';
 
-  fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': anthropicKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
-    body: JSON.stringify({
+  anthropicFetch({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 600,
       messages: [{ role: 'user', content: prompt }]
     })
-  })
   .then(function(r) { return r.json(); })
   .then(function(data) {
     if (data.content && data.content[0] && data.content[0].text) {
@@ -4578,21 +4581,12 @@ function sendPortfolioQuestion() {
   portfolioChatHistory.push({ role: 'user', content: question });
   if (!checkAnthropicRateLimit()) return;
 
-  fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': anthropicKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
-    body: JSON.stringify({
+  anthropicFetch({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 400,
       system: portfolioChatContext,
       messages: portfolioChatHistory
     })
-  })
   .then(function(r) { return r.json(); })
   .then(function(data) {
     let typing = document.getElementById(typingId);
@@ -4788,16 +4782,7 @@ function sendStockQuestion() {
       : [{ role: 'assistant', content: 'Got it, I have the context.' }].concat(stockChatHistory)
   );
 
-  fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': anthropicKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
-    body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 400, messages: messagesPayload })
-  })
+  anthropicFetch({ model: 'claude-haiku-4-5-20251001', max_tokens: 400, messages: messagesPayload })
   .then(function(r) { return r.json(); })
   .then(function(data) {
     let typing = document.getElementById(typingId);
