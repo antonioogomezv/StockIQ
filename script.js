@@ -2556,16 +2556,18 @@ function loadScreener() {
   function fetchPrices() {
     if (cachedPrices) return Promise.resolve(cachedPrices);
     statusEl.innerHTML = '<div class="screener-loading">Finding best matches…</div>';
-    var url = 'https://api.polygon.io/v3/snapshot?ticker.any_of=' + symbols.join(',') + '&apiKey=' + polygonKey;
+    var url = 'https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers?tickers=' + symbols.join(',') + '&apiKey=' + polygonKey;
     return fetch(url)
       .then(function(r) { return r.json(); })
       .then(function(data) {
         var map = {};
-        (data.results || []).forEach(function(r) {
-          var session = r.session || {};
+        (data.tickers || []).forEach(function(r) {
+          var day = r.day || {};
+          var prevDay = r.prevDay || {};
+          var price = day.c || r.lastTrade && r.lastTrade.p || prevDay.c || 0;
           map[r.ticker] = {
-            price: session.close || r.last_trade && r.last_trade.price || 0,
-            changePct: session.change_percent || 0
+            price: price,
+            changePct: r.todaysChangePerc || 0
           };
         });
         localStorage.setItem('screener-price-cache', JSON.stringify({ ts: Date.now(), data: map }));
