@@ -2221,6 +2221,7 @@ let allTrendingData = [];
 // ── STOCK SCREENER ─────────────────────────────────────────────────────────
 
 var SCREENER_POOL = [
+  // Technology (25)
   {symbol:'AAPL',name:'Apple',sector:'Technology'},
   {symbol:'MSFT',name:'Microsoft',sector:'Technology'},
   {symbol:'NVDA',name:'NVIDIA',sector:'Technology'},
@@ -2236,6 +2237,17 @@ var SCREENER_POOL = [
   {symbol:'NFLX',name:'Netflix',sector:'Technology'},
   {symbol:'ADBE',name:'Adobe',sector:'Technology'},
   {symbol:'QCOM',name:'Qualcomm',sector:'Technology'},
+  {symbol:'UBER',name:'Uber',sector:'Technology'},
+  {symbol:'SHOP',name:'Shopify',sector:'Technology'},
+  {symbol:'SNOW',name:'Snowflake',sector:'Technology'},
+  {symbol:'NOW',name:'ServiceNow',sector:'Technology'},
+  {symbol:'PANW',name:'Palo Alto Networks',sector:'Technology'},
+  {symbol:'CRWD',name:'CrowdStrike',sector:'Technology'},
+  {symbol:'MU',name:'Micron',sector:'Technology'},
+  {symbol:'AMAT',name:'Applied Materials',sector:'Technology'},
+  {symbol:'PLTR',name:'Palantir',sector:'Technology'},
+  {symbol:'ARM',name:'ARM Holdings',sector:'Technology'},
+  // Healthcare (20)
   {symbol:'JNJ',name:'Johnson & Johnson',sector:'Healthcare'},
   {symbol:'UNH',name:'UnitedHealth',sector:'Healthcare'},
   {symbol:'LLY',name:'Eli Lilly',sector:'Healthcare'},
@@ -2246,6 +2258,17 @@ var SCREENER_POOL = [
   {symbol:'AMGN',name:'Amgen',sector:'Healthcare'},
   {symbol:'GILD',name:'Gilead',sector:'Healthcare'},
   {symbol:'CVS',name:'CVS Health',sector:'Healthcare'},
+  {symbol:'BMY',name:'Bristol-Myers Squibb',sector:'Healthcare'},
+  {symbol:'ISRG',name:'Intuitive Surgical',sector:'Healthcare'},
+  {symbol:'MDT',name:'Medtronic',sector:'Healthcare'},
+  {symbol:'SYK',name:'Stryker',sector:'Healthcare'},
+  {symbol:'REGN',name:'Regeneron',sector:'Healthcare'},
+  {symbol:'VRTX',name:'Vertex Pharma',sector:'Healthcare'},
+  {symbol:'ZBH',name:'Zimmer Biomet',sector:'Healthcare'},
+  {symbol:'HCA',name:'HCA Healthcare',sector:'Healthcare'},
+  {symbol:'CI',name:'Cigna',sector:'Healthcare'},
+  {symbol:'BIIB',name:'Biogen',sector:'Healthcare'},
+  // Financials (20)
   {symbol:'JPM',name:'JPMorgan',sector:'Financials'},
   {symbol:'BAC',name:'Bank of America',sector:'Financials'},
   {symbol:'WFC',name:'Wells Fargo',sector:'Financials'},
@@ -2255,6 +2278,18 @@ var SCREENER_POOL = [
   {symbol:'AXP',name:'American Express',sector:'Financials'},
   {symbol:'V',name:'Visa',sector:'Financials'},
   {symbol:'MA',name:'Mastercard',sector:'Financials'},
+  {symbol:'C',name:'Citigroup',sector:'Financials'},
+  {symbol:'USB',name:'U.S. Bancorp',sector:'Financials'},
+  {symbol:'PGR',name:'Progressive',sector:'Financials'},
+  {symbol:'CB',name:'Chubb',sector:'Financials'},
+  {symbol:'ICE',name:'Intercontinental Exchange',sector:'Financials'},
+  {symbol:'CME',name:'CME Group',sector:'Financials'},
+  {symbol:'SCHW',name:'Charles Schwab',sector:'Financials'},
+  {symbol:'COF',name:'Capital One',sector:'Financials'},
+  {symbol:'AFL',name:'Aflac',sector:'Financials'},
+  {symbol:'MET',name:'MetLife',sector:'Financials'},
+  {symbol:'PRU',name:'Prudential',sector:'Financials'},
+  // Energy (15)
   {symbol:'XOM',name:'ExxonMobil',sector:'Energy'},
   {symbol:'CVX',name:'Chevron',sector:'Energy'},
   {symbol:'COP',name:'ConocoPhillips',sector:'Energy'},
@@ -2263,6 +2298,14 @@ var SCREENER_POOL = [
   {symbol:'EOG',name:'EOG Resources',sector:'Energy'},
   {symbol:'MPC',name:'Marathon Petroleum',sector:'Energy'},
   {symbol:'HAL',name:'Halliburton',sector:'Energy'},
+  {symbol:'PSX',name:'Phillips 66',sector:'Energy'},
+  {symbol:'VLO',name:'Valero Energy',sector:'Energy'},
+  {symbol:'WMB',name:'Williams Companies',sector:'Energy'},
+  {symbol:'KMI',name:'Kinder Morgan',sector:'Energy'},
+  {symbol:'DVN',name:'Devon Energy',sector:'Energy'},
+  {symbol:'FANG',name:'Diamondback Energy',sector:'Energy'},
+  {symbol:'BKR',name:'Baker Hughes',sector:'Energy'},
+  // Consumer (20)
   {symbol:'HD',name:'Home Depot',sector:'Consumer'},
   {symbol:'MCD',name:"McDonald's",sector:'Consumer'},
   {symbol:'NKE',name:'Nike',sector:'Consumer'},
@@ -2273,6 +2316,17 @@ var SCREENER_POOL = [
   {symbol:'BKNG',name:'Booking Holdings',sector:'Consumer'},
   {symbol:'GM',name:'General Motors',sector:'Consumer'},
   {symbol:'F',name:'Ford',sector:'Consumer'},
+  {symbol:'WMT',name:'Walmart',sector:'Consumer'},
+  {symbol:'COST',name:'Costco',sector:'Consumer'},
+  {symbol:'KO',name:'Coca-Cola',sector:'Consumer'},
+  {symbol:'PEP',name:'PepsiCo',sector:'Consumer'},
+  {symbol:'DIS',name:'Disney',sector:'Consumer'},
+  {symbol:'ABNB',name:'Airbnb',sector:'Consumer'},
+  {symbol:'LYFT',name:'Lyft',sector:'Consumer'},
+  {symbol:'DASH',name:'DoorDash',sector:'Consumer'},
+  {symbol:'YUM',name:'Yum! Brands',sector:'Consumer'},
+  {symbol:'MAR',name:'Marriott',sector:'Consumer'},
+  // Industrials (15)
   {symbol:'CAT',name:'Caterpillar',sector:'Industrials'},
   {symbol:'RTX',name:'RTX',sector:'Industrials'},
   {symbol:'HON',name:'Honeywell',sector:'Industrials'},
@@ -2281,14 +2335,35 @@ var SCREENER_POOL = [
   {symbol:'GE',name:'GE Aerospace',sector:'Industrials'},
   {symbol:'LMT',name:'Lockheed Martin',sector:'Industrials'},
   {symbol:'FDX',name:'FedEx',sector:'Industrials'},
-  {symbol:'NEE',name:'NextEra Energy',sector:'Other'},
-  {symbol:'DIS',name:'Disney',sector:'Other'},
-  {symbol:'KO',name:'Coca-Cola',sector:'Other'},
-  {symbol:'PEP',name:'PepsiCo',sector:'Other'},
-  {symbol:'WMT',name:'Walmart',sector:'Other'},
-  {symbol:'COST',name:'Costco',sector:'Other'},
-  {symbol:'PLD',name:'Prologis',sector:'Other'},
-  {symbol:'AMT',name:'American Tower',sector:'Other'},
+  {symbol:'DE',name:'John Deere',sector:'Industrials'},
+  {symbol:'MMM',name:'3M',sector:'Industrials'},
+  {symbol:'EMR',name:'Emerson Electric',sector:'Industrials'},
+  {symbol:'ETN',name:'Eaton',sector:'Industrials'},
+  {symbol:'NOC',name:'Northrop Grumman',sector:'Industrials'},
+  {symbol:'GD',name:'General Dynamics',sector:'Industrials'},
+  {symbol:'CSX',name:'CSX',sector:'Industrials'},
+  // Real Estate (10)
+  {symbol:'PLD',name:'Prologis',sector:'Real Estate'},
+  {symbol:'AMT',name:'American Tower',sector:'Real Estate'},
+  {symbol:'EQIX',name:'Equinix',sector:'Real Estate'},
+  {symbol:'CCI',name:'Crown Castle',sector:'Real Estate'},
+  {symbol:'SPG',name:'Simon Property',sector:'Real Estate'},
+  {symbol:'O',name:'Realty Income',sector:'Real Estate'},
+  {symbol:'WELL',name:'Welltower',sector:'Real Estate'},
+  {symbol:'DLR',name:'Digital Realty',sector:'Real Estate'},
+  {symbol:'AVB',name:'AvalonBay',sector:'Real Estate'},
+  {symbol:'EQR',name:'Equity Residential',sector:'Real Estate'},
+  // Utilities (10)
+  {symbol:'NEE',name:'NextEra Energy',sector:'Utilities'},
+  {symbol:'DUK',name:'Duke Energy',sector:'Utilities'},
+  {symbol:'SO',name:'Southern Company',sector:'Utilities'},
+  {symbol:'D',name:'Dominion Energy',sector:'Utilities'},
+  {symbol:'AEP',name:'American Electric Power',sector:'Utilities'},
+  {symbol:'EXC',name:'Exelon',sector:'Utilities'},
+  {symbol:'XEL',name:'Xcel Energy',sector:'Utilities'},
+  {symbol:'SRE',name:'Sempra',sector:'Utilities'},
+  {symbol:'WEC',name:'WEC Energy',sector:'Utilities'},
+  {symbol:'ES',name:'Eversource',sector:'Utilities'},
 ];
 
 var _screenerOpen = false;
@@ -2439,64 +2514,117 @@ function loadScreener() {
   var resultsEl = document.getElementById('screener-results');
   if (!statusEl || !resultsEl) return;
 
-  var cached = localStorage.getItem('screener-cache');
-  if (cached) {
-    var p = JSON.parse(cached);
-    if (Date.now() - p.ts < 600000) {
-      _screenerData = p.data;
+  // Price cache: 5 min TTL
+  var priceCache = localStorage.getItem('screener-price-cache');
+  var cachedPrices = null;
+  if (priceCache) {
+    var pc = JSON.parse(priceCache);
+    if (Date.now() - pc.ts < 300000) cachedPrices = pc.data;
+  }
+
+  // Full results cache: 10 min TTL (used when both prices + fundamentals are fresh)
+  var fullCache = localStorage.getItem('screener-cache');
+  if (fullCache) {
+    var fc = JSON.parse(fullCache);
+    if (Date.now() - fc.ts < 600000) {
+      _screenerData = fc.data;
       _screenerLoaded = true;
+      if (statusEl) statusEl.innerHTML = '';
+      renderScreenerResults();
       return;
     }
   }
 
-  statusEl.innerHTML = '<div class="screener-loading">Fetching live data for ' + SCREENER_POOL.length + ' stocks… takes ~30 seconds.</div>';
+  var symbols = SCREENER_POOL.map(function(s) { return s.symbol; });
 
-  var results = [];
-  var total = SCREENER_POOL.length;
-  var done = 0;
-  var delay = 0;
+  // Step 1: Fetch all prices in one Polygon batch call
+  function fetchPrices() {
+    if (cachedPrices) return Promise.resolve(cachedPrices);
+    statusEl.innerHTML = '<div class="screener-loading">Fetching prices for ' + symbols.length + ' stocks…</div>';
+    var url = 'https://api.polygon.io/v3/snapshot?ticker.any_of=' + symbols.join(',') + '&apiKey=' + polygonKey;
+    return fetch(url)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var map = {};
+        (data.results || []).forEach(function(r) {
+          var session = r.session || {};
+          map[r.ticker] = {
+            price: session.close || r.last_trade && r.last_trade.price || 0,
+            changePct: session.change_percent || 0
+          };
+        });
+        localStorage.setItem('screener-price-cache', JSON.stringify({ ts: Date.now(), data: map }));
+        return map;
+      });
+  }
 
-  SCREENER_POOL.forEach(function(stock) {
-    var d = delay;
-    delay += 250;
-    setTimeout(function() {
-      var key = window.FINNHUB_KEY || window.finnhubKey || '';
-      fetch('https://finnhub.io/api/v1/quote?symbol=' + stock.symbol + '&token=' + key)
-        .then(function(r) { return r.json(); })
-        .then(function(q) {
-          fetch('https://finnhub.io/api/v1/stock/metric?symbol=' + stock.symbol + '&metric=all&token=' + key)
-            .then(function(r) { return r.json(); })
-            .then(function(m) {
-              var metrics = m.metric || {};
-              var pe     = metrics['peBasicExclExtraTTM'] || metrics['peTTM'] || 0;
-              var beta   = metrics['beta'] || 0;
-              var margin = metrics['netProfitMarginTTM'] || 0;
-              var growth = metrics['revenueGrowthTTMYoy'] || 0;
-              var dividend = metrics['dividendYieldIndicatedAnnual'] || 0;
-              var score  = calcQuickScore(pe, beta, margin, growth, q.dp || 0, q.c, metrics['52WeekHigh'] || 0);
-              var signal = score >= 65 ? 'Strong' : score >= 50 ? 'Watch' : 'Risky';
-              results.push({
-                symbol: stock.symbol, name: stock.name, sector: stock.sector,
-                price: q.c || q.pc || 0, changePct: q.dp || 0,
-                score: score, signal: signal,
-                pe: pe, beta: beta, margin: margin, growth: growth,
-                dividend: dividend, week52High: metrics['52WeekHigh'] || 0
-              });
-              done++;
-              if (statusEl) statusEl.innerHTML = '<div class="screener-loading">Loading… ' + done + ' / ' + total + '</div>';
-              if (done === total) {
-                _screenerData = results;
-                _screenerLoaded = true;
-                localStorage.setItem('screener-cache', JSON.stringify({ ts: Date.now(), data: results }));
-                if (statusEl) statusEl.innerHTML = '<div class="screener-loading">Almost ready…</div>';
-                setTimeout(function() {
-                  if (statusEl) statusEl.innerHTML = '';
-                  renderScreenerResults();
-                }, 4000);
-              }
-            }).catch(function() { done++; });
-        }).catch(function() { done++; });
-    }, d);
+  // Step 2: Get fundamentals — use per-symbol cache (24h TTL) to avoid re-fetching daily
+  function getFundamentals(symbol) {
+    var cacheKey = 'screener-fund-' + symbol;
+    var cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      var c = JSON.parse(cached);
+      if (Date.now() - c.ts < 86400000) return Promise.resolve(c.data); // 24h
+    }
+    return fetch('https://finnhub.io/api/v1/stock/metric?symbol=' + symbol + '&metric=all&token=' + finnhubKey)
+      .then(function(r) { return r.json(); })
+      .then(function(m) {
+        var metrics = m.metric || {};
+        var data = {
+          pe:       metrics['peBasicExclExtraTTM'] || metrics['peTTM'] || 0,
+          beta:     metrics['beta'] || 0,
+          margin:   metrics['netProfitMarginTTM'] || 0,
+          growth:   metrics['revenueGrowthTTMYoy'] || 0,
+          dividend: metrics['dividendYieldIndicatedAnnual'] || 0,
+          week52High: metrics['52WeekHigh'] || 0
+        };
+        localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data: data }));
+        return data;
+      })
+      .catch(function() { return { pe:0, beta:0, margin:0, growth:0, dividend:0, week52High:0 }; });
+  }
+
+  fetchPrices().then(function(priceMap) {
+    statusEl.innerHTML = '<div class="screener-loading">Loading fundamentals… this takes ~30s on first load, instant after.</div>';
+    var results = [];
+    var done = 0;
+    var total = SCREENER_POOL.length;
+    var delay = 0;
+
+    SCREENER_POOL.forEach(function(stock) {
+      var d = delay;
+      // Only delay if we actually need to fetch (no cache) — check cheaply
+      var cacheKey = 'screener-fund-' + stock.symbol;
+      var hasCached = (function() {
+        try { var c = JSON.parse(localStorage.getItem(cacheKey)); return c && (Date.now() - c.ts < 86400000); } catch(e) { return false; }
+      })();
+      if (!hasCached) { delay += 250; } // stagger only uncached calls
+      setTimeout(function() {
+        getFundamentals(stock.symbol).then(function(f) {
+          var q = priceMap[stock.symbol] || { price: 0, changePct: 0 };
+          var score  = calcQuickScore(f.pe, f.beta, f.margin, f.growth, q.changePct, q.price, f.week52High);
+          var signal = score >= 65 ? 'Strong' : score >= 50 ? 'Watch' : 'Risky';
+          results.push({
+            symbol: stock.symbol, name: stock.name, sector: stock.sector,
+            price: q.price, changePct: q.changePct,
+            score: score, signal: signal,
+            pe: f.pe, beta: f.beta, margin: f.margin, growth: f.growth,
+            dividend: f.dividend, week52High: f.week52High
+          });
+          done++;
+          if (statusEl && done < total) statusEl.innerHTML = '<div class="screener-loading">Loading… ' + done + ' / ' + total + '</div>';
+          if (done === total) {
+            _screenerData = results;
+            _screenerLoaded = true;
+            localStorage.setItem('screener-cache', JSON.stringify({ ts: Date.now(), data: results }));
+            if (statusEl) statusEl.innerHTML = '';
+            renderScreenerResults();
+          }
+        });
+      }, d);
+    });
+  }).catch(function() {
+    if (statusEl) statusEl.innerHTML = '<div class="screener-loading">Could not load prices. Check your connection.</div>';
   });
 }
 
