@@ -2295,6 +2295,9 @@ var _screenerOpen = false;
 var _screenerData = [];
 var _screenerLoaded = false;
 var _screenerGoal = null;
+var _screenerSector = null;
+
+var SCREENER_SECTORS = ['Technology','Healthcare','Financials','Energy','Consumer','Industrials','Real Estate','Utilities'];
 
 var SCREENER_GOALS = [
   {
@@ -2385,11 +2388,26 @@ function toggleScreener() {
 function renderScreenerGoals() {
   var el = document.getElementById('screener-goals');
   if (!el) return;
-  el.innerHTML = SCREENER_GOALS.map(function(g) {
-    return '<button class="screener-goal-btn' + (_screenerGoal === g.id ? ' active' : '') + '" onclick="selectScreenerGoal(\'' + g.id + '\')">' +
-      g.label +
-    '</button>';
-  }).join('');
+  el.innerHTML =
+    '<div class="screener-goals-row">' +
+    SCREENER_GOALS.map(function(g) {
+      return '<button class="screener-goal-btn' + (_screenerGoal === g.id ? ' active' : '') + '" onclick="selectScreenerGoal(\'' + g.id + '\')">' +
+        g.label +
+      '</button>';
+    }).join('') +
+    '</div>' +
+    '<div class="screener-sector-label">Filter by sector</div>' +
+    '<div class="screener-sector-row">' +
+    SCREENER_SECTORS.map(function(s) {
+      return '<button class="screener-sector-btn' + (_screenerSector === s ? ' active' : '') + '" onclick="selectScreenerSector(\'' + s + '\')">' + s + '</button>';
+    }).join('') +
+    '</div>';
+}
+
+function selectScreenerSector(sector) {
+  _screenerSector = _screenerSector === sector ? null : sector;
+  renderScreenerGoals();
+  renderScreenerResults();
 }
 
 function selectScreenerGoal(id) {
@@ -2518,7 +2536,11 @@ function renderScreenerResults() {
   var goal = SCREENER_GOALS.find(function(g) { return g.id === _screenerGoal; });
   if (!goal) return;
 
-  var data = _screenerData.filter(goal.filter).sort(goal.sort).slice(0, 12);
+  var data = _screenerData.filter(function(s) {
+    if (!goal.filter(s)) return false;
+    if (_screenerSector && s.sector !== _screenerSector) return false;
+    return true;
+  }).sort(goal.sort).slice(0, 12);
 
   if (data.length === 0) {
     el.innerHTML = '<div class="screener-empty">No stocks matched right now — market conditions change daily. Try another goal.</div>';
@@ -3058,7 +3080,16 @@ var _termMap = {
   'Crec. Ingresos':     'Revenue Growth',
   'Next Earnings':      'Earnings Report',
   'Last EPS':           'EPS',
-  'Últ. UPA':           'EPS'
+  'Últ. UPA':           'EPS',
+  // Cap sizes
+  'Large Cap':          'Market Cap Size',
+  'Mid Cap':            'Market Cap Size',
+  'Small Cap':          'Market Cap Size',
+  'Micro Cap':          'Market Cap Size',
+  'Market Cap Size':    'Market Cap Size',
+  // TAM
+  'TAM':                'TAM',
+  'Total Addressable Market': 'TAM'
 };
 
 function openTerm(label) {
