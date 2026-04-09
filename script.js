@@ -2540,7 +2540,7 @@ function loadScreener() {
   // Step 1: Fetch all prices in one Polygon batch call
   function fetchPrices() {
     if (cachedPrices) return Promise.resolve(cachedPrices);
-    statusEl.innerHTML = '<div class="screener-loading">Fetching prices for ' + symbols.length + ' stocks…</div>';
+    statusEl.innerHTML = '<div class="screener-loading">Finding best matches…</div>';
     var url = 'https://api.polygon.io/v3/snapshot?ticker.any_of=' + symbols.join(',') + '&apiKey=' + polygonKey;
     return fetch(url)
       .then(function(r) { return r.json(); })
@@ -2585,7 +2585,7 @@ function loadScreener() {
   }
 
   fetchPrices().then(function(priceMap) {
-    statusEl.innerHTML = '<div class="screener-loading">Loading fundamentals… this takes ~30s on first load, instant after.</div>';
+    statusEl.innerHTML = '<div class="screener-loading">Finding best matches…</div>';
     var results = [];
     var done = 0;
     var total = SCREENER_POOL.length;
@@ -2612,7 +2612,7 @@ function loadScreener() {
             dividend: f.dividend, week52High: f.week52High
           });
           done++;
-          if (statusEl && done < total) statusEl.innerHTML = '<div class="screener-loading">Loading… ' + done + ' / ' + total + '</div>';
+          if (statusEl && done < total) statusEl.innerHTML = '<div class="screener-loading">Finding best matches…</div>';
           if (done === total) {
             _screenerData = results;
             _screenerLoaded = true;
@@ -2667,8 +2667,9 @@ function renderScreenerResults() {
   var data = _screenerData.filter(function(s) {
     if (!goal.filter(s)) return false;
     if (_screenerSector && s.sector !== _screenerSector) return false;
+    if (s.score < 45) return false;
     return true;
-  }).sort(goal.sort).slice(0, 12);
+  }).sort(goal.sort).slice(0, 8);
 
   if (data.length === 0) {
     el.innerHTML = '<div class="screener-empty">No stocks matched right now — market conditions change daily. Try another goal.</div>';
@@ -2676,7 +2677,7 @@ function renderScreenerResults() {
   }
 
   el.innerHTML =
-    '<div class="screener-count">' + data.length + ' matches</div>' +
+    '<div class="screener-count">Top ' + data.length + ' picks</div>' +
     '<div class="screener-cards">' +
     data.map(function(s) {
       var up = s.changePct >= 0;
