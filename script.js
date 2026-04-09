@@ -2575,70 +2575,99 @@ function loadScreener() {
       });
   }
 
-  // Step 2: Get fundamentals — use per-symbol cache (24h TTL) to avoid re-fetching daily
-  function getFundamentals(symbol) {
-    var cacheKey = 'screener-fund-' + symbol;
-    var cached = localStorage.getItem(cacheKey);
-    if (cached) {
-      var c = JSON.parse(cached);
-      if (Date.now() - c.ts < 86400000) return Promise.resolve(c.data); // 24h
-    }
-    return fetch('https://finnhub.io/api/v1/stock/metric?symbol=' + symbol + '&metric=all&token=' + finnhubKey)
-      .then(function(r) { return r.json(); })
-      .then(function(m) {
-        var metrics = m.metric || {};
-        var data = {
-          pe:       metrics['peBasicExclExtraTTM'] || metrics['peTTM'] || 0,
-          beta:     metrics['beta'] || 0,
-          margin:   metrics['netProfitMarginTTM'] || 0,
-          growth:   metrics['revenueGrowthTTMYoy'] || 0,
-          dividend: metrics['dividendYieldIndicatedAnnual'] || 0,
-          week52High: metrics['52WeekHigh'] || 0
-        };
-        localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data: data }));
-        return data;
-      })
-      .catch(function() { return { pe:0, beta:0, margin:0, growth:0, dividend:0, week52High:0 }; });
+  // Step 2: Load all fundamentals — Firestore cache first (24h TTL), then Finnhub
+  function loadAllFundamentals() {
+    var ref = userRef();
+    // Try Firestore cache first
+    var firestorePromise = ref
+      ? ref.get().then(function(doc) {
+          var data = doc.exists ? doc.data() : {};
+          var fund = data.screenerFundamentals || {};
+          if (fund.ts && (Date.now() - fund.ts < 86400000)) return fund.data || null;
+          return null;
+        }).catch(function() { return null; })
+      : Promise.resolve(null);
+
+    return firestorePromise.then(function(cached) {
+      if (cached) {
+        // Write to localStorage for instant access next time on this device
+        SCREENER_POOL.forEach(function(s) {
+          if (cached[s.symbol]) {
+            localStorage.setItem('screener-fund-' + s.symbol, JSON.stringify({ ts: Date.now(), data: cached[s.symbol] }));
+          }
+        });
+        return cached;
+      }
+
+      // Not in Firestore — fetch from Finnhub, stagger requests
+      statusEl.innerHTML = '<div class="screener-loading">First time setup — loading fundamentals… this takes ~30s once.</div>';
+      var fundMap = {};
+      var delay = 0;
+      var promises = SCREENER_POOL.map(function(stock) {
+        // Check localStorage first to avoid redundant calls
+        var lsCache = localStorage.getItem('screener-fund-' + stock.symbol);
+        if (lsCache) {
+          try {
+            var lc = JSON.parse(lsCache);
+            if (Date.now() - lc.ts < 86400000) { fundMap[stock.symbol] = lc.data; return Promise.resolve(); }
+          } catch(e) {}
+        }
+        var d = delay; delay += 250;
+        return new Promise(function(resolve) {
+          setTimeout(function() {
+            fetch('https://finnhub.io/api/v1/stock/metric?symbol=' + stock.symbol + '&metric=all&token=' + finnhubKey)
+              .then(function(r) { return r.json(); })
+              .then(function(m) {
+                var metrics = m.metric || {};
+                var data = {
+                  pe:       metrics['peBasicExclExtraTTM'] || metrics['peTTM'] || 0,
+                  beta:     metrics['beta'] || 0,
+                  margin:   metrics['netProfitMarginTTM'] || 0,
+                  growth:   metrics['revenueGrowthTTMYoy'] || 0,
+                  dividend: metrics['dividendYieldIndicatedAnnual'] || 0,
+                  week52High: metrics['52WeekHigh'] || 0
+                };
+                fundMap[stock.symbol] = data;
+                localStorage.setItem('screener-fund-' + stock.symbol, JSON.stringify({ ts: Date.now(), data: data }));
+              })
+              .catch(function() { fundMap[stock.symbol] = { pe:0, beta:0, margin:0, growth:0, dividend:0, week52High:0 }; })
+              .then(resolve);
+          }, d);
+        });
+      });
+
+      return Promise.all(promises).then(function() {
+        // Save to Firestore so all other devices get it instantly
+        if (ref) {
+          ref.set({ screenerFundamentals: { ts: Date.now(), data: fundMap } }, { merge: true }).catch(function() {});
+        }
+        return fundMap;
+      });
+    });
   }
 
   fetchPrices().then(function(priceMap) {
     statusEl.innerHTML = '<div class="screener-loading">Finding best matches…</div>';
-    var results = [];
-    var done = 0;
-    var total = SCREENER_POOL.length;
-    var delay = 0;
-
-    SCREENER_POOL.forEach(function(stock) {
-      var d = delay;
-      // Only delay if we actually need to fetch (no cache) — check cheaply
-      var cacheKey = 'screener-fund-' + stock.symbol;
-      var hasCached = (function() {
-        try { var c = JSON.parse(localStorage.getItem(cacheKey)); return c && (Date.now() - c.ts < 86400000); } catch(e) { return false; }
-      })();
-      if (!hasCached) { delay += 250; } // stagger only uncached calls
-      setTimeout(function() {
-        getFundamentals(stock.symbol).then(function(f) {
-          var q = priceMap[stock.symbol] || { price: 0, changePct: 0 };
-          var score  = calcQuickScore(f.pe, f.beta, f.margin, f.growth, q.changePct, q.price, f.week52High);
-          var signal = score >= 65 ? 'Strong' : score >= 50 ? 'Watch' : 'Risky';
-          results.push({
-            symbol: stock.symbol, name: stock.name, sector: stock.sector,
-            price: q.price, changePct: q.changePct,
-            score: score, signal: signal,
-            pe: f.pe, beta: f.beta, margin: f.margin, growth: f.growth,
-            dividend: f.dividend, week52High: f.week52High
-          });
-          done++;
-          if (statusEl && done < total) statusEl.innerHTML = '<div class="screener-loading">Finding best matches…</div>';
-          if (done === total) {
-            _screenerData = results;
-            _screenerLoaded = true;
-            localStorage.setItem('screener-cache', JSON.stringify({ ts: Date.now(), data: results }));
-            if (statusEl) statusEl.innerHTML = '';
-            renderScreenerResults();
-          }
+    return loadAllFundamentals().then(function(fundMap) {
+      var results = [];
+      SCREENER_POOL.forEach(function(stock) {
+        var f = fundMap[stock.symbol] || { pe:0, beta:0, margin:0, growth:0, dividend:0, week52High:0 };
+        var q = priceMap[stock.symbol] || { price: 0, changePct: 0 };
+        var score  = calcQuickScore(f.pe, f.beta, f.margin, f.growth, q.changePct, q.price, f.week52High);
+        var signal = score >= 65 ? 'Strong' : score >= 50 ? 'Watch' : 'Risky';
+        results.push({
+          symbol: stock.symbol, name: stock.name, sector: stock.sector,
+          price: q.price, changePct: q.changePct,
+          score: score, signal: signal,
+          pe: f.pe, beta: f.beta, margin: f.margin, growth: f.growth,
+          dividend: f.dividend, week52High: f.week52High
         });
-      }, d);
+      });
+      _screenerData = results;
+      _screenerLoaded = true;
+      localStorage.setItem('screener-cache', JSON.stringify({ ts: Date.now(), data: results }));
+      if (statusEl) statusEl.innerHTML = '';
+      renderScreenerResults();
     });
   }).catch(function() {
     if (statusEl) statusEl.innerHTML = '<div class="screener-loading">Could not load prices. Check your connection.</div>';
