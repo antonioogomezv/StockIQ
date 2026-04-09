@@ -2530,70 +2530,11 @@ function loadScreener() {
   var resultsEl = document.getElementById('screener-results');
   if (!statusEl || !resultsEl) return;
 
-  // Price cache: 5 min TTL
-  var priceCache = localStorage.getItem('screener-price-cache');
-  var cachedPrices = null;
-  if (priceCache) {
-    var pc = JSON.parse(priceCache);
-    if (Date.now() - pc.ts < 300000) cachedPrices = pc.data;
-  }
+  statusEl.innerHTML = '<div class="screener-loading">Finding best matches…</div>';
 
-  // Full results cache: 10 min TTL (used when both prices + fundamentals are fresh)
-  var fullCache = localStorage.getItem('screener-cache');
-  if (fullCache) {
-    var fc = JSON.parse(fullCache);
-    if (Date.now() - fc.ts < 600000) {
-      _screenerData = fc.data;
-      _screenerLoaded = true;
-      if (statusEl) statusEl.innerHTML = '';
-      renderScreenerResults();
-      return;
-    }
-  }
-
-  var symbols = SCREENER_POOL.map(function(s) { return s.symbol; });
-
-  // Step 1: Fetch all prices in one Polygon batch call
-  function fetchPrices() {
-    if (cachedPrices) return Promise.resolve(cachedPrices);
-    statusEl.innerHTML = '<div class="screener-loading">Finding best matches…</div>';
-    var url = 'https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers?tickers=' + symbols.join(',') + '&apiKey=' + polygonKey;
-    return fetch(url)
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        var map = {};
-        (data.tickers || []).forEach(function(r) {
-          var day = r.day || {};
-          var prevDay = r.prevDay || {};
-          var price = day.c || (r.lastTrade && r.lastTrade.p) || prevDay.c || 0;
-          var prevClose = prevDay.c || 0;
-          var changePct = r.todaysChangePerc != null ? r.todaysChangePerc
-            : (price > 0 && prevClose > 0 ? ((price - prevClose) / prevClose * 100) : 0);
-          map[r.ticker] = { price: price, changePct: changePct };
-        });
-        // If all changePct are 0 (market closed), use last known values
-        var allZero = Object.keys(map).every(function(k) { return map[k].changePct === 0; });
-        if (allZero) {
-          var lastKnown = localStorage.getItem('screener-changepct-last');
-          if (lastKnown) {
-            var lk = JSON.parse(lastKnown);
-            Object.keys(map).forEach(function(k) { if (lk[k]) map[k].changePct = lk[k]; });
-          }
-        } else {
-          // Save this as the last known good changePct
-          var toSave = {};
-          Object.keys(map).forEach(function(k) { if (map[k].changePct !== 0) toSave[k] = map[k].changePct; });
-          localStorage.setItem('screener-changepct-last', JSON.stringify(toSave));
-        }
-        localStorage.setItem('screener-price-cache', JSON.stringify({ ts: Date.now(), data: map }));
-        return map;
-      });
-  }
-
-  // Step 2: Load all fundamentals — Firestore cache first (24h TTL), then Finnhub
+  // Load fundamentals — Firestore cache first (24h TTL), then Finnhub
   function loadAllFundamentals() {
     var ref = userRef();
-    // Try Firestore cache first
     var firestorePromise = ref
       ? ref.get().then(function(doc) {
           var data = doc.exists ? doc.data() : {};
@@ -2605,28 +2546,31 @@ function loadScreener() {
 
     return firestorePromise.then(function(cached) {
       if (cached) {
-        // Write to localStorage for instant access next time on this device
         SCREENER_POOL.forEach(function(s) {
-          if (cached[s.symbol]) {
-            localStorage.setItem('screener-fund-' + s.symbol, JSON.stringify({ ts: Date.now(), data: cached[s.symbol] }));
-          }
+          if (cached[s.symbol]) localStorage.setItem('screener-fund-' + s.symbol, JSON.stringify({ ts: Date.now(), data: cached[s.symbol] }));
         });
         return cached;
       }
 
-      // Not in Firestore — fetch from Finnhub, stagger requests
-      statusEl.innerHTML = '<div class="screener-loading">First time setup — loading fundamentals… this takes ~30s once.</div>';
+      // Check localStorage before fetching
       var fundMap = {};
-      var delay = 0;
-      var promises = SCREENER_POOL.map(function(stock) {
-        // Check localStorage first to avoid redundant calls
+      var toFetch = [];
+      SCREENER_POOL.forEach(function(stock) {
         var lsCache = localStorage.getItem('screener-fund-' + stock.symbol);
         if (lsCache) {
           try {
             var lc = JSON.parse(lsCache);
-            if (Date.now() - lc.ts < 86400000) { fundMap[stock.symbol] = lc.data; return Promise.resolve(); }
+            if (Date.now() - lc.ts < 86400000) { fundMap[stock.symbol] = lc.data; return; }
           } catch(e) {}
         }
+        toFetch.push(stock);
+      });
+
+      if (toFetch.length === 0) return Promise.resolve(fundMap);
+
+      statusEl.innerHTML = '<div class="screener-loading">First time setup — loading fundamentals… this takes ~30s once.</div>';
+      var delay = 0;
+      var promises = toFetch.map(function(stock) {
         var d = delay; delay += 250;
         return new Promise(function(resolve) {
           setTimeout(function() {
@@ -2634,14 +2578,7 @@ function loadScreener() {
               .then(function(r) { return r.json(); })
               .then(function(m) {
                 var metrics = m.metric || {};
-                var data = {
-                  pe:       metrics['peBasicExclExtraTTM'] || metrics['peTTM'] || 0,
-                  beta:     metrics['beta'] || 0,
-                  margin:   metrics['netProfitMarginTTM'] || 0,
-                  growth:   metrics['revenueGrowthTTMYoy'] || 0,
-                  dividend: metrics['dividendYieldIndicatedAnnual'] || 0,
-                  week52High: metrics['52WeekHigh'] || 0
-                };
+                var data = { pe: metrics['peBasicExclExtraTTM'] || metrics['peTTM'] || 0, beta: metrics['beta'] || 0, margin: metrics['netProfitMarginTTM'] || 0, growth: metrics['revenueGrowthTTMYoy'] || 0, dividend: metrics['dividendYieldIndicatedAnnual'] || 0, week52High: metrics['52WeekHigh'] || 0 };
                 fundMap[stock.symbol] = data;
                 localStorage.setItem('screener-fund-' + stock.symbol, JSON.stringify({ ts: Date.now(), data: data }));
               })
@@ -2652,40 +2589,70 @@ function loadScreener() {
       });
 
       return Promise.all(promises).then(function() {
-        // Save to Firestore so all other devices get it instantly
-        if (ref) {
-          ref.set({ screenerFundamentals: { ts: Date.now(), data: fundMap } }, { merge: true }).catch(function() {});
-        }
+        if (ref) ref.set({ screenerFundamentals: { ts: Date.now(), data: fundMap } }, { merge: true }).catch(function() {});
         return fundMap;
       });
     });
   }
 
-  fetchPrices().then(function(priceMap) {
-    statusEl.innerHTML = '<div class="screener-loading">Finding best matches…</div>';
-    return loadAllFundamentals().then(function(fundMap) {
-      var results = [];
-      SCREENER_POOL.forEach(function(stock) {
-        var f = fundMap[stock.symbol] || { pe:0, beta:0, margin:0, growth:0, dividend:0, week52High:0 };
-        var q = priceMap[stock.symbol] || { price: 0, changePct: 0 };
-        var score  = calcQuickScore(f.pe, f.beta, f.margin, f.growth, q.changePct, q.price, f.week52High);
-        var signal = score >= 65 ? 'Strong' : score >= 50 ? 'Watch' : 'Risky';
-        results.push({
-          symbol: stock.symbol, name: stock.name, sector: stock.sector,
-          price: q.price, changePct: q.changePct,
-          score: score, signal: signal,
-          pe: f.pe, beta: f.beta, margin: f.margin, growth: f.growth,
-          dividend: f.dividend, week52High: f.week52High
-        });
+  // Fetch live Finnhub prices for a list of symbols, staggered 120ms apart
+  function fetchPrices(symbols) {
+    var delay = 0;
+    var priceMap = {};
+    var promises = symbols.map(function(sym) {
+      var d = delay; delay += 120;
+      return new Promise(function(resolve) {
+        setTimeout(function() {
+          fetch('https://finnhub.io/api/v1/quote?symbol=' + sym + '&token=' + finnhubKey)
+            .then(function(r) { return r.json(); })
+            .then(function(q) {
+              priceMap[sym] = { price: q.c || q.pc || 0, changePct: q.dp || 0 };
+              // Save changePct for after-hours use
+              if (q.dp) {
+                var lk = JSON.parse(localStorage.getItem('screener-changepct-last') || '{}');
+                lk[sym] = q.dp;
+                localStorage.setItem('screener-changepct-last', JSON.stringify(lk));
+              }
+            })
+            .catch(function() { priceMap[sym] = { price: 0, changePct: 0 }; })
+            .then(resolve);
+        }, d);
       });
-      _screenerData = results;
-      _screenerLoaded = true;
-      localStorage.setItem('screener-cache', JSON.stringify({ ts: Date.now(), data: results }));
-      if (statusEl) statusEl.innerHTML = '';
+    });
+    return Promise.all(promises).then(function() { return priceMap; });
+  }
+
+  loadAllFundamentals().then(function(fundMap) {
+    // Build screener data with price=0 first so filtering works on fundamentals
+    var lastKnown = JSON.parse(localStorage.getItem('screener-changepct-last') || '{}');
+    var results = SCREENER_POOL.map(function(stock) {
+      var f = fundMap[stock.symbol] || { pe:0, beta:0, margin:0, growth:0, dividend:0, week52High:0 };
+      var changePct = lastKnown[stock.symbol] || 0;
+      var score  = calcQuickScore(f.pe, f.beta, f.margin, f.growth, changePct, 0, f.week52High);
+      var signal = score >= 65 ? 'Strong' : score >= 50 ? 'Watch' : 'Risky';
+      return { symbol: stock.symbol, name: stock.name, sector: stock.sector, price: 0, changePct: changePct, score: score, signal: signal, pe: f.pe, beta: f.beta, margin: f.margin, growth: f.growth, dividend: f.dividend, week52High: f.week52High };
+    });
+    _screenerData = results;
+    _screenerLoaded = true;
+    if (statusEl) statusEl.innerHTML = '';
+    renderScreenerResults();
+
+    // Now fetch live prices for ALL stocks, update in place
+    var allSymbols = SCREENER_POOL.map(function(s) { return s.symbol; });
+    fetchPrices(allSymbols).then(function(priceMap) {
+      _screenerData = _screenerData.map(function(s) {
+        var q = priceMap[s.symbol] || { price: 0, changePct: s.changePct };
+        var price = q.price || 0;
+        var changePct = q.changePct || s.changePct;
+        var score = calcQuickScore(s.pe, s.beta, s.margin, s.growth, changePct, price, s.week52High);
+        var signal = score >= 65 ? 'Strong' : score >= 50 ? 'Watch' : 'Risky';
+        return Object.assign({}, s, { price: price, changePct: changePct, score: score, signal: signal });
+      });
+      localStorage.setItem('screener-cache', JSON.stringify({ ts: Date.now(), data: _screenerData }));
       renderScreenerResults();
     });
   }).catch(function() {
-    if (statusEl) statusEl.innerHTML = '<div class="screener-loading">Could not load prices. Check your connection.</div>';
+    if (statusEl) statusEl.innerHTML = '<div class="screener-loading">Could not load data. Check your connection.</div>';
   });
 }
 
