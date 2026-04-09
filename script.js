@@ -2436,7 +2436,8 @@ var SCREENER_GOALS = [
     learn: { term: '52-Week Range', explain: 'The 52-week range shows the lowest and highest price a stock has traded at over the past year. A stock near its 52-week low has fallen significantly — sometimes because the business is struggling, sometimes because the whole market sold off unfairly. Learning to tell the difference is one of the most valuable skills in investing.' },
     filter: function(s) { return s.price > 0 && s.week52High > 0 && (s.price / s.week52High) < 0.75; },
     sort: function(a, b) { return (a.price / a.week52High) - (b.price / b.week52High); },
-    reason: function(s) { return Math.round((1 - s.price / s.week52High) * 100) + '% below its 52-week high of $' + s.week52High.toFixed(0); }
+    reason: function(s) { return Math.round((1 - s.price / s.week52High) * 100) + '% below its 52-week high of $' + s.week52High.toFixed(0); },
+    skipScoreFilter: true
   },
   {
     id: 'moat',
@@ -2446,6 +2447,20 @@ var SCREENER_GOALS = [
     filter: function(s) { return s.margin > 20 && s.score >= 60; },
     sort: function(a, b) { return b.margin - a.margin; },
     reason: function(s) { return s.margin.toFixed(1) + '% profit margin — hard to compete with'; }
+  },
+  {
+    id: 'contrarian',
+    label: 'Contrarian Picks',
+    desc: 'Lower-scored stocks with one strong signal — the kind of hidden opportunity most investors overlook.',
+    learn: { term: 'Market Sentiment', explain: 'Contrarian investing means going against the crowd. When a stock\'s score is low and sentiment is negative, most investors avoid it — but that\'s sometimes exactly when the best opportunities appear. A company with falling stock price but still growing revenue may just be going through a rough patch, not a permanent decline. Warren Buffett built his fortune being greedy when others were fearful.' },
+    filter: function(s) { return s.score < 55 && (s.growth > 5 || s.dividend > 1 || (s.week52High > 0 && (s.price / s.week52High) < 0.75)); },
+    sort: function(a, b) { return b.growth - a.growth; },
+    reason: function(s) {
+      if (s.growth > 5) return 'Revenue still growing ' + s.growth.toFixed(1) + '% despite low score — could be temporary weakness';
+      if (s.dividend > 1) return s.dividend.toFixed(2) + '% dividend — getting paid while you wait for recovery';
+      return Math.round((1 - s.price / s.week52High) * 100) + '% below 52-week high — deeply discounted';
+    },
+    skipScoreFilter: true
   },
 ];
 
@@ -2667,7 +2682,7 @@ function renderScreenerResults() {
   var data = _screenerData.filter(function(s) {
     if (!goal.filter(s)) return false;
     if (_screenerSector && s.sector !== _screenerSector) return false;
-    if (s.score < 45) return false;
+    if (!goal.skipScoreFilter && s.score < 45) return false;
     return true;
   }).sort(goal.sort).slice(0, 8);
 
@@ -2698,7 +2713,7 @@ function renderScreenerResults() {
         '<div class="screener-card-reason">' + reason + '</div>' +
         '<div class="screener-card-bottom">' +
           '<span class="screener-card-score" style="color:' + scoreColor + ';">' + s.score + '/100 · ' + s.signal + '</span>' +
-          '<span class="screener-card-sector">' + escHtml(s.sector) + '</span>' +
+          (goal.id === 'contrarian' ? '<span class="screener-card-contrarian">Contrarian</span>' : '<span class="screener-card-sector">' + escHtml(s.sector) + '</span>') +
         '</div>' +
       '</div>';
     }).join('') +

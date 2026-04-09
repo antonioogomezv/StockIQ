@@ -2264,6 +2264,14 @@ button:active { transform: translateY(0); }
   font-weight: 600;
   color: var(--accent-blue);
 }
+.screener-card-contrarian {
+  font-size: 10px;
+  font-weight: 700;
+  color: #f59e0b;
+  background: rgba(245,158,11,0.12);
+  padding: 2px 7px;
+  border-radius: 10px;
+}
 
 /* ── Quick tickers ── */
 #quick-tickers {
