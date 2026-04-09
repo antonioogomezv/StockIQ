@@ -2413,8 +2413,8 @@ var SCREENER_GOALS = [
   },
   {
     id: 'gaining',
-    label: 'Gaining Today',
-    desc: 'Stocks moving up today — momentum can signal positive news or sentiment.',
+    label: 'Top Movers',
+    desc: 'Stocks with the biggest price moves — leaders and laggards from the latest session.',
     learn: { term: 'Price Movement', explain: 'A stock moving up more than 1% in a single day often signals buying momentum — investors are excited. This could be due to good earnings, an analyst upgrade, or broader market optimism. But remember: short-term price moves don\'t always reflect long-term value.' },
     filter: function(s) { return s.changePct !== 0; },
     sort: function(a, b) { return b.changePct - a.changePct; },
@@ -2567,11 +2567,24 @@ function loadScreener() {
           var prevDay = r.prevDay || {};
           var price = day.c || (r.lastTrade && r.lastTrade.p) || prevDay.c || 0;
           var prevClose = prevDay.c || 0;
-          // Calculate change % ourselves if todaysChangePerc is missing
           var changePct = r.todaysChangePerc != null ? r.todaysChangePerc
             : (price > 0 && prevClose > 0 ? ((price - prevClose) / prevClose * 100) : 0);
           map[r.ticker] = { price: price, changePct: changePct };
         });
+        // If all changePct are 0 (market closed), use last known values
+        var allZero = Object.keys(map).every(function(k) { return map[k].changePct === 0; });
+        if (allZero) {
+          var lastKnown = localStorage.getItem('screener-changepct-last');
+          if (lastKnown) {
+            var lk = JSON.parse(lastKnown);
+            Object.keys(map).forEach(function(k) { if (lk[k]) map[k].changePct = lk[k]; });
+          }
+        } else {
+          // Save this as the last known good changePct
+          var toSave = {};
+          Object.keys(map).forEach(function(k) { if (map[k].changePct !== 0) toSave[k] = map[k].changePct; });
+          localStorage.setItem('screener-changepct-last', JSON.stringify(toSave));
+        }
         localStorage.setItem('screener-price-cache', JSON.stringify({ ts: Date.now(), data: map }));
         return map;
       });
@@ -2731,9 +2744,7 @@ function renderScreenerResults() {
   }
 
   if (data.length === 0) {
-    var msg = (goal.id === 'gaining' && _screenerData.every(function(s) { return s.changePct === 0; }))
-      ? 'Market may be closed — price changes aren\'t available right now. Check back during trading hours.'
-      : 'No stocks matched right now — market conditions change daily. Try another goal.';
+    var msg = 'No stocks matched right now — market conditions change daily. Try another goal.';
     el.innerHTML = '<div class="screener-empty">' + msg + '</div>';
     return;
   }
