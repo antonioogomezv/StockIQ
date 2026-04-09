@@ -2416,9 +2416,10 @@ var SCREENER_GOALS = [
     label: 'Gaining Today',
     desc: 'Stocks moving up today — momentum can signal positive news or sentiment.',
     learn: { term: 'Price Movement', explain: 'A stock moving up more than 1% in a single day often signals buying momentum — investors are excited. This could be due to good earnings, an analyst upgrade, or broader market optimism. But remember: short-term price moves don\'t always reflect long-term value.' },
-    filter: function(s) { return s.changePct > 0; },
+    filter: function(s) { return s.changePct !== 0; },
     sort: function(a, b) { return b.changePct - a.changePct; },
-    reason: function(s) { return '+' + s.changePct.toFixed(2) + '% today — gaining momentum'; }
+    reason: function(s) { return (s.changePct >= 0 ? '+' : '') + s.changePct.toFixed(2) + '% today'; },
+    skipScoreFilter: true
   },
   {
     id: 'dividend',
@@ -2564,11 +2565,12 @@ function loadScreener() {
         (data.tickers || []).forEach(function(r) {
           var day = r.day || {};
           var prevDay = r.prevDay || {};
-          var price = day.c || r.lastTrade && r.lastTrade.p || prevDay.c || 0;
-          map[r.ticker] = {
-            price: price,
-            changePct: r.todaysChangePerc || 0
-          };
+          var price = day.c || (r.lastTrade && r.lastTrade.p) || prevDay.c || 0;
+          var prevClose = prevDay.c || 0;
+          // Calculate change % ourselves if todaysChangePerc is missing
+          var changePct = r.todaysChangePerc != null ? r.todaysChangePerc
+            : (price > 0 && prevClose > 0 ? ((price - prevClose) / prevClose * 100) : 0);
+          map[r.ticker] = { price: price, changePct: changePct };
         });
         localStorage.setItem('screener-price-cache', JSON.stringify({ ts: Date.now(), data: map }));
         return map;
@@ -2729,7 +2731,10 @@ function renderScreenerResults() {
   }
 
   if (data.length === 0) {
-    el.innerHTML = '<div class="screener-empty">No stocks matched right now — market conditions change daily. Try another goal.</div>';
+    var msg = (goal.id === 'gaining' && _screenerData.every(function(s) { return s.changePct === 0; }))
+      ? 'Market may be closed — price changes aren\'t available right now. Check back during trading hours.'
+      : 'No stocks matched right now — market conditions change daily. Try another goal.';
+    el.innerHTML = '<div class="screener-empty">' + msg + '</div>';
     return;
   }
 
