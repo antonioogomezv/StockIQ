@@ -3430,11 +3430,371 @@ function setActivePortfolio(id) {
 }
 
 function promptNewPortfolio() {
+  // Show choice: blank or guided wizard
+  let overlay = document.createElement('div');
+  overlay.id = 'new-port-choice-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;';
+  overlay.innerHTML =
+    '<div style="background:var(--surface);border-radius:16px;padding:28px 24px;max-width:360px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.4);">' +
+      '<div style="font-size:18px;font-weight:700;margin-bottom:6px;">New Portfolio</div>' +
+      '<div style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">How do you want to start?</div>' +
+      '<button onclick="closeNewPortChoice();openPortfolioWizard();" style="width:100%;padding:14px 16px;border-radius:12px;border:none;background:var(--accent-blue);color:#fff;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:10px;text-align:left;">' +
+        '✦ Build with guidance' +
+        '<div style="font-size:11px;font-weight:400;opacity:0.85;margin-top:2px;">Answer 5 questions — we pick the stocks for you</div>' +
+      '</button>' +
+      '<button onclick="closeNewPortChoice();promptBlankPortfolio();" style="width:100%;padding:14px 16px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--text);font-size:14px;font-weight:600;cursor:pointer;text-align:left;">' +
+        'Start blank' +
+        '<div style="font-size:11px;font-weight:400;color:var(--text-muted);margin-top:2px;">Add stocks manually yourself</div>' +
+      '</button>' +
+    '</div>';
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) closeNewPortChoice(); });
+  document.body.appendChild(overlay);
+}
+
+function closeNewPortChoice() {
+  let el = document.getElementById('new-port-choice-overlay');
+  if (el) el.remove();
+}
+
+function promptBlankPortfolio() {
   let name = prompt('Portfolio name:');
   if (!name || !name.trim()) return;
   createPortfolio(name.trim(), false, []);
   renderPortfolioTabs();
   renderPortfolio();
+}
+
+// ── Portfolio Wizard ─────────────────────────────────────────
+
+var _wizardAnswers = {};
+
+var WIZARD_QUESTIONS = [
+  {
+    id: 'goal',
+    q: "What's your main goal?",
+    sub: 'Pick the one that fits best.',
+    options: [
+      { value: 'growth',     label: 'Grow my money',        desc: 'I want it to increase in value over time' },
+      { value: 'income',     label: 'Get regular income',   desc: 'I want dividends — cash paid to me regularly' },
+      { value: 'safe',       label: 'Keep it safe',         desc: 'Slow and steady, I don\'t want big swings' }
+    ]
+  },
+  {
+    id: 'horizon',
+    q: 'How long can you leave the money invested?',
+    sub: 'Longer time = more flexibility to ride out bad days.',
+    options: [
+      { value: 'short',  label: 'Less than 2 years',  desc: 'I might need it soon' },
+      { value: 'mid',    label: '2–5 years',           desc: 'Medium term plan' },
+      { value: 'long',   label: '5+ years',            desc: 'Long-term, I\'m patient' }
+    ]
+  },
+  {
+    id: 'risk',
+    q: 'Your portfolio drops 20% in a month. What do you do?',
+    sub: 'Be honest — this helps us match your real comfort level.',
+    options: [
+      { value: 'low',    label: 'Sell everything',        desc: 'I can\'t handle big losses' },
+      { value: 'mid',    label: 'Hold and wait',          desc: 'I\'d be nervous but stay in' },
+      { value: 'high',   label: 'Buy more — it\'s a deal', desc: 'Drops are opportunities for me' }
+    ]
+  },
+  {
+    id: 'sector',
+    q: 'Any sector you\'re excited about?',
+    sub: 'Optional — we\'ll prioritize stocks from here.',
+    options: [
+      { value: 'Technology',  label: '💻 Technology',   desc: 'Software, chips, AI, cloud' },
+      { value: 'Healthcare',  label: '🏥 Healthcare',   desc: 'Pharma, biotech, medical devices' },
+      { value: 'Consumer',    label: '🛍 Consumer',     desc: 'Retail, food, travel, entertainment' },
+      { value: 'Financials',  label: '🏦 Financials',   desc: 'Banks, insurance, payments' },
+      { value: 'none',        label: 'No preference',   desc: 'Just pick the best ones' }
+    ]
+  },
+  {
+    id: 'budget',
+    q: 'How much are you starting with?',
+    sub: 'We\'ll split it evenly across your 5 stocks.',
+    type: 'number'
+  }
+];
+
+function openPortfolioWizard() {
+  _wizardAnswers = {};
+  _renderWizardStep(0);
+}
+
+function _renderWizardStep(step) {
+  let existing = document.getElementById('wizard-overlay');
+  if (existing) existing.remove();
+
+  let q = WIZARD_QUESTIONS[step];
+  let total = WIZARD_QUESTIONS.length;
+  let progress = Math.round(((step) / total) * 100);
+
+  let overlay = document.createElement('div');
+  overlay.id = 'wizard-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;';
+
+  let optionsHtml = '';
+  if (q.type === 'number') {
+    optionsHtml =
+      '<div style="margin:8px 0 24px;">' +
+        '<div style="display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;">' +
+          '<span style="font-size:18px;color:var(--text-muted);">$</span>' +
+          '<input id="wizard-budget" type="number" min="100" placeholder="e.g. 1000" style="background:none;border:none;outline:none;font-size:20px;font-weight:600;color:var(--text);width:100%;">' +
+        '</div>' +
+        '<div style="font-size:11px;color:var(--text-muted);margin-top:8px;">Minimum $100 · We use fractional shares so any amount works</div>' +
+      '</div>';
+  } else {
+    optionsHtml = '<div style="display:flex;flex-direction:column;gap:8px;margin:8px 0 24px;">' +
+      q.options.map(function(opt) {
+        let selected = _wizardAnswers[q.id] === opt.value;
+        return '<button onclick="_wizardSelect(\'' + q.id + '\',\'' + opt.value + '\',' + step + ')" ' +
+          'style="padding:12px 14px;border-radius:10px;border:1px solid ' + (selected ? 'var(--accent-blue)' : 'var(--border)') + ';' +
+          'background:' + (selected ? 'rgba(59,130,246,0.08)' : 'transparent') + ';' +
+          'color:var(--text);cursor:pointer;text-align:left;">' +
+          '<div style="font-size:13px;font-weight:600;">' + opt.label + '</div>' +
+          '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">' + opt.desc + '</div>' +
+        '</button>';
+      }).join('') +
+    '</div>';
+  }
+
+  let isLast = step === total - 1;
+  let canProceed = q.type === 'number' ? true : !!_wizardAnswers[q.id];
+
+  overlay.innerHTML =
+    '<div style="background:var(--surface);border-radius:16px;padding:28px 24px;max-width:400px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.4);">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">' +
+        '<div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Step ' + (step+1) + ' of ' + total + '</div>' +
+        '<button onclick="document.getElementById(\'wizard-overlay\').remove();" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:18px;line-height:1;">✕</button>' +
+      '</div>' +
+      '<div style="height:4px;background:var(--border);border-radius:4px;margin-bottom:20px;">' +
+        '<div style="height:4px;background:var(--accent-blue);border-radius:4px;width:' + progress + '%;transition:width 0.3s;"></div>' +
+      '</div>' +
+      '<div style="font-size:18px;font-weight:700;margin-bottom:4px;">' + q.q + '</div>' +
+      '<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">' + q.sub + '</div>' +
+      optionsHtml +
+      '<div style="display:flex;gap:10px;">' +
+        (step > 0 ? '<button onclick="_wizardStep(' + (step-1) + ')" style="flex:1;padding:12px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--text);font-size:14px;font-weight:600;cursor:pointer;">← Back</button>' : '') +
+        '<button id="wizard-next-btn" onclick="' + (isLast ? '_wizardFinish()' : '_wizardNext(' + step + ')') + '" ' +
+          'style="flex:2;padding:12px;border-radius:10px;border:none;background:var(--accent-blue);color:#fff;font-size:14px;font-weight:600;cursor:pointer;' + (canProceed ? '' : 'opacity:0.4;') + '">' +
+          (isLast ? 'Build my portfolio →' : 'Next →') +
+        '</button>' +
+      '</div>' +
+    '</div>';
+
+  document.body.appendChild(overlay);
+  if (q.type === 'number' && _wizardAnswers.budget) {
+    document.getElementById('wizard-budget').value = _wizardAnswers.budget;
+  }
+}
+
+function _wizardSelect(qid, value, step) {
+  _wizardAnswers[qid] = value;
+  _renderWizardStep(step); // re-render to show selection
+}
+
+function _wizardStep(step) {
+  _renderWizardStep(step);
+}
+
+function _wizardNext(step) {
+  let q = WIZARD_QUESTIONS[step];
+  if (q.type !== 'number' && !_wizardAnswers[q.id]) { showToast('Please pick an option'); return; }
+  _renderWizardStep(step + 1);
+}
+
+function _wizardFinish() {
+  let budget = parseFloat(document.getElementById('wizard-budget').value);
+  if (!budget || budget < 100) { showToast('Please enter a budget of at least $100'); return; }
+  _wizardAnswers.budget = budget;
+
+  // Map answers to profile
+  let goalScore    = { growth: 2, income: 0, safe: -2 }[_wizardAnswers.goal] || 0;
+  let horizonScore = { short: -2, mid: 0, long: 2 }[_wizardAnswers.horizon] || 0;
+  let riskScore    = { low: -2, mid: 0, high: 2 }[_wizardAnswers.risk] || 0;
+  let total = goalScore + horizonScore + riskScore;
+  let profile = total >= 3 ? 'Aggressive' : total <= -2 ? 'Conservative' : 'Balanced';
+
+  document.getElementById('wizard-overlay').remove();
+  _buildWizardPortfolio(profile, _wizardAnswers.budget, _wizardAnswers.sector);
+}
+
+function _buildWizardPortfolio(profile, budget, preferredSector) {
+  // Show loading overlay
+  let overlay = document.createElement('div');
+  overlay.id = 'wizard-loading-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;';
+  overlay.innerHTML =
+    '<div style="background:var(--surface);border-radius:16px;padding:32px 24px;max-width:360px;width:100%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.4);">' +
+      '<div style="font-size:28px;margin-bottom:12px;">⚙️</div>' +
+      '<div style="font-size:16px;font-weight:700;margin-bottom:6px;">Building your portfolio…</div>' +
+      '<div style="font-size:13px;color:var(--text-muted);">Fetching live prices and scores for the best matches</div>' +
+    '</div>';
+  document.body.appendChild(overlay);
+
+  // Extended pool weighted by sector preference
+  let poolByProfile = {
+    Aggressive:   ['NVDA','TSLA','META','AMZN','PLTR','CRWD','AMD','SHOP','HOOD','NET',
+                   'SNOW','NOW','PANW','APP','UBER','NFLX','COIN','RBLX','SOFI','ARM'],
+    Balanced:     ['AAPL','MSFT','GOOGL','JPM','V','MA','UNH','HD','LLY','ABBV',
+                   'MCD','COST','TXN','PEP','TMO','AMGN','BLK','AXP','AVGO','CRM'],
+    Conservative: ['KO','PG','JNJ','VZ','MO','PM','CL','SO','DUK','NEE',
+                   'WEC','XEL','O','D','AEP','EXC','ED','PFE','MRK','ABT']
+  };
+  let sectorMap = {
+    Technology:  ['AAPL','MSFT','NVDA','GOOGL','META','AMD','AVGO','CRM','ADBE','QCOM','NOW','PANW','CRWD','PLTR','ARM','SNOW'],
+    Healthcare:  ['JNJ','UNH','LLY','PFE','ABBV','MRK','TMO','AMGN','GILD','BMY','ISRG','MDT','REGN','VRTX','HCA'],
+    Consumer:    ['AMZN','TSLA','NFLX','UBER','HD','MCD','NKE','SBUX','WMT','COST','KO','PEP','DIS','BKNG','CMG'],
+    Financials:  ['JPM','BAC','WFC','GS','MS','BLK','AXP','V','MA','C','SCHW','COF','PGR','ICE','CME']
+  };
+
+  let basePool = poolByProfile[profile] || poolByProfile['Balanced'];
+  // If sector preference, put those stocks first
+  let pool = basePool.slice();
+  if (preferredSector && preferredSector !== 'none' && sectorMap[preferredSector]) {
+    let sectorStocks = sectorMap[preferredSector].filter(function(t) { return !pool.includes(t); });
+    pool = sectorStocks.concat(pool);
+  }
+  pool = pool.slice(0, 25); // cap at 25 to keep fetch time reasonable
+
+  let criteria = {
+    Aggressive:   { minBeta: 0.8, maxBeta: 99, minScore: 48 },
+    Balanced:     { minBeta: 0.4, maxBeta: 1.8, minScore: 50 },
+    Conservative: { minBeta: 0.0, maxBeta: 1.2, minScore: 46 }
+  };
+  let c = criteria[profile];
+  let today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+  // Fetch quotes + metrics for candidates
+  var candidateSymbols = pool;
+  getSharedPrices(candidateSymbols, 120000).then(function(priceMap) {
+    var metricPromises = pool.map(function(ticker, idx) {
+      return new Promise(function(resolve) { setTimeout(resolve, idx * 150); })
+        .then(function() {
+          return fetch(finnhubUrl('/api/v1/stock/metric', {symbol: ticker, metric: 'all'}))
+            .then(function(r) { return r.json(); })
+            .catch(function() { return {}; });
+        })
+        .then(function(data) {
+          var m = data.metric || {};
+          var q = priceMap[ticker] || {};
+          var price = q.price || 0;
+          if (!price) return null;
+          var beta = m['beta'] || 1;
+          if (beta < c.minBeta || beta > c.maxBeta) return null;
+          var scored = calculateScore(q.changePct || 0, m['52WeekHigh'] || 0, price, m['peBasicExclExtraTTM'] || 0, m, 5, null, null);
+          if (scored.total < c.minScore) return null;
+          var margin = m['netProfitMarginTTM'] || 0;
+          var growth = m['revenueGrowthTTMYoy'] || 0;
+          return { ticker: ticker, price: price, score: scored.total, beta: beta, margin: margin, growth: growth };
+        })
+        .catch(function() { return null; });
+    });
+
+    Promise.all(metricPromises).then(function(results) {
+      var valid = results.filter(function(r) { return r !== null; });
+      valid.sort(function(a, b) { return b.score - a.score; });
+
+      // Try to include at least 1-2 from preferred sector
+      var top5 = valid.slice(0, 5);
+      if (top5.length < 3) {
+        // Fallback defaults
+        top5 = [
+          { ticker: 'AAPL', price: 0, score: 70 },
+          { ticker: 'MSFT', price: 0, score: 70 },
+          { ticker: 'JPM',  price: 0, score: 65 },
+          { ticker: 'V',    price: 0, score: 65 },
+          { ticker: 'KO',   price: 0, score: 60 }
+        ];
+      }
+
+      document.getElementById('wizard-loading-overlay').remove();
+      _showWizardPreview(top5, budget, profile, today);
+    });
+  });
+}
+
+var _wizardFinalPicks = [];
+var _wizardFinalBudget = 0;
+
+function _showWizardPreview(picks, budget, profile, today) {
+  _wizardFinalPicks = picks;
+  _wizardFinalBudget = budget;
+
+  var profileDesc = {
+    Aggressive:   'High Growth',
+    Balanced:     'Balanced',
+    Conservative: 'Conservative'
+  }[profile] || 'Balanced';
+
+  var profileColor = {
+    Aggressive: '#f59e0b',
+    Balanced:   '#3b82f6',
+    Conservative: '#22c55e'
+  }[profile] || '#3b82f6';
+
+  var perStock = budget / picks.length;
+
+  // Fetch stock names from screener pool or fallback
+  var nameMap = {};
+  SCREENER_POOL.forEach(function(s) { nameMap[s.symbol] = s.name; });
+
+  var overlay = document.createElement('div');
+  overlay.id = 'wizard-preview-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:flex-end;justify-content:center;padding:0;';
+
+  var picksHtml = picks.map(function(p) {
+    var name = nameMap[p.ticker] || p.ticker;
+    var shares = p.price > 0 ? (perStock / p.price).toFixed(2) : '—';
+    var scoreColor = p.score >= 65 ? '#22c55e' : p.score >= 50 ? '#f59e0b' : '#ef4444';
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">' +
+      '<div>' +
+        '<div style="font-size:14px;font-weight:700;">' + p.ticker + ' <span style="font-size:12px;font-weight:400;color:var(--text-muted);">· ' + escHtml(name) + '</span></div>' +
+        '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">' + (p.price > 0 ? shares + ' shares @ $' + p.price.toFixed(2) : 'Price loading…') + '</div>' +
+      '</div>' +
+      '<span style="font-size:11px;font-weight:600;color:' + scoreColor + ';background:' + scoreColor + '22;padding:3px 8px;border-radius:8px;">' + p.score + '/100</span>' +
+    '</div>';
+  }).join('');
+
+  overlay.innerHTML =
+    '<div style="background:var(--surface);border-radius:20px 20px 0 0;padding:28px 24px 32px;max-width:480px;width:100%;box-shadow:0 -8px 32px rgba(0,0,0,0.4);max-height:90vh;overflow-y:auto;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
+        '<div style="font-size:18px;font-weight:700;">Your portfolio preview</div>' +
+        '<button onclick="document.getElementById(\'wizard-preview-overlay\').remove();" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:18px;">✕</button>' +
+      '</div>' +
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">' +
+        '<span style="font-size:12px;font-weight:600;color:' + profileColor + ';background:' + profileColor + '22;padding:4px 10px;border-radius:20px;">' + profileDesc + ' profile</span>' +
+        '<span style="font-size:12px;color:var(--text-muted);">$' + budget.toLocaleString() + ' · 5 stocks</span>' +
+      '</div>' +
+      picksHtml +
+      '<div style="font-size:11px;color:var(--text-muted);margin:14px 0 20px;">Prices are live. Shares are fractional — most brokers support this.</div>' +
+      '<button onclick="_wizardCreatePortfolio(\'' + profile + '\',\'' + today + '\')" style="width:100%;padding:14px;border-radius:12px;border:none;background:var(--accent-blue);color:#fff;font-size:15px;font-weight:700;cursor:pointer;">Create this portfolio</button>' +
+      '<button onclick="document.getElementById(\'wizard-preview-overlay\').remove();" style="width:100%;padding:12px;border-radius:12px;border:none;background:transparent;color:var(--text-muted);font-size:13px;cursor:pointer;margin-top:8px;">Start over</button>' +
+    '</div>';
+
+  document.body.appendChild(overlay);
+}
+
+function _wizardCreatePortfolio(profile, today) {
+  var budget = _wizardFinalBudget;
+  var picks = _wizardFinalPicks;
+  var perStock = budget / picks.length;
+
+  var stocks = picks.map(function(p) {
+    var shares = p.price > 0 ? Math.max(0.01, parseFloat((perStock / p.price).toFixed(2))) : 1;
+    var price = p.price > 0 ? parseFloat(p.price.toFixed(2)) : perStock;
+    return { ticker: p.ticker, lots: [{ shares: shares, price: price, date: today }] };
+  });
+
+  var name = profile + ' Portfolio';
+  createPortfolio(name, true, stocks);
+  document.getElementById('wizard-preview-overlay').remove();
+  renderPortfolioTabs();
+  renderPortfolio();
+  showToast('Portfolio created — ' + picks.map(function(p) { return p.ticker; }).join(', '));
 }
 
 function openPortfolioMenu(id) {
