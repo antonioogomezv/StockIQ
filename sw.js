@@ -18,6 +18,16 @@ self.addEventListener("activate", function(e) {
 self.addEventListener("fetch", function(e) {
   let url = e.request.url;
 
+  // Never cache POST requests
+  if (e.request.method !== 'GET') return;
+
+  // Skip Firebase/Firestore — must not be intercepted (streaming connections)
+  if (url.includes("firestore.googleapis.com") || url.includes("firebase") ||
+      url.includes("googleapis.com") || url.includes("google.com/images")) return;
+
+  // Skip Netlify functions (API proxies)
+  if (url.includes("/.netlify/functions/")) return;
+
   // API calls — network only, cache as fallback
   if (url.includes("finnhub.io") || url.includes("polygon.io") || url.includes("anthropic.com")) {
     e.respondWith(fetch(e.request).catch(function() { return caches.match(e.request); }));
@@ -37,6 +47,7 @@ self.addEventListener("fetch", function(e) {
   // App shell (HTML, CSS, JS, config) — network-first so deploys show immediately
   e.respondWith(
     fetch(e.request).then(function(res) {
+      if (!res || res.status !== 200 || res.type === 'opaque') return res;
       return caches.open(CACHE).then(function(c) { c.put(e.request, res.clone()); return res; });
     }).catch(function() {
       return caches.match(e.request);
