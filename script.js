@@ -2617,67 +2617,66 @@ function loadScreener() {
 
   statusEl.innerHTML = '<div class="screener-loading">Finding best matches…</div>';
 
-  // Load fundamentals — Firestore cache first (24h TTL), then Finnhub
+  // Load fundamentals — shared Firestore cache first (24h TTL), then Finnhub
+  // Shared cache means only ONE user per day ever hits Finnhub for fundamentals
   function loadAllFundamentals() {
-    var ref = userRef();
-    var firestorePromise = ref
-      ? ref.get().then(function(doc) {
-          var data = doc.exists ? doc.data() : {};
-          var fund = data.screenerFundamentals || {};
-          if (fund.ts && (Date.now() - fund.ts < 86400000)) return fund.data || null;
-          return null;
-        }).catch(function() { return null; })
-      : Promise.resolve(null);
-
-    return firestorePromise.then(function(cached) {
-      if (cached) {
-        SCREENER_POOL.forEach(function(s) {
-          if (cached[s.symbol]) localStorage.setItem('screener-fund-' + s.symbol, JSON.stringify({ ts: Date.now(), data: cached[s.symbol] }));
-        });
-        return cached;
-      }
-
-      // Check localStorage before fetching
-      var fundMap = {};
-      var toFetch = [];
-      SCREENER_POOL.forEach(function(stock) {
-        var lsCache = localStorage.getItem('screener-fund-' + stock.symbol);
-        if (lsCache) {
-          try {
-            var lc = JSON.parse(lsCache);
-            if (Date.now() - lc.ts < 86400000) { fundMap[stock.symbol] = lc.data; return; }
-          } catch(e) {}
+    return db.collection('sharedCache').doc('fundamentals').get()
+      .then(function(doc) {
+        if (doc.exists) {
+          var fund = doc.data();
+          if (fund.ts && (Date.now() - fund.ts < 86400000) && fund.data) {
+            // Only use cache if we have real data for most stocks (not just zeros)
+            var validCount = Object.keys(fund.data).filter(function(k) {
+              var d = fund.data[k];
+              return d && (d.beta > 0 || d.margin !== 0 || d.growth !== 0 || d.week52High > 0);
+            }).length;
+            if (validCount >= 80) return fund.data;
+          }
         }
-        toFetch.push(stock);
-      });
+        return null;
+      })
+      .catch(function() { return null; })
+      .then(function(cached) {
+        if (cached) return cached;
 
-      if (toFetch.length === 0) return Promise.resolve(fundMap);
+        // Fetch from Finnhub — 1100ms stagger to stay within 60 calls/min rate limit
+        // First user pays the cost; result saved to shared cache so no one else has to
+        statusEl.innerHTML = '<div class="screener-loading">Loading company data for the first time — takes about 2 min, then stays fast for everyone.</div>';
+        var fundMap = {};
+        var delay = 0;
+        var loaded = 0;
+        var promises = SCREENER_POOL.map(function(stock) {
+          var d = delay; delay += 1100;
+          return new Promise(function(resolve) {
+            setTimeout(function() {
+              fetch(finnhubUrl('/api/v1/stock/metric', {symbol: stock.symbol, metric: 'all'}))
+                .then(function(r) { return r.json(); })
+                .then(function(m) {
+                  var metrics = m.metric || {};
+                  var beta = metrics['beta'] || 0;
+                  var margin = metrics['netProfitMarginTTM'] || 0;
+                  var growth = metrics['revenueGrowthTTMYoy'] || 0;
+                  var pe = metrics['peBasicExclExtraTTM'] || metrics['peTTM'] || 0;
+                  var dividend = metrics['dividendYieldIndicatedAnnual'] || 0;
+                  var week52High = metrics['52WeekHigh'] || 0;
+                  // Only save real data — skip if everything is zero (rate-limited response)
+                  if (beta > 0 || margin !== 0 || growth !== 0 || week52High > 0) {
+                    fundMap[stock.symbol] = { pe: pe, beta: beta, margin: margin, growth: growth, dividend: dividend, week52High: week52High };
+                  }
+                  loaded++;
+                  if (statusEl) statusEl.innerHTML = '<div class="screener-loading">Loading fundamentals… ' + loaded + '/' + SCREENER_POOL.length + '</div>';
+                })
+                .catch(function() {}) // skip failed fetches — don't cache zeros
+                .then(resolve);
+            }, d);
+          });
+        });
 
-      statusEl.innerHTML = '<div class="screener-loading">First time setup — loading fundamentals… this takes ~30s once.</div>';
-      var delay = 0;
-      var promises = toFetch.map(function(stock) {
-        var d = delay; delay += 250;
-        return new Promise(function(resolve) {
-          setTimeout(function() {
-            fetch(finnhubUrl('/api/v1/stock/metric', {symbol: stock.symbol, metric: 'all'}))
-              .then(function(r) { return r.json(); })
-              .then(function(m) {
-                var metrics = m.metric || {};
-                var data = { pe: metrics['peBasicExclExtraTTM'] || metrics['peTTM'] || 0, beta: metrics['beta'] || 0, margin: metrics['netProfitMarginTTM'] || 0, growth: metrics['revenueGrowthTTMYoy'] || 0, dividend: metrics['dividendYieldIndicatedAnnual'] || 0, week52High: metrics['52WeekHigh'] || 0 };
-                fundMap[stock.symbol] = data;
-                localStorage.setItem('screener-fund-' + stock.symbol, JSON.stringify({ ts: Date.now(), data: data }));
-              })
-              .catch(function() { fundMap[stock.symbol] = { pe:0, beta:0, margin:0, growth:0, dividend:0, week52High:0 }; })
-              .then(resolve);
-          }, d);
+        return Promise.all(promises).then(function() {
+          db.collection('sharedCache').doc('fundamentals').set({ ts: Date.now(), data: fundMap }).catch(function() {});
+          return fundMap;
         });
       });
-
-      return Promise.all(promises).then(function() {
-        if (ref) ref.set({ screenerFundamentals: { ts: Date.now(), data: fundMap } }, { merge: true }).catch(function() {});
-        return fundMap;
-      });
-    });
   }
 
   // Fetch prices via shared Firestore cache (2min TTL) — saves Finnhub calls for all users
