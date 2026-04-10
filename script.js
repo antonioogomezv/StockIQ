@@ -2455,6 +2455,7 @@ var _screenerData = [];
 var _screenerLoaded = false;
 var _screenerGoal = null;
 var _screenerSector = null;
+var _screenerRenderToken = 0;
 
 var SCREENER_SECTORS = ['Technology','Healthcare','Financials','Energy','Consumer','Industrials','Real Estate','Utilities'];
 
@@ -2680,10 +2681,6 @@ function loadScreener() {
   }
 
   // Fetch prices via shared Firestore cache (2min TTL) — saves Finnhub calls for all users
-  function fetchPrices(symbols) {
-    return getSharedPrices(symbols, 120000); // 2 min TTL for screener
-  }
-
   loadAllFundamentals().then(function(fundMap) {
     // Build screener data with price=0 first so filtering works on fundamentals
     var lastKnown = JSON.parse(localStorage.getItem('screener-changepct-last') || '{}');
@@ -2697,22 +2694,7 @@ function loadScreener() {
     _screenerData = results;
     _screenerLoaded = true;
     if (statusEl) statusEl.innerHTML = '';
-    renderScreenerResults();
-
-    // Now fetch live prices for ALL stocks, update in place
-    var allSymbols = SCREENER_POOL.map(function(s) { return s.symbol; });
-    fetchPrices(allSymbols).then(function(priceMap) {
-      _screenerData = _screenerData.map(function(s) {
-        var q = priceMap[s.symbol] || { price: 0, changePct: s.changePct };
-        var price = q.price || 0;
-        var changePct = q.changePct || s.changePct;
-        var score = calcQuickScore(s.pe, s.beta, s.margin, s.growth, changePct, price, s.week52High);
-        var signal = score >= 65 ? 'Strong' : score >= 50 ? 'Watch' : 'Risky';
-        return Object.assign({}, s, { price: price, changePct: changePct, score: score, signal: signal });
-      });
-      localStorage.setItem('screener-cache', JSON.stringify({ ts: Date.now(), data: _screenerData }));
-      renderScreenerResults();
-    });
+    renderScreenerResults(); // renders immediately; prices fetched per visible set inside renderScreenerResults
   }).catch(function() {
     if (statusEl) statusEl.innerHTML = '<div class="screener-loading">Could not load data. Check your connection.</div>';
   });
@@ -2793,8 +2775,8 @@ function renderScreenerResults() {
             '<div class="screener-card-name">' + escHtml(s.name) + '</div>' +
           '</div>' +
           '<div class="screener-card-right">' +
-            '<div class="screener-card-price">$' + (s.price > 0 ? s.price.toFixed(2) : '—') + '</div>' +
-            '<div class="screener-card-change" style="color:' + changeColor + ';">' + (up ? '+' : '') + s.changePct.toFixed(2) + '%</div>' +
+            '<div class="screener-card-price" id="sc-price-' + s.symbol + '">' + (s.price > 0 ? '$' + s.price.toFixed(2) : '<span style="color:#64748b">Loading…</span>') + '</div>' +
+            '<div class="screener-card-change" id="sc-change-' + s.symbol + '" style="color:' + changeColor + ';">' + (s.price > 0 ? (up ? '+' : '') + s.changePct.toFixed(2) + '%' : '') + '</div>' +
           '</div>' +
         '</div>' +
         '<div class="screener-card-reason">' + reason + '</div>' +
@@ -2805,6 +2787,33 @@ function renderScreenerResults() {
       '</div>';
     }).join('') +
     '</div>';
+
+  // Fetch prices for just the visible stocks, update in-place
+  var token = ++_screenerRenderToken;
+  var visibleSymbols = data.map(function(s) { return s.symbol; });
+  getSharedPrices(visibleSymbols, 120000).then(function(priceMap) {
+    if (token !== _screenerRenderToken) return; // user changed filter, discard
+    visibleSymbols.forEach(function(sym) {
+      var q = priceMap[sym] || {};
+      if (!q.price) return;
+      // Update _screenerData so re-renders have fresh prices
+      var idx = _screenerData.findIndex(function(s) { return s.symbol === sym; });
+      if (idx >= 0) {
+        var s = _screenerData[idx];
+        var score = calcQuickScore(s.pe, s.beta, s.margin, s.growth, q.changePct || 0, q.price, s.week52High);
+        _screenerData[idx] = Object.assign({}, s, { price: q.price, changePct: q.changePct || 0, score: score, signal: score >= 65 ? 'Strong' : score >= 50 ? 'Watch' : 'Risky' });
+      }
+      // Update DOM in-place
+      var priceEl = document.getElementById('sc-price-' + sym);
+      var changeEl = document.getElementById('sc-change-' + sym);
+      if (priceEl) priceEl.textContent = '$' + q.price.toFixed(2);
+      if (changeEl) {
+        var up = (q.changePct || 0) >= 0;
+        changeEl.textContent = (up ? '+' : '') + (q.changePct || 0).toFixed(2) + '%';
+        changeEl.style.color = up ? 'var(--accent-green)' : 'var(--loss)';
+      }
+    });
+  });
 }
 
 function setTrendingFilter(filter) {
