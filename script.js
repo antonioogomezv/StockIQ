@@ -87,6 +87,78 @@ let finnhubKey   = window.FINNHUB_KEY;
 let polygonKey   = window.POLYGON_KEY;
 let anthropicKey = window.ANTHROPIC_KEY;
 let cache = {};
+
+// ── Shared Firestore price cache ─────────────────────────────────────────────
+// All authenticated users read from / write to sharedCache/prices in Firestore.
+// TTL: 2 minutes for screener (135 stocks), 1 minute for market/trending.
+// Only the first user whose cache is stale makes Finnhub calls — everyone else
+// gets the result for free.
+
+var _sharedPriceCache = null; // in-memory copy for this session
+
+function getSharedPrices(symbols, ttlMs) {
+  // 1. Check in-memory first
+  if (_sharedPriceCache && _sharedPriceCache.ts && (Date.now() - _sharedPriceCache.ts < ttlMs)) {
+    var hit = {};
+    symbols.forEach(function(s) { if (_sharedPriceCache.data[s]) hit[s] = _sharedPriceCache.data[s]; });
+    if (Object.keys(hit).length === symbols.length) return Promise.resolve(hit);
+  }
+
+  // 2. Check Firestore shared cache
+  return db.collection('sharedCache').doc('prices').get()
+    .then(function(doc) {
+      var stored = doc.exists ? doc.data() : {};
+      var age = stored.ts ? (Date.now() - stored.ts) : Infinity;
+      if (age < ttlMs && stored.data) {
+        _sharedPriceCache = stored;
+        var hit = {};
+        symbols.forEach(function(s) { if (stored.data[s]) hit[s] = stored.data[s]; });
+        if (Object.keys(hit).length > 0) return hit;
+      }
+      // 3. Cache stale — fetch from Finnhub and save for everyone
+      return _fetchAndCachePrices(symbols, stored.data || {});
+    })
+    .catch(function() {
+      // Firestore unavailable — fetch directly
+      return _fetchAndCachePrices(symbols, {});
+    });
+}
+
+function _fetchAndCachePrices(symbols, existing) {
+  var priceMap = Object.assign({}, existing);
+  var delay = 0;
+  var promises = symbols.map(function(sym) {
+    var d = delay; delay += 120;
+    return new Promise(function(resolve) {
+      setTimeout(function() {
+        fetch(finnhubUrl('/api/v1/quote', {symbol: sym}))
+          .then(function(r) { return r.json(); })
+          .then(function(q) {
+            if (q.c > 0) {
+              priceMap[sym] = { price: q.c, changePct: q.dp || 0, change: q.d || 0 };
+              // Persist last known changePct for after-hours
+              if (q.dp) {
+                var lk = JSON.parse(localStorage.getItem('screener-changepct-last') || '{}');
+                lk[sym] = q.dp;
+                localStorage.setItem('screener-changepct-last', JSON.stringify(lk));
+              }
+            }
+          })
+          .catch(function() {})
+          .then(resolve);
+      }, d);
+    });
+  });
+  return Promise.all(promises).then(function() {
+    var record = { ts: Date.now(), data: priceMap };
+    _sharedPriceCache = record;
+    db.collection('sharedCache').doc('prices').set(record).catch(function() {});
+    var result = {};
+    symbols.forEach(function(s) { if (priceMap[s]) result[s] = priceMap[s]; });
+    return result;
+  });
+}
+// ─────────────────────────────────────────────────────────────────────────────
 let chartInstance = null;
 let currentTicker = null;
 let currentScore = null;
@@ -2014,13 +2086,13 @@ function renderWatchlist() {
   else if (wlSort === 'ticker') initSorted.sort(function(a, b) { return a.ticker.localeCompare(b.ticker); });
   items.innerHTML = initSorted.map(function(item) { return buildRow(item, null, 0); }).join("");
 
-  // Fetch live quotes in parallel
-  Promise.all(watchlist.map(function(item) {
-    return fetch(finnhubUrl('/api/v1/quote', {symbol: item.ticker}))
-      .then(function(r) { return r.json(); })
-      .then(function(q) { return { ticker: item.ticker, price: q.c || null, changePct: q.dp || 0, prevClose: q.pc || 0 }; })
-      .catch(function() { return { ticker: item.ticker, price: null, changePct: 0, prevClose: 0 }; });
-  })).then(function(quotes) {
+  // Fetch live quotes via shared cache
+  var wlSymbols = watchlist.map(function(item) { return item.ticker; });
+  getSharedPrices(wlSymbols, 60000).then(function(priceMap) {
+    var quotes = watchlist.map(function(item) {
+      var p = priceMap[item.ticker] || {};
+      return { ticker: item.ticker, price: p.price || null, changePct: p.changePct || 0, prevClose: p.prevClose || 0 };
+    });
     let quoteMap = {};
     quotes.forEach(function(q) { quoteMap[q.ticker] = q; });
     checkPriceAlerts(quoteMap);
@@ -2213,26 +2285,13 @@ function loadTrendingTickers(forceRefresh) {
 
   list.innerHTML = '<div class="trending-loading">Fetching prices...</div>';
 
-  // Stagger requests 200ms apart to avoid rate limit
-  let delay = 0;
-  let promises = tickers.map(function(t) {
-    let d = delay;
-    delay += 200;
-    return new Promise(function(resolve) {
-      setTimeout(function() {
-        fetch(finnhubUrl('/api/v1/quote', {symbol: t.symbol}))
-          .then(function(r) { return r.json(); })
-          .then(function(q) {
-            let price = q.c > 0 ? q.c : q.pc;
-            resolve({ symbol: t.symbol, name: t.name, price: price, change: q.d || 0, changePct: q.dp || 0 });
-          })
-          .catch(function() { resolve(null); });
-      }, d);
-    });
-  });
-
-  Promise.all(promises).then(function(results) {
-    let valid = results.filter(function(r) { return r && r.price > 0; });
+  var symbols = tickers.map(function(t) { return t.symbol; });
+  getSharedPrices(symbols, 60000).then(function(priceMap) { // 1 min TTL for trending
+    var valid = tickers.map(function(t) {
+      var q = priceMap[t.symbol];
+      if (!q || !q.price) return null;
+      return { symbol: t.symbol, name: t.name, price: q.price, change: q.change || 0, changePct: q.changePct || 0 };
+    }).filter(function(r) { return r && r.price > 0; });
     valid.sort(function(a, b) { return Math.abs(b.changePct) - Math.abs(a.changePct); });
     localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data: valid }));
     allTrendingData = valid;
@@ -2620,31 +2679,9 @@ function loadScreener() {
     });
   }
 
-  // Fetch live Finnhub prices for a list of symbols, staggered 120ms apart
+  // Fetch prices via shared Firestore cache (2min TTL) — saves Finnhub calls for all users
   function fetchPrices(symbols) {
-    var delay = 0;
-    var priceMap = {};
-    var promises = symbols.map(function(sym) {
-      var d = delay; delay += 120;
-      return new Promise(function(resolve) {
-        setTimeout(function() {
-          fetch(finnhubUrl('/api/v1/quote', {symbol: sym}))
-            .then(function(r) { return r.json(); })
-            .then(function(q) {
-              priceMap[sym] = { price: q.c || q.pc || 0, changePct: q.dp || 0 };
-              // Save changePct for after-hours use
-              if (q.dp) {
-                var lk = JSON.parse(localStorage.getItem('screener-changepct-last') || '{}');
-                lk[sym] = q.dp;
-                localStorage.setItem('screener-changepct-last', JSON.stringify(lk));
-              }
-            })
-            .catch(function() { priceMap[sym] = { price: 0, changePct: 0 }; })
-            .then(resolve);
-        }, d);
-      });
-    });
-    return Promise.all(promises).then(function() { return priceMap; });
+    return getSharedPrices(symbols, 120000); // 2 min TTL for screener
   }
 
   loadAllFundamentals().then(function(fundMap) {
@@ -2855,44 +2892,33 @@ function loadMarketOverview() {
   // Clone content now (both copies get "—" placeholders; prices update both via querySelectorAll)
   _rebuildTickerClone();
 
-  // Fetch index prices — update ALL matching elements (original + clone)
-  indices.forEach(function(index) {
-    fetch(finnhubUrl("/api/v1/quote", {symbol: index.ticker}))
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        let price = data.c;
-        let changePct = data.dp;
-        if (!price) return;
-        let priceStr = "$" + price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        let arrow = changePct >= 0 ? "▲" : "▼";
-        let sign = changePct >= 0 ? "+" : "";
-        let changeStr = arrow + " " + sign + changePct.toFixed(2) + "%";
-        let changeColor = changePct >= 0 ? "#16a34a" : "#dc2626";
-        _updateTickerEl('[data-mid="' + index.priceKey + '"]', priceStr, null);
-        _updateTickerEl('[data-mid="' + index.changeKey + '"]', changeStr, changeColor);
-      })
-      .catch(function() {});
-  });
-
-  // Fetch watchlist prices — staggered, update ALL matching elements (original + clone)
-  watchlist.forEach(function(item, i) {
-    setTimeout(function() {
-      fetch(finnhubUrl("/api/v1/quote", {symbol: item.ticker}))
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          let price = data.c;
-          let changePct = data.dp;
-          if (!price) return;
-          let priceStr = "$" + price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-          let arrow = changePct >= 0 ? "▲" : "▼";
-          let sign = changePct >= 0 ? "+" : "";
-          let changeStr = arrow + " " + sign + changePct.toFixed(2) + "%";
-          let changeColor = changePct >= 0 ? "#16a34a" : "#dc2626";
-          _updateTickerEl('[data-wlprice="' + item.ticker + '"]', priceStr, null);
-          _updateTickerEl('[data-wlchange="' + item.ticker + '"]', changeStr, changeColor);
-        })
-        .catch(function() {});
-    }, 200 * (i + 1));
+  // Fetch index + watchlist prices via shared cache
+  var allTickerBarSymbols = indices.map(function(idx) { return idx.ticker; }).concat(watchlist.map(function(item) { return item.ticker; }));
+  getSharedPrices(allTickerBarSymbols, 60000).then(function(priceMap) {
+    indices.forEach(function(index) {
+      var data = priceMap[index.ticker] || {};
+      var price = data.price, changePct = data.changePct;
+      if (!price) return;
+      var priceStr = "$" + price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      var arrow = changePct >= 0 ? "▲" : "▼";
+      var sign = changePct >= 0 ? "+" : "";
+      var changeStr = arrow + " " + sign + changePct.toFixed(2) + "%";
+      var changeColor = changePct >= 0 ? "#16a34a" : "#dc2626";
+      _updateTickerEl('[data-mid="' + index.priceKey + '"]', priceStr, null);
+      _updateTickerEl('[data-mid="' + index.changeKey + '"]', changeStr, changeColor);
+    });
+    watchlist.forEach(function(item) {
+      var data = priceMap[item.ticker] || {};
+      var price = data.price, changePct = data.changePct;
+      if (!price) return;
+      var priceStr = "$" + price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      var arrow = changePct >= 0 ? "▲" : "▼";
+      var sign = changePct >= 0 ? "+" : "";
+      var changeStr = arrow + " " + sign + changePct.toFixed(2) + "%";
+      var changeColor = changePct >= 0 ? "#16a34a" : "#dc2626";
+      _updateTickerEl('[data-wlprice="' + item.ticker + '"]', priceStr, null);
+      _updateTickerEl('[data-wlchange="' + item.ticker + '"]', changeStr, changeColor);
+    });
   });
 }
 
@@ -3051,27 +3077,22 @@ function showSectorStocks(name) {
     '</div>';
   }).join('');
 
-  // Fetch quotes staggered
-  var delay = 0;
-  tickers.forEach(function(s) {
-    var d = delay; delay += 120;
-    setTimeout(function() {
-      fetch(finnhubUrl('/api/v1/quote', {symbol: s.t}))
-        .then(function(r) { return r.json(); })
-        .then(function(q) {
-          var row = list.querySelector('[data-ticker="' + s.t + '"]');
-          if (!row) return;
-          var price = q.c || 0;
-          var dp = q.dp || 0;
-          var up = dp >= 0;
-          var color = up ? 'var(--accent-green, #16a34a)' : '#dc2626';
-          row.querySelector('.sector-stock-price').textContent = price > 0 ? '$' + price.toFixed(2) : '—';
-          var chgEl = row.querySelector('.sector-stock-chg');
-          chgEl.textContent = price > 0 ? (up ? '+' : '') + dp.toFixed(2) + '%' : '—';
-          chgEl.style.color = price > 0 ? color : '';
-        })
-        .catch(function() {});
-    }, d);
+  // Fetch quotes via shared cache
+  var symbols = tickers.map(function(s) { return s.t; });
+  getSharedPrices(symbols, 60000).then(function(priceMap) {
+    tickers.forEach(function(s) {
+      var q = priceMap[s.t] || {};
+      var row = list.querySelector('[data-ticker="' + s.t + '"]');
+      if (!row) return;
+      var price = q.price || 0;
+      var dp = q.changePct || 0;
+      var up = dp >= 0;
+      var color = up ? 'var(--accent-green, #16a34a)' : '#dc2626';
+      row.querySelector('.sector-stock-price').textContent = price > 0 ? '$' + price.toFixed(2) : '—';
+      var chgEl = row.querySelector('.sector-stock-chg');
+      chgEl.textContent = price > 0 ? (up ? '+' : '') + dp.toFixed(2) + '%' : '—';
+      chgEl.style.color = price > 0 ? color : '';
+    });
   });
 }
 
@@ -3106,20 +3127,12 @@ function loadSectors() {
     let p = JSON.parse(cached);
     if (Date.now() - p.ts < 300000) { renderSectors(p.data); return; }
   }
-  let delay = 0;
-  let promises = sectors.map(function(s) {
-    let d = delay; delay += 150;
-    return new Promise(function(resolve) {
-      setTimeout(function() {
-        fetch(finnhubUrl('/api/v1/quote', {symbol: s.etf}))
-          .then(function(r) { return r.json(); })
-          .then(function(q) { resolve({ name: s.name, etf: s.etf, changePct: q.dp || 0, marketOpen: q.c > 0 }); })
-          .catch(function() { resolve(null); });
-      }, d);
-    });
-  });
-  Promise.all(promises).then(function(results) {
-    let valid = results.filter(function(r) { return r !== null; });
+  var etfSymbols = sectors.map(function(s) { return s.etf; });
+  getSharedPrices(etfSymbols, 300000).then(function(priceMap) { // 5 min TTL for sectors
+    var valid = sectors.map(function(s) {
+      var q = priceMap[s.etf] || {};
+      return { name: s.name, etf: s.etf, changePct: q.changePct || 0, marketOpen: q.price > 0 };
+    }).filter(function(r) { return r !== null; });
     valid.sort(function(a, b) { return b.changePct - a.changePct; });
     localStorage.setItem('sectors-cache', JSON.stringify({ ts: Date.now(), data: valid }));
     renderSectors(valid);
@@ -3651,37 +3664,33 @@ function renderPortfolio() {
   empty.style.display = 'none';
   summary.style.display = 'block';
   let totalValue = 0, totalCost = 0, totalDayChange = 0;
-  let scores = [], fetchPromises = [], stockData = [], failedTickers = [];
-  portfolio.forEach(function(item, idx) {
-    // Compute totals across all lots
+  let scores = [], stockData = [], failedTickers = [];
+  // Pre-compute lot totals so we can use them in the price callback
+  let lotTotals = portfolio.map(function(item) {
     let totalShares = item.lots.reduce(function(sum, l) { return sum + l.shares; }, 0);
     let totalLotCost = item.lots.reduce(function(sum, l) { return sum + l.shares * l.price; }, 0);
     let avgPrice = totalShares > 0 ? totalLotCost / totalShares : 0;
-    // Stagger requests 120ms apart to avoid Finnhub rate limiting
-    let p = new Promise(function(resolve) { setTimeout(resolve, idx * 120); })
-      .then(function() { return fetch(finnhubUrl('/api/v1/quote', {symbol: item.ticker})); })
-      .then(function(r) { return r.json(); })
-      .then(function(q) {
-        let currentPrice = q.c || avgPrice; // fall back to buy price if rate-limited
-        let value = currentPrice * totalShares;
-        let cost = totalLotCost;
-        let gain = value - cost;
-        let gainPct = cost > 0 ? ((gain / cost) * 100) : 0;
-        // q.d is the exact $ change from previous close — avoids rounding errors from dp%
-        let dayChangeAmt = (q.d || 0) * totalShares;
-        totalValue += value; totalCost += cost; totalDayChange += dayChangeAmt;
-        let histScore = JSON.parse(localStorage.getItem('history_score_' + item.ticker) || '[]');
-        let score = histScore.length > 0 ? histScore[histScore.length - 1].score : null;
-        if (score) scores.push(score);
-        stockData.push({ ticker: item.ticker, lots: item.lots, shares: totalShares, buyPrice: avgPrice, currentPrice, value, cost, gain, gainPct, dayChangeAmt, score });
-      })
-      .catch(function() {
-        failedTickers.push(item.ticker);
-        stockData.push({ ticker: item.ticker, lots: item.lots, shares: totalShares, buyPrice: avgPrice, currentPrice: avgPrice, value: totalLotCost, cost: totalLotCost, gain: 0, gainPct: 0, dayChangeAmt: 0, score: null });
-      });
-    fetchPromises.push(p);
+    return { totalShares: totalShares, totalLotCost: totalLotCost, avgPrice: avgPrice };
   });
-  Promise.all(fetchPromises).then(function() {
+  var portSymbols = portfolio.map(function(item) { return item.ticker; });
+  getSharedPrices(portSymbols, 60000).then(function(priceMap) {
+    portfolio.forEach(function(item, idx) {
+      var lt = lotTotals[idx];
+      var q = priceMap[item.ticker] || {};
+      var currentPrice = q.price || lt.avgPrice;
+      var value = currentPrice * lt.totalShares;
+      var cost = lt.totalLotCost;
+      var gain = value - cost;
+      var gainPct = cost > 0 ? ((gain / cost) * 100) : 0;
+      var dayChangeAmt = (q.change || 0) * lt.totalShares;
+      totalValue += value; totalCost += cost; totalDayChange += dayChangeAmt;
+      var histScore = JSON.parse(localStorage.getItem('history_score_' + item.ticker) || '[]');
+      var score = histScore.length > 0 ? histScore[histScore.length - 1].score : null;
+      if (score) scores.push(score);
+      if (!q.price) failedTickers.push(item.ticker);
+      stockData.push({ ticker: item.ticker, lots: item.lots, shares: lt.totalShares, buyPrice: lt.avgPrice, currentPrice: currentPrice, value: value, cost: cost, gain: gain, gainPct: gainPct, dayChangeAmt: dayChangeAmt, score: score });
+    });
+  }).then(function() {
     let totalGain = totalValue - totalCost;
     let totalGainPct = totalCost > 0 ? ((totalGain / totalCost) * 100) : 0;
     let avgScore = scores.length > 0 ? Math.round(scores.reduce(function(a, b) { return a + b; }, 0) / scores.length) : null;
@@ -3798,7 +3807,7 @@ function fetchSpyBenchmark(portfolio, callback) {
   // Use a 7-day window to handle weekends/holidays
   let toDate = new Date(earliest.getTime() + 7 * 86400000).toISOString().split('T')[0];
   Promise.all([
-    fetch(finnhubUrl('/api/v1/quote', {symbol: 'SPY'})).then(function(r) { return r.json(); }).catch(function() { return {}; }),
+    getSharedPrices(['SPY'], 300000).then(function(m) { return { c: (m['SPY']||{}).price || 0 }; }).catch(function() { return {}; }),
     fetch(polygonUrl('/v2/aggs/ticker/SPY/range/1/day/' + fromDate + '/' + toDate, {})).then(function(r) { return r.json(); }).catch(function() { return {}; })
   ]).then(function(results) {
     let currentSPY = results[0].c || 0;
