@@ -2305,23 +2305,19 @@ let allTrendingData = [];
 // ── STOCK SCREENER ─────────────────────────────────────────────────────────
 
 var SCREENER_POOL = [
-  // Technology (25)
+  // Technology (21) — software, semiconductors, hardware, cloud, cybersecurity
   {symbol:'AAPL',name:'Apple',sector:'Technology'},
   {symbol:'MSFT',name:'Microsoft',sector:'Technology'},
   {symbol:'NVDA',name:'NVIDIA',sector:'Technology'},
-  {symbol:'GOOGL',name:'Alphabet',sector:'Technology'},
-  {symbol:'META',name:'Meta',sector:'Technology'},
-  {symbol:'AMZN',name:'Amazon',sector:'Technology'},
+  {symbol:'GOOGL',name:'Alphabet (Google)',sector:'Technology'},
+  {symbol:'META',name:'Meta (Facebook)',sector:'Technology'},
   {symbol:'AMD',name:'AMD',sector:'Technology'},
   {symbol:'INTC',name:'Intel',sector:'Technology'},
   {symbol:'ORCL',name:'Oracle',sector:'Technology'},
   {symbol:'CRM',name:'Salesforce',sector:'Technology'},
   {symbol:'AVGO',name:'Broadcom',sector:'Technology'},
-  {symbol:'TSLA',name:'Tesla',sector:'Technology'},
-  {symbol:'NFLX',name:'Netflix',sector:'Technology'},
   {symbol:'ADBE',name:'Adobe',sector:'Technology'},
   {symbol:'QCOM',name:'Qualcomm',sector:'Technology'},
-  {symbol:'UBER',name:'Uber',sector:'Technology'},
   {symbol:'SHOP',name:'Shopify',sector:'Technology'},
   {symbol:'SNOW',name:'Snowflake',sector:'Technology'},
   {symbol:'NOW',name:'ServiceNow',sector:'Technology'},
@@ -2331,7 +2327,7 @@ var SCREENER_POOL = [
   {symbol:'AMAT',name:'Applied Materials',sector:'Technology'},
   {symbol:'PLTR',name:'Palantir',sector:'Technology'},
   {symbol:'ARM',name:'ARM Holdings',sector:'Technology'},
-  // Healthcare (20)
+  // Healthcare (20) — pharma, biotech, medical devices, health insurance
   {symbol:'JNJ',name:'Johnson & Johnson',sector:'Healthcare'},
   {symbol:'UNH',name:'UnitedHealth',sector:'Healthcare'},
   {symbol:'LLY',name:'Eli Lilly',sector:'Healthcare'},
@@ -2340,7 +2336,7 @@ var SCREENER_POOL = [
   {symbol:'MRK',name:'Merck',sector:'Healthcare'},
   {symbol:'TMO',name:'Thermo Fisher',sector:'Healthcare'},
   {symbol:'AMGN',name:'Amgen',sector:'Healthcare'},
-  {symbol:'GILD',name:'Gilead',sector:'Healthcare'},
+  {symbol:'GILD',name:'Gilead Sciences',sector:'Healthcare'},
   {symbol:'CVS',name:'CVS Health',sector:'Healthcare'},
   {symbol:'BMY',name:'Bristol-Myers Squibb',sector:'Healthcare'},
   {symbol:'ISRG',name:'Intuitive Surgical',sector:'Healthcare'},
@@ -2352,8 +2348,8 @@ var SCREENER_POOL = [
   {symbol:'HCA',name:'HCA Healthcare',sector:'Healthcare'},
   {symbol:'CI',name:'Cigna',sector:'Healthcare'},
   {symbol:'BIIB',name:'Biogen',sector:'Healthcare'},
-  // Financials (20)
-  {symbol:'JPM',name:'JPMorgan',sector:'Financials'},
+  // Financials (20) — banks, insurance, payments, asset managers
+  {symbol:'JPM',name:'JPMorgan Chase',sector:'Financials'},
   {symbol:'BAC',name:'Bank of America',sector:'Financials'},
   {symbol:'WFC',name:'Wells Fargo',sector:'Financials'},
   {symbol:'GS',name:'Goldman Sachs',sector:'Financials'},
@@ -2373,7 +2369,7 @@ var SCREENER_POOL = [
   {symbol:'AFL',name:'Aflac',sector:'Financials'},
   {symbol:'MET',name:'MetLife',sector:'Financials'},
   {symbol:'PRU',name:'Prudential',sector:'Financials'},
-  // Energy (15)
+  // Energy (15) — oil, gas, pipelines, refiners, services
   {symbol:'XOM',name:'ExxonMobil',sector:'Energy'},
   {symbol:'CVX',name:'Chevron',sector:'Energy'},
   {symbol:'COP',name:'ConocoPhillips',sector:'Energy'},
@@ -2389,7 +2385,11 @@ var SCREENER_POOL = [
   {symbol:'DVN',name:'Devon Energy',sector:'Energy'},
   {symbol:'FANG',name:'Diamondback Energy',sector:'Energy'},
   {symbol:'BKR',name:'Baker Hughes',sector:'Energy'},
-  // Consumer (20)
+  // Consumer (24) — retail, food, autos, travel, entertainment, e-commerce
+  {symbol:'AMZN',name:'Amazon',sector:'Consumer'},
+  {symbol:'TSLA',name:'Tesla',sector:'Consumer'},
+  {symbol:'NFLX',name:'Netflix',sector:'Consumer'},
+  {symbol:'UBER',name:'Uber',sector:'Consumer'},
   {symbol:'HD',name:'Home Depot',sector:'Consumer'},
   {symbol:'MCD',name:"McDonald's",sector:'Consumer'},
   {symbol:'NKE',name:'Nike',sector:'Consumer'},
@@ -2410,7 +2410,7 @@ var SCREENER_POOL = [
   {symbol:'DASH',name:'DoorDash',sector:'Consumer'},
   {symbol:'YUM',name:'Yum! Brands',sector:'Consumer'},
   {symbol:'MAR',name:'Marriott',sector:'Consumer'},
-  // Industrials (15)
+  // Industrials (15) — aerospace, defense, logistics, machinery, railroads
   {symbol:'CAT',name:'Caterpillar',sector:'Industrials'},
   {symbol:'RTX',name:'RTX',sector:'Industrials'},
   {symbol:'HON',name:'Honeywell',sector:'Industrials'},
@@ -2426,7 +2426,7 @@ var SCREENER_POOL = [
   {symbol:'NOC',name:'Northrop Grumman',sector:'Industrials'},
   {symbol:'GD',name:'General Dynamics',sector:'Industrials'},
   {symbol:'CSX',name:'CSX',sector:'Industrials'},
-  // Real Estate (10)
+  // Real Estate (10) — REITs: warehouses, towers, malls, data centers, apartments
   {symbol:'PLD',name:'Prologis',sector:'Real Estate'},
   {symbol:'AMT',name:'American Tower',sector:'Real Estate'},
   {symbol:'EQIX',name:'Equinix',sector:'Real Estate'},
@@ -2437,7 +2437,7 @@ var SCREENER_POOL = [
   {symbol:'DLR',name:'Digital Realty',sector:'Real Estate'},
   {symbol:'AVB',name:'AvalonBay',sector:'Real Estate'},
   {symbol:'EQR',name:'Equity Residential',sector:'Real Estate'},
-  // Utilities (10)
+  // Utilities (10) — electric, gas, water utilities
   {symbol:'NEE',name:'NextEra Energy',sector:'Utilities'},
   {symbol:'DUK',name:'Duke Energy',sector:'Utilities'},
   {symbol:'SO',name:'Southern Company',sector:'Utilities'},
