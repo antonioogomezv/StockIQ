@@ -2454,10 +2454,8 @@ var _screenerOpen = false;
 var _screenerData = [];
 var _screenerLoaded = false;
 var _screenerGoal = null;
-var _screenerSector = null;
 var _screenerRenderToken = 0;
 
-var SCREENER_SECTORS = ['Technology','Healthcare','Financials','Energy','Consumer','Industrials','Real Estate','Utilities'];
 
 var SCREENER_GOALS = [
   {
@@ -2571,19 +2569,7 @@ function renderScreenerGoals() {
         g.label +
       '</button>';
     }).join('') +
-    '</div>' +
-    '<div class="screener-sector-label">Filter by sector</div>' +
-    '<div class="screener-sector-row">' +
-    SCREENER_SECTORS.map(function(s) {
-      return '<button class="screener-sector-btn' + (_screenerSector === s ? ' active' : '') + '" onclick="selectScreenerSector(\'' + s + '\')">' + s + '</button>';
-    }).join('') +
     '</div>';
-}
-
-function selectScreenerSector(sector) {
-  _screenerSector = _screenerSector === sector ? null : sector;
-  renderScreenerGoals();
-  renderScreenerResults();
 }
 
 function selectScreenerGoal(id) {
@@ -2735,23 +2721,11 @@ function renderScreenerResults() {
   var goal = SCREENER_GOALS.find(function(g) { return g.id === _screenerGoal; });
   if (!goal) return;
 
-  var sectorFallback = false;
   var data = _screenerData.filter(function(s) {
     if (!goal.filter(s)) return false;
-    if (_screenerSector && s.sector !== _screenerSector) return false;
     if (!goal.skipScoreFilter && s.score < 45) return false;
     return true;
   }).sort(goal.sort).slice(0, 10);
-
-  // If no results with sector filter, fall back to all sectors
-  if (data.length === 0 && _screenerSector) {
-    sectorFallback = true;
-    data = _screenerData.filter(function(s) {
-      if (!goal.filter(s)) return false;
-      if (!goal.skipScoreFilter && s.score < 45) return false;
-      return true;
-    }).sort(goal.sort).slice(0, 10);
-  }
 
   if (data.length === 0) {
     var msg = 'No stocks matched right now — market conditions change daily. Try another goal.';
@@ -2760,7 +2734,7 @@ function renderScreenerResults() {
   }
 
   el.innerHTML =
-    '<div class="screener-count">' + (sectorFallback ? 'No ' + _screenerSector + ' matches — showing best across all sectors' : 'Top ' + data.length + ' match' + (data.length === 1 ? '' : 'es')) + '</div>' +
+    '<div class="screener-count">Top ' + data.length + ' match' + (data.length === 1 ? '' : 'es') + '</div>' +
     '<div class="screener-cards">' +
     data.map(function(s) {
       var up = s.changePct >= 0;
