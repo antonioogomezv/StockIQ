@@ -4032,7 +4032,7 @@ function renderPortfolioRows(data) {
             (hasMultiple ? '<button id="lots-btn-' + s.ticker + '" onclick="event.stopPropagation();togglePortLots(' + escHtml(JSON.stringify(s.ticker)) + ')" class="port-lots-toggle">▾</button>' : '') +
             '<div>' +
               '<div style="font-weight:600;font-size:14px;">' + s.ticker + '</div>' +
-              '<div style="font-size:11px;color:#64748b;">' + s.shares.toFixed(s.shares % 1 === 0 ? 0 : 2) + ' shares · avg $' + s.buyPrice.toFixed(2) + (hasMultiple ? ' · ' + s.lots.length + ' lots' : '') + '</div>' +
+              '<div style="font-size:11px;color:#64748b;">' + s.shares.toFixed(s.shares % 1 === 0 ? 0 : 2) + ' shares · avg $' + s.buyPrice.toFixed(2) + (hasMultiple ? ' · ' + s.lots.length + ' lots' : (s.lots && s.lots[0] && s.lots[0].date ? ' · ' + s.lots[0].date : '')) + '</div>' +
               '<div style="font-size:11px;margin-top:2px;"><span style="color:var(--text-muted);">now $' + s.currentPrice.toFixed(2) + '</span> <span style="color:' + dc + ';">' + (s.dayChangeAmt >= 0 ? '+' : '') + '$' + s.dayChangeAmt.toFixed(2) + ' today</span></div>' +
             '</div>' +
           '</div>' +
