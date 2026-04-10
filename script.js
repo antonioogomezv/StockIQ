@@ -5260,39 +5260,44 @@ function exportPortfolioCSV() {
   let stocks = migratePortfolio(active.stocks || []);
   if (stocks.length === 0) { showToast('Nothing to export'); return; }
 
-  // Yahoo Finance header
+  // Yahoo Finance requires all fields quoted, fractional shares rounded,
+  // and Trade Date in MM/DD/YYYY format
+  function q(v) { return '"' + String(v).replace(/"/g, '""') + '"'; }
+
+  function toYahooDate(dateStr) {
+    if (!dateStr) return '';
+    var d = new Date(dateStr);
+    if (isNaN(d)) return '';
+    var mm = String(d.getMonth() + 1).padStart(2, '0');
+    var dd = String(d.getDate()).padStart(2, '0');
+    return mm + '/' + dd + '/' + d.getFullYear();
+  }
+
   let header = 'Symbol,Current Price,Date,Time,Change,Open,High,Low,Volume,Trade Date,Purchase Price,Quantity,Commission,High Limit,Low Limit,Comment';
   let rows = [header];
 
   stocks.forEach(function(item) {
     item.lots.forEach(function(lot) {
-      // Convert "Apr 1, 2026" → "4/1/2026" for Yahoo Finance
-      var tradeDate = '';
-      if (lot.date) {
-        var d = new Date(lot.date);
-        if (!isNaN(d)) {
-          tradeDate = (d.getMonth() + 1) + '/' + d.getDate() + '/' + d.getFullYear();
-        } else {
-          tradeDate = lot.date;
-        }
-      }
+      // Yahoo Finance does not support fractional shares — round to nearest whole share
+      // If less than 1 share, use 1 as minimum so the row isn't rejected
+      var qty = Math.max(1, Math.round(lot.shares));
       rows.push([
-        item.ticker, // Symbol
-        '',          // Current Price (Yahoo fills this)
-        '',          // Date
-        '',          // Time
-        '',          // Change
-        '',          // Open
-        '',          // High
-        '',          // Low
-        '',          // Volume
-        tradeDate,   // Trade Date
-        lot.price.toFixed(2), // Purchase Price
-        lot.shares,           // Quantity
-        '0',                  // Commission
-        '',                   // High Limit
-        '',                   // Low Limit
-        ''                    // Comment
+        q(item.ticker),
+        q(''),
+        q(''),
+        q(''),
+        q(''),
+        q(''),
+        q(''),
+        q(''),
+        q(''),
+        q(toYahooDate(lot.date)),
+        q(lot.price.toFixed(2)),
+        q(qty),
+        q('0'),
+        q(''),
+        q(''),
+        q('')
       ].join(','));
     });
   });
