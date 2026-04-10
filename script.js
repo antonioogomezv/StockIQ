@@ -5249,32 +5249,60 @@ function getStockNote(ticker) {
 
 
 // ── Export portfolio CSV ─────────────────────────────────────
+// Format matches Yahoo Finance portfolio import:
+// Symbol, Current Price, Date, Time, Change, Open, High, Low, Volume,
+// Trade Date, Purchase Price, Quantity, Commission, High Limit, Low Limit, Comment
 
 function exportPortfolioCSV() {
   let active = getActivePortfolio();
   if (!active) { showToast('Nothing to export'); return; }
-  let rows = ['Section,Ticker,Shares,Avg Cost,Lot #,Lot Shares,Lot Price,Lot Date,Sell Price,Realized Gain'];
-  // Open positions
+
   let stocks = migratePortfolio(active.stocks || []);
+  if (stocks.length === 0) { showToast('Nothing to export'); return; }
+
+  // Yahoo Finance header
+  let header = 'Symbol,Current Price,Date,Time,Change,Open,High,Low,Volume,Trade Date,Purchase Price,Quantity,Commission,High Limit,Low Limit,Comment';
+  let rows = [header];
+
   stocks.forEach(function(item) {
-    let totalShares = item.lots.reduce(function(s, l) { return s + l.shares; }, 0);
-    let totalCost   = item.lots.reduce(function(s, l) { return s + l.shares * l.price; }, 0);
-    let avg = totalShares > 0 ? (totalCost / totalShares).toFixed(2) : 0;
-    item.lots.forEach(function(lot, i) {
-      rows.push(['Open', item.ticker, totalShares, avg, i + 1, lot.shares, lot.price.toFixed(2), lot.date || '', '', ''].join(','));
+    item.lots.forEach(function(lot) {
+      // Convert "Apr 1, 2026" → "4/1/2026" for Yahoo Finance
+      var tradeDate = '';
+      if (lot.date) {
+        var d = new Date(lot.date);
+        if (!isNaN(d)) {
+          tradeDate = (d.getMonth() + 1) + '/' + d.getDate() + '/' + d.getFullYear();
+        } else {
+          tradeDate = lot.date;
+        }
+      }
+      rows.push([
+        item.ticker, // Symbol
+        '',          // Current Price (Yahoo fills this)
+        '',          // Date
+        '',          // Time
+        '',          // Change
+        '',          // Open
+        '',          // High
+        '',          // Low
+        '',          // Volume
+        tradeDate,   // Trade Date
+        lot.price.toFixed(2), // Purchase Price
+        lot.shares,           // Quantity
+        '0',                  // Commission
+        '',                   // High Limit
+        '',                   // Low Limit
+        ''                    // Comment
+      ].join(','));
     });
   });
-  // Closed positions
-  let closed = active.closedPositions || [];
-  closed.forEach(function(c) {
-    rows.push(['Closed', c.ticker, c.sharesSold, '', '', c.sharesSold, c.avgCost ? c.avgCost.toFixed(2) : '', c.date || '', c.sellPrice.toFixed(2), c.realizedGain.toFixed(2)].join(','));
-  });
-  if (rows.length === 1) { showToast('Nothing to export'); return; }
+
   let blob = new Blob([rows.join('\n')], { type: 'text/csv' });
   let a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = (active.name || 'portfolio').replace(/\s+/g, '_') + '.csv';
+  a.download = (active.name || 'portfolio').replace(/\s+/g, '_') + '_yahoo.csv';
   a.click();
+  showToast('Exported — import in Yahoo Finance under Portfolios → Import');
 }
 
 // ── Remove account ───────────────────────────────────────────
