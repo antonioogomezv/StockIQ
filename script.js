@@ -207,8 +207,12 @@ function fmtSigned$(amount) {
 }
 
 function _applyRateAndRerender() {
+  // Re-render active tab
   if (document.getElementById('nav-portfolio').classList.contains('active')) renderPortfolio();
   else if (document.getElementById('nav-watchlist').classList.contains('active')) renderWatchlist();
+  else if (allTrendingData && allTrendingData.length) renderTrending(allTrendingData);
+  // Always refresh market bar prices
+  loadMarketOverview();
 }
 
 function fetchFxRate(callback) {
@@ -2921,7 +2925,7 @@ function renderTrending(data) {
         "<div class='trending-name'>" + escHtml(r.name) + "</div>" +
       "</div>" +
       "<div class='trending-right'>" +
-        "<div class='trending-price'>$" + r.price.toFixed(2) + "</div>" +
+        "<div class='trending-price'>" + fmt$(r.price) + "</div>" +
         "<div class='trending-change' style='color:" + color + ";'>" + sign + r.changePct.toFixed(2) + "%</div>" +
       "</div>" +
     "</div>";
@@ -2986,7 +2990,7 @@ function loadMarketOverview() {
       var data = priceMap[index.ticker] || {};
       var price = data.price, changePct = data.changePct;
       if (!price) return;
-      var priceStr = "$" + price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      var priceStr = fmt$(price);
       var arrow = changePct >= 0 ? "▲" : "▼";
       var sign = changePct >= 0 ? "+" : "";
       var changeStr = arrow + " " + sign + changePct.toFixed(2) + "%";
@@ -2998,7 +3002,7 @@ function loadMarketOverview() {
       var data = priceMap[item.ticker] || {};
       var price = data.price, changePct = data.changePct;
       if (!price) return;
-      var priceStr = "$" + price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      var priceStr = fmt$(price);
       var arrow = changePct >= 0 ? "▲" : "▼";
       var sign = changePct >= 0 ? "+" : "";
       var changeStr = arrow + " " + sign + changePct.toFixed(2) + "%";
