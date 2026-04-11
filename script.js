@@ -188,6 +188,12 @@ let currentTicker = null;
 let currentScore = null;
 let currentName = null;
 let userProfile = null;
+
+function _profileIcon(type) {
+  if (type === 'Conservative') return '<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>';
+  if (type === 'Aggressive')  return '<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>';
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="3" x2="12" y2="21"/><polyline points="3 6 12 3 21 6"/><line x1="3" y1="6" x2="3" y2="13"/><line x1="21" y1="6" x2="21" y2="13"/><path d="M3 13a3 3 0 0 0 6 0H3z"/><path d="M15 13a3 3 0 0 0 6 0h-6z"/></svg>';
+}
 let quizAnswers = {};
 let portfolioChartInstance = null;
 let portfolioLineChartInstance = null;
@@ -1794,7 +1800,7 @@ function getRiskProfileWarning(beta, totalScore) {
   let cssClass = isAlert ? "risk-warning" : "risk-match";
   return "<div class='" + cssClass + "'>" +
     "<div class='risk-profile-header'>" +
-      "<span class='risk-profile-tag'>" + userProfile.icon + " " + userProfile.type.toUpperCase() + "</span>" +
+      "<span class='risk-profile-tag'>" + _profileIcon(userProfile.type) + " " + userProfile.type.toUpperCase() + "</span>" +
       "<span class='risk-stock-tag' style='color:" + stockColor + ";'>" + stockLabel + "</span>" +
     "</div>" +
     "<div class='risk-warning-text'>" + warning + "</div>" +
@@ -1846,12 +1852,13 @@ function showQuizResult() {
   let budget = quizAnswers.step4 || 2500;
   let profile = {};
   if (risk === "low" || goal === "preserve") {
-    profile = { type: "Conservative", icon: '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>', desc: "You prefer stable, lower risk investments. StockIQ will warn you about high volatility stocks.", maxBeta: 1.0, minScore: 55 };
+    profile = { type: "Conservative", desc: "You prefer stable, lower risk investments. StockIQ will warn you about high volatility stocks.", maxBeta: 1.0, minScore: 55 };
   } else if (risk === "high" && horizon === "long") {
-    profile = { type: "Aggressive", icon: '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>', desc: "You're comfortable with big swings for bigger rewards. StockIQ will highlight high growth opportunities.", maxBeta: 2.5, minScore: 40 };
+    profile = { type: "Aggressive", desc: "You're comfortable with big swings for bigger rewards. StockIQ will highlight high growth opportunities.", maxBeta: 2.5, minScore: 40 };
   } else {
-    profile = { type: "Balanced", icon: '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="3" x2="12" y2="21"/><polyline points="3 6 12 3 21 6"/><line x1="3" y1="6" x2="3" y2="13"/><line x1="21" y1="6" x2="21" y2="13"/><path d="M3 13a3 3 0 0 0 6 0H3z"/><path d="M15 13a3 3 0 0 0 6 0h-6z"/></svg>', desc: "You want a mix of growth and stability. StockIQ will help you find stocks with solid fundamentals.", maxBeta: 1.5, minScore: 50 };
+    profile = { type: "Balanced", desc: "You want a mix of growth and stability. StockIQ will help you find stocks with solid fundamentals.", maxBeta: 1.5, minScore: 50 };
   }
+  profile.icon = _profileIcon(profile.type);
   profile.horizon = horizon;
   profile.goal = goal;
   profile.budget = budget;
@@ -1890,7 +1897,7 @@ function finishQuiz() {
   updateRiskBadge();
   if (localStorage.getItem('tour-done')) return;
   let nameEl = document.getElementById("onboarding-profile-name");
-  if (nameEl) nameEl.textContent = userProfile.icon + " " + userProfile.type;
+  if (nameEl) nameEl.innerHTML = userProfile.icon + " " + userProfile.type;
   document.getElementById("onboarding-overlay").style.display = "flex";
   // Reset card state
   _obStep = 0;
@@ -1933,7 +1940,7 @@ function finishOnboarding() {
 function updateRiskBadge() {
   if (!userProfile) return;
   let badge = document.getElementById("risk-badge");
-  if (badge) badge.textContent = userProfile.icon + " " + userProfile.type;
+  if (badge) badge.innerHTML = _profileIcon(userProfile.type) + " " + userProfile.type;
 }
 
 function quickAddToPortfolio() {
@@ -5089,7 +5096,7 @@ function saveUserInfo() {
 function renderProfile() {
   loadUserInfo();
   if (userProfile) {
-    document.getElementById('profile-icon-display').textContent = userProfile.icon;
+    document.getElementById('profile-icon-display').innerHTML = _profileIcon(userProfile.type);
     document.getElementById('profile-type-display').textContent = userProfile.type + ' Investor';
     document.getElementById('profile-desc-display').textContent = userProfile.desc;
     document.getElementById('profile-quiz-btn').textContent = 'Retake Quiz';
@@ -5448,6 +5455,7 @@ auth.onAuthStateChanged(function(user) {
     } else {
       userProfile = JSON.parse(localStorage.getItem('userProfile') || 'null');
     }
+    if (userProfile) userProfile.icon = _profileIcon(userProfile.type);
 
     // Restore portfolios — Firestore is source of truth across devices
     if (data.portfolios) {
