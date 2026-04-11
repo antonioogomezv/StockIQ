@@ -191,8 +191,8 @@ let userProfile = null;
 
 // ── CURRENCY ─────────────────────────────────────────────────────────────────
 let _currency = localStorage.getItem('currency') || 'USD';
-let _fxRate   = 1;
-let _fxSym    = '$';
+let _fxRate   = parseFloat(localStorage.getItem('fx-rate-manual') || '1');
+let _fxSym    = _currency === 'MXN' ? 'MX$' : '$';
 
 function fmt$(amount, decimals) {
   var d = decimals !== undefined ? decimals : 2;
@@ -206,48 +206,48 @@ function fmtSigned$(amount) {
   return (v >= 0 ? '+' : '-') + _fxSym + abs;
 }
 
-function fetchFxRate(callback) {
-  if (_currency === 'USD') { _fxRate = 1; _fxSym = '$'; if (callback) callback(); return; }
-  var cached = JSON.parse(localStorage.getItem('fx-usdmxn') || 'null');
-  if (cached && cached.rate && (Date.now() - cached.ts < 43200000)) {
-    _fxRate = cached.rate; _fxSym = 'MX$'; if (callback) callback(); return;
-  }
-  fetch('/.netlify/functions/fx-rate')
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      var rate = data && data.rates && data.rates.MXN;
-      if (rate) {
-        _fxRate = rate; _fxSym = 'MX$';
-        localStorage.setItem('fx-usdmxn', JSON.stringify({ rate: rate, ts: Date.now() }));
-      }
-      if (callback) callback();
-    })
-    .catch(function() { _fxRate = 20; _fxSym = 'MX$'; if (callback) callback(); });
+function _applyRateAndRerender() {
+  var active = document.querySelector('.tab-btn.active');
+  if (!active) return;
+  var tab = active.getAttribute('data-tab') || active.textContent.trim().toLowerCase();
+  if (tab === 'portfolio') renderPortfolio();
+  else if (tab === 'watchlist') renderWatchlist();
 }
 
 function setCurrency(code) {
-  _currency = code;
-  localStorage.setItem('currency', code);
+  if (code === 'MXN' && _currency === 'USD') {
+    // Ask for the current rate
+    var saved = localStorage.getItem('fx-rate-manual');
+    var def = saved && parseFloat(saved) > 1 ? saved : '17.50';
+    var input = prompt('Enter the current USD → MXN rate:\n(e.g. 17.50)', def);
+    if (!input) return;
+    var rate = parseFloat(input);
+    if (!rate || rate <= 0) { showToast('Invalid rate'); return; }
+    _fxRate = rate;
+    _fxSym = 'MX$';
+    localStorage.setItem('fx-rate-manual', String(rate));
+    _currency = 'MXN';
+  } else {
+    _fxRate = 1;
+    _fxSym = '$';
+    _currency = 'USD';
+  }
+  localStorage.setItem('currency', _currency);
   var btn = document.getElementById('currency-toggle');
-  if (btn) btn.textContent = code;
-  fetchFxRate(function() {
-    var active = document.querySelector('.tab-btn.active');
-    if (active) {
-      var tab = active.getAttribute('data-tab') || active.textContent.trim().toLowerCase();
-      if (tab === 'portfolio') renderPortfolio();
-      else if (tab === 'watchlist') renderWatchlist();
-      else if (tab === 'analyze' && currentTicker) {
-        var priceEl = document.getElementById('stock-price');
-        if (priceEl && priceEl._rawPrice) priceEl.textContent = fmt$(priceEl._rawPrice);
-      }
-    }
-  });
+  if (btn) btn.textContent = _currency;
+  _applyRateAndRerender();
 }
 
 function initCurrency() {
+  if (_currency === 'MXN') {
+    _fxRate = parseFloat(localStorage.getItem('fx-rate-manual') || '17.50');
+    _fxSym = 'MX$';
+  } else {
+    _fxRate = 1;
+    _fxSym = '$';
+  }
   var btn = document.getElementById('currency-toggle');
   if (btn) btn.textContent = _currency;
-  fetchFxRate();
 }
 // ── END CURRENCY ──────────────────────────────────────────────────────────────
 
