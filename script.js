@@ -189,6 +189,68 @@ let currentScore = null;
 let currentName = null;
 let userProfile = null;
 
+// ── CURRENCY ─────────────────────────────────────────────────────────────────
+let _currency = localStorage.getItem('currency') || 'USD';
+let _fxRate   = 1;
+let _fxSym    = '$';
+
+function fmt$(amount, decimals) {
+  var d = decimals !== undefined ? decimals : 2;
+  var v = amount * _fxRate;
+  return _fxSym + v.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+}
+
+function fmtSigned$(amount) {
+  var v = amount * _fxRate;
+  var abs = Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return (v >= 0 ? '+' : '-') + _fxSym + abs;
+}
+
+function fetchFxRate(callback) {
+  if (_currency === 'USD') { _fxRate = 1; _fxSym = '$'; if (callback) callback(); return; }
+  var cached = JSON.parse(localStorage.getItem('fx-usdmxn') || 'null');
+  if (cached && cached.rate && (Date.now() - cached.ts < 43200000)) {
+    _fxRate = cached.rate; _fxSym = 'MX$'; if (callback) callback(); return;
+  }
+  fetch('https://api.frankfurter.app/latest?from=USD&to=MXN')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var rate = data && data.rates && data.rates.MXN;
+      if (rate) {
+        _fxRate = rate; _fxSym = 'MX$';
+        localStorage.setItem('fx-usdmxn', JSON.stringify({ rate: rate, ts: Date.now() }));
+      }
+      if (callback) callback();
+    })
+    .catch(function() { _fxRate = 20; _fxSym = 'MX$'; if (callback) callback(); });
+}
+
+function setCurrency(code) {
+  _currency = code;
+  localStorage.setItem('currency', code);
+  var btn = document.getElementById('currency-toggle');
+  if (btn) btn.textContent = code;
+  fetchFxRate(function() {
+    var active = document.querySelector('.tab-btn.active');
+    if (active) {
+      var tab = active.getAttribute('data-tab') || active.textContent.trim().toLowerCase();
+      if (tab === 'portfolio') renderPortfolio();
+      else if (tab === 'watchlist') renderWatchlist();
+      else if (tab === 'analyze' && currentTicker) {
+        var priceEl = document.getElementById('stock-price');
+        if (priceEl && priceEl._rawPrice) priceEl.textContent = fmt$(priceEl._rawPrice);
+      }
+    }
+  });
+}
+
+function initCurrency() {
+  var btn = document.getElementById('currency-toggle');
+  if (btn) btn.textContent = _currency;
+  fetchFxRate();
+}
+// ── END CURRENCY ──────────────────────────────────────────────────────────────
+
 function _profileIcon(type) {
   if (type === 'Conservative') return '<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>';
   if (type === 'Aggressive')  return '<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>';
@@ -682,8 +744,6 @@ function displayData(data) {
   let { ticker, quote, profile, news, metrics, prices, dates, volumes, earningsData, pastEarnings } = data;
   let price = quote.c, changePct = quote.dp, prevClose = quote.pc, dayHigh = quote.h, dayLow = quote.l;
   let companyName = profile.name || ticker;
-  let isMX = ticker.endsWith('.MX');
-  let currSym = isMX ? 'MX$' : '$';
   let industry = profile.finnhubIndustry || "";
   let week52High = metrics["52WeekHigh"] || 0;
   let week52Low  = metrics["52WeekLow"]  || 0;
@@ -747,9 +807,11 @@ function displayData(data) {
   let changeArrow = changeAmt >= 0 ? "▲" : "▼";
   let changePill = prevClose > 0
     ? "<span class='price-change-pill' style='background:" + (changeAmt >= 0 ? "rgba(22,163,74,0.12)" : "rgba(220,38,38,0.12)") + ";color:" + changeColor + ";'>" +
-      changeArrow + " " + changeSign + currSym + Math.abs(changeAmt).toFixed(2) + " (" + changeSign + changePct.toFixed(2) + "%)" +
+      changeArrow + " " + changeSign + fmt$(Math.abs(changeAmt)) + " (" + changeSign + changePct.toFixed(2) + "%)" +
       "</span>"
     : "";
+  let priceEl = document.getElementById("stock-name");
+  if (priceEl) priceEl._rawPrice = price;
   document.getElementById("stock-name").innerHTML =
     "<div class='stock-header-row'>" +
       logoHtml +
@@ -757,8 +819,8 @@ function displayData(data) {
         "<div class='stock-header-ticker'>" + escHtml(ticker) + " · <span class='stock-header-fullname'>" + escHtml(companyName) + "</span></div>" +
       "</div>" +
     "</div>" +
-    "<div class='stock-header-price'>" +
-      currSym + price.toFixed(2) + (isMX ? "<span class='stock-currency-label'>MXN</span>" : "") +
+    "<div class='stock-header-price' id='stock-price'>" +
+      fmt$(price) + (_currency !== 'USD' ? "<span class='stock-currency-label'>" + _currency + "</span>" : "") +
       changePill +
     "</div>";
 
@@ -2077,7 +2139,7 @@ function renderWatchlist() {
     let signal = item.score >= 65 ? "Strong" : item.score >= 50 ? "Watch" : "Risky";
     let priceHtml = price == null
       ? "<span class='wl-price'>—</span>"
-      : "<span class='wl-price'>$" + price.toFixed(2) + "</span><span class='wl-change' style='color:" + (changePct >= 0 ? "#16a34a" : "#dc2626") + ";'>" + (changePct >= 0 ? "+" : "") + changePct.toFixed(2) + "%</span>";
+      : "<span class='wl-price'>" + fmt$(price) + "</span><span class='wl-change' style='color:" + (changePct >= 0 ? "#16a34a" : "#dc2626") + ";'>" + (changePct >= 0 ? "+" : "") + changePct.toFixed(2) + "%</span>";
     let hist = buildScoreHistoryBars(item.ticker, item.score);
     let histDrawer = hist.bars
       ? "<div class='wl-history-drawer' id='wl-hist-" + item.ticker + "' style='display:none;'>" +
@@ -4076,16 +4138,15 @@ function renderPortfolio() {
     let avgScore = scores.length > 0 ? Math.round(scores.reduce(function(a, b) { return a + b; }, 0) / scores.length) : null;
     let gainColor = totalGain >= 0 ? '#16a34a' : '#dc2626';
     let dayColor = totalDayChange >= 0 ? '#16a34a' : '#dc2626';
-    let fmt = function(n) { return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
-    document.getElementById('port-total-value').textContent = '$' + fmt(totalValue);
+    document.getElementById('port-total-value').textContent = fmt$(totalValue);
     let costEl = document.getElementById('port-total-cost');
-    if (costEl) costEl.textContent = 'Cost $' + fmt(totalCost);
-    document.getElementById('port-total-gain').textContent = (totalGain >= 0 ? '+$' : '-$') + fmt(Math.abs(totalGain));
+    if (costEl) costEl.textContent = 'Cost ' + fmt$(totalCost);
+    document.getElementById('port-total-gain').textContent = fmtSigned$(totalGain);
     document.getElementById('port-total-gain').style.color = gainColor;
     document.getElementById('port-total-pct').textContent = (totalGainPct >= 0 ? '+' : '') + totalGainPct.toFixed(2) + '% vs cost';
     let prevValue = totalValue - totalDayChange;
     let totalDayChangePct = prevValue > 0 ? (totalDayChange / prevValue) * 100 : 0;
-    document.getElementById('port-today-change').textContent = (totalDayChange >= 0 ? '+$' : '-$') + fmt(Math.abs(totalDayChange));
+    document.getElementById('port-today-change').textContent = fmtSigned$(totalDayChange);
     document.getElementById('port-today-change').style.color = dayColor;
     let todayPctEl = document.getElementById('port-today-pct');
     if (todayPctEl) { todayPctEl.textContent = (totalDayChangePct >= 0 ? '+' : '') + totalDayChangePct.toFixed(2) + '% vs yesterday'; todayPctEl.style.color = dayColor; }
@@ -4095,7 +4156,7 @@ function renderPortfolio() {
     let realizedEl = document.getElementById('port-realized-gain');
     let realizedCard = document.getElementById('port-realized-card');
     if (realizedEl) {
-      realizedEl.textContent = (totalRealized >= 0 ? '+$' : '-$') + fmt(Math.abs(totalRealized));
+      realizedEl.textContent = fmtSigned$(totalRealized);
       realizedEl.style.color = totalRealized >= 0 ? '#16a34a' : '#dc2626';
     }
     if (realizedCard) { realizedCard.classList.remove('metric-up','metric-down'); realizedCard.classList.add(totalRealized >= 0 ? 'metric-up' : 'metric-down'); }
@@ -4109,10 +4170,10 @@ function renderPortfolio() {
     let winnersCard = document.getElementById('port-winners-card');
     if (winnersCard) winnersCard.style.display = 'grid';
     document.getElementById('port-best-ticker').textContent = best.ticker;
-    document.getElementById('port-best-gain').textContent = (best.gain >= 0 ? '+' : '') + '$' + best.gain.toFixed(2) + ' · ' + (best.gainPct >= 0 ? '+' : '') + best.gainPct.toFixed(1) + '%';
+    document.getElementById('port-best-gain').textContent = fmtSigned$(best.gain) + ' · ' + (best.gainPct >= 0 ? '+' : '') + best.gainPct.toFixed(1) + '%';
     document.getElementById('port-best-gain').style.color = best.gain >= 0 ? '#16a34a' : '#dc2626';
     document.getElementById('port-worst-ticker').textContent = worst.ticker;
-    document.getElementById('port-worst-gain').textContent = (worst.gain >= 0 ? '+' : '') + '$' + worst.gain.toFixed(2) + ' · ' + (worst.gainPct >= 0 ? '+' : '') + worst.gainPct.toFixed(1) + '%';
+    document.getElementById('port-worst-gain').textContent = fmtSigned$(worst.gain) + ' · ' + (worst.gainPct >= 0 ? '+' : '') + worst.gainPct.toFixed(1) + '%';
     document.getElementById('port-worst-gain').style.color = worst.gain >= 0 ? '#16a34a' : '#dc2626';
     if (failedTickers.length > 0) {
       showToast('Prices unavailable for ' + failedTickers.join(', ') + ' — showing cost basis instead.');
@@ -4413,9 +4474,9 @@ function renderPortfolioRows(data) {
             return '<div class="port-lot-row">' +
               '<div class="port-lot-info">' +
                 '<span class="port-lot-num">Lot ' + (i + 1) + '</span>' +
-                '<span>' + lot.shares + ' shares @ $' + lot.price.toFixed(2) + (lot.date ? ' · ' + lot.date : '') + '</span>' +
+                '<span>' + lot.shares + ' shares @ ' + fmt$(lot.price) + (lot.date ? ' · ' + lot.date : '') + '</span>' +
               '</div>' +
-              '<div class="port-lot-gain" style="color:' + lotGc + ';">' + (lotGain >= 0 ? '+' : '') + '$' + lotGain.toFixed(2) + ' (' + (lotGainPct >= 0 ? '+' : '') + lotGainPct.toFixed(1) + '%)</div>' +
+              '<div class="port-lot-gain" style="color:' + lotGc + ';">' + fmtSigned$(lotGain) + ' (' + (lotGainPct >= 0 ? '+' : '') + lotGainPct.toFixed(1) + '%)</div>' +
               '<button onclick="event.stopPropagation();removeLotFromPortfolio(' + escHtml(JSON.stringify(s.ticker)) + ',' + i + ')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:13px;padding:2px 6px;flex-shrink:0;">✕</button>' +
             '</div>';
           }).join('') +
@@ -4430,14 +4491,14 @@ function renderPortfolioRows(data) {
             (hasMultiple ? '<button id="lots-btn-' + s.ticker + '" onclick="event.stopPropagation();togglePortLots(' + escHtml(JSON.stringify(s.ticker)) + ')" class="port-lots-toggle">▾</button>' : '') +
             '<div>' +
               '<div style="font-weight:600;font-size:14px;">' + s.ticker + '</div>' +
-              '<div style="font-size:11px;color:#64748b;">' + s.shares.toFixed(s.shares % 1 === 0 ? 0 : 2) + ' shares · avg $' + s.buyPrice.toFixed(2) + (hasMultiple ? ' · ' + s.lots.length + ' lots' : (s.lots && s.lots[0] && s.lots[0].date ? ' · ' + s.lots[0].date : '')) + '</div>' +
-              '<div style="font-size:11px;margin-top:2px;"><span style="color:var(--text-muted);">now $' + s.currentPrice.toFixed(2) + '</span> <span style="color:' + dc + ';">' + (s.dayChangeAmt >= 0 ? '+' : '') + '$' + s.dayChangeAmt.toFixed(2) + ' today</span></div>' +
+              '<div style="font-size:11px;color:#64748b;">' + s.shares.toFixed(s.shares % 1 === 0 ? 0 : 2) + ' shares · avg ' + fmt$(s.buyPrice) + (hasMultiple ? ' · ' + s.lots.length + ' lots' : (s.lots && s.lots[0] && s.lots[0].date ? ' · ' + s.lots[0].date : '')) + '</div>' +
+              '<div style="font-size:11px;margin-top:2px;"><span style="color:var(--text-muted);">now ' + fmt$(s.currentPrice) + '</span> <span style="color:' + dc + ';">' + fmtSigned$(s.dayChangeAmt) + ' today</span></div>' +
             '</div>' +
           '</div>' +
-          '<div><div>$' + s.value.toFixed(2) + '</div></div>' +
-          '<div class="hide-mobile" style="color:var(--text-muted);font-size:13px;">$' + s.cost.toFixed(2) + '</div>' +
-          '<div class="hide-mobile" style="color:' + gc + ';">' + (s.gain >= 0 ? '+' : '') + '$' + s.gain.toFixed(2) + '<br><span style="font-size:11px;">' + (s.gainPct >= 0 ? '+' : '') + s.gainPct.toFixed(1) + '%</span></div>' +
-          '<div class="hide-mobile" style="color:' + dc + ';">' + (s.dayChangeAmt >= 0 ? '+' : '') + '$' + s.dayChangeAmt.toFixed(2) + '<br><span style="font-size:11px;color:' + dc + ';">' + (s.dayChangeAmt >= 0 ? '+' : '') + (s.currentPrice > 0 ? ((s.dayChangeAmt / (s.value - s.dayChangeAmt)) * 100).toFixed(2) : '0.00') + '%</span></div>' +
+          '<div><div>' + fmt$(s.value) + '</div></div>' +
+          '<div class="hide-mobile" style="color:var(--text-muted);font-size:13px;">' + fmt$(s.cost) + '</div>' +
+          '<div class="hide-mobile" style="color:' + gc + ';">' + fmtSigned$(s.gain) + '<br><span style="font-size:11px;">' + (s.gainPct >= 0 ? '+' : '') + s.gainPct.toFixed(1) + '%</span></div>' +
+          '<div class="hide-mobile" style="color:' + dc + ';">' + fmtSigned$(s.dayChangeAmt) + '<br><span style="font-size:11px;color:' + dc + ';">' + (s.dayChangeAmt >= 0 ? '+' : '') + (s.currentPrice > 0 ? ((s.dayChangeAmt / (s.value - s.dayChangeAmt)) * 100).toFixed(2) : '0.00') + '%</span></div>' +
           '<div style="display:flex;align-items:center;gap:8px;"><span id="port-signal-' + s.ticker + '">' + portSignal(s.score) + '</span>' +
             '<button onclick="event.stopPropagation();openSellModal(' + escHtml(JSON.stringify(s.ticker)) + ',' + s.currentPrice + ',' + s.shares + ')" class="sell-btn">Sell</button>' +
             '<button onclick="event.stopPropagation();removeFromPortfolio(' + escHtml(JSON.stringify(s.ticker)) + ')" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:16px;padding:0;">✕</button>' +
@@ -5503,6 +5564,7 @@ auth.onAuthStateChanged(function(user) {
     renderSearchHistory();
     showTab('analyze');
     initTheme();
+    initCurrency();
     handleUrlParams();
     _appReady = true; // allow real-time Firestore updates to re-render
     hideAppLoading();
