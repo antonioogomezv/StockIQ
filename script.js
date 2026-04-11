@@ -135,7 +135,7 @@ function _fetchAndCachePrices(symbols, existing) {
           .then(function(r) { return r.json(); })
           .then(function(q) {
             if (q.c > 0) {
-              priceMap[sym] = { price: q.c, changePct: q.dp || 0, change: q.d || 0 };
+              priceMap[sym] = { price: q.c, changePct: q.dp || 0, change: q.d || (q.pc > 0 ? q.c - q.pc : 0), prevClose: q.pc || 0 };
               // Persist last known changePct for after-hours
               if (q.dp) {
                 var lk = JSON.parse(localStorage.getItem('screener-changepct-last') || '{}');
@@ -4024,7 +4024,9 @@ function renderPortfolio() {
       var cost = lt.totalLotCost;
       var gain = value - cost;
       var gainPct = cost > 0 ? ((gain / cost) * 100) : 0;
-      var dayChangeAmt = (q.change || 0) * lt.totalShares;
+      // q.change is Finnhub's q.d (dollar change). Fall back to calculating from changePct if missing.
+      var dayChangePer = q.change || (q.changePct && currentPrice > 0 ? (q.changePct / 100) * (currentPrice / (1 + q.changePct / 100)) : 0);
+      var dayChangeAmt = dayChangePer * lt.totalShares;
       totalValue += value; totalCost += cost; totalDayChange += dayChangeAmt;
       var histScore = JSON.parse(localStorage.getItem('history_score_' + item.ticker) || '[]');
       var score = histScore.length > 0 ? histScore[histScore.length - 1].score : null;
