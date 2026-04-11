@@ -212,7 +212,7 @@ function fetchFxRate(callback) {
   if (cached && cached.rate && (Date.now() - cached.ts < 43200000)) {
     _fxRate = cached.rate; _fxSym = 'MX$'; if (callback) callback(); return;
   }
-  fetch('https://api.frankfurter.app/latest?from=USD&to=MXN')
+  fetch('/.netlify/functions/fx-rate')
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var rate = data && data.rates && data.rates.MXN;
