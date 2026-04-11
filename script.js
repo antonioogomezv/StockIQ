@@ -220,21 +220,17 @@ function fetchFxRate(callback) {
   if (cached && cached.rate && (Date.now() - cached.ts < 43200000)) {
     _fxRate = cached.rate; _fxSym = 'MX$'; if (callback) callback(); return;
   }
-  // Use same Finnhub quote endpoint as stocks, with forex symbol OANDA:USD_MXN
-  // response.c = current price = exchange rate
-  fetch(finnhubUrl('/api/v1/quote', { symbol: 'OANDA:USD_MXN' }))
+  fetch('/.netlify/functions/fx-rate')
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      var rate = data && data.c && data.c > 1 ? data.c : null;
-      if (rate) {
+      var rate = data && data.rate;
+      if (rate && rate > 1) {
         _fxRate = rate; _fxSym = 'MX$';
         localStorage.setItem('fx-usdmxn', JSON.stringify({ rate: rate, ts: Date.now() }));
-        showToast('1 USD = ' + rate.toFixed(2) + ' MXN');
       } else {
         var cached2 = JSON.parse(localStorage.getItem('fx-usdmxn') || 'null');
         _fxRate = (cached2 && cached2.rate) || 17.5;
         _fxSym = 'MX$';
-        showToast('Using rate: 1 USD = ' + _fxRate.toFixed(2) + ' MXN (cached)');
       }
       if (callback) callback();
     })
