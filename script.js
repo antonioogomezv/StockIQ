@@ -97,11 +97,20 @@ let cache = {};
 var _sharedPriceCache = null; // in-memory copy for this session
 
 function getSharedPrices(symbols, ttlMs) {
-  // 1. Check in-memory first
+  // 1. Check in-memory first — only use if ALL requested symbols are present
   if (_sharedPriceCache && _sharedPriceCache.ts && (Date.now() - _sharedPriceCache.ts < ttlMs)) {
-    var hit = {};
-    symbols.forEach(function(s) { if (_sharedPriceCache.data[s]) hit[s] = _sharedPriceCache.data[s]; });
-    if (Object.keys(hit).length === symbols.length) return Promise.resolve(hit);
+    var missing = symbols.filter(function(s) { return !_sharedPriceCache.data[s]; });
+    if (missing.length === 0) {
+      var hit = {};
+      symbols.forEach(function(s) { hit[s] = _sharedPriceCache.data[s]; });
+      return Promise.resolve(hit);
+    }
+    // Some symbols missing from cache — fetch just the missing ones
+    return _fetchAndCachePrices(missing, _sharedPriceCache.data).then(function(fetched) {
+      var result = {};
+      symbols.forEach(function(s) { if (_sharedPriceCache.data[s] || fetched[s]) result[s] = _sharedPriceCache.data[s] || fetched[s]; });
+      return result;
+    });
   }
 
   // 2. Check Firestore shared cache
@@ -109,17 +118,26 @@ function getSharedPrices(symbols, ttlMs) {
     .then(function(doc) {
       var stored = doc.exists ? doc.data() : {};
       var age = stored.ts ? (Date.now() - stored.ts) : Infinity;
-      if (age < ttlMs && stored.data) {
+      var cachedData = stored.data || {};
+      if (age < ttlMs && Object.keys(cachedData).length > 0) {
         _sharedPriceCache = stored;
-        var hit = {};
-        symbols.forEach(function(s) { if (stored.data[s]) hit[s] = stored.data[s]; });
-        if (Object.keys(hit).length > 0) return hit;
+        // Fetch only the symbols not in cache
+        var missing = symbols.filter(function(s) { return !cachedData[s]; });
+        if (missing.length === 0) {
+          var hit = {};
+          symbols.forEach(function(s) { hit[s] = cachedData[s]; });
+          return hit;
+        }
+        return _fetchAndCachePrices(missing, cachedData).then(function(fetched) {
+          var result = {};
+          symbols.forEach(function(s) { if (cachedData[s] || fetched[s]) result[s] = cachedData[s] || fetched[s]; });
+          return result;
+        });
       }
-      // 3. Cache stale — fetch from Finnhub and save for everyone
-      return _fetchAndCachePrices(symbols, stored.data || {});
+      // Cache stale or empty — fetch all
+      return _fetchAndCachePrices(symbols, cachedData);
     })
     .catch(function() {
-      // Firestore unavailable — fetch directly
       return _fetchAndCachePrices(symbols, {});
     });
 }
