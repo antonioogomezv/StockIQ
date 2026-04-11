@@ -1579,7 +1579,7 @@ button:active { transform: translateY(0); }
   align-items: center;
   gap: 10px;
 }
-.daily-tip-emoji { font-size: 22px; line-height: 1; flex-shrink: 0; }
+.daily-tip-icon { display: flex; align-items: center; flex-shrink: 0; color: var(--text-muted); }
 .daily-tip-label {
   font-size: 9px;
   font-weight: 700;
@@ -1832,7 +1832,7 @@ button:active { transform: translateY(0); }
   gap: 12px;
   min-width: 0;
 }
-.quiz-cta-icon { font-size: 22px; flex-shrink: 0; }
+.quiz-cta-icon { display: flex; align-items: center; flex-shrink: 0; color: var(--accent-blue); }
 .quiz-cta-title {
   font-size: 13px;
   font-weight: 700;
@@ -2041,7 +2041,7 @@ button:active { transform: translateY(0); }
   text-align: center;
   padding: 8px 0 4px;
 }
-.quiz-results-emoji { font-size: 40px; margin-bottom: 12px; }
+.quiz-results-icon { display: flex; justify-content: center; margin-bottom: 12px; color: var(--accent-blue); }
 .quiz-results-score {
   font-size: 32px;
   font-weight: 800;
@@ -3077,9 +3077,10 @@ footer {
 }
 
 .onboarding-card-icon {
-  font-size: 36px;
   margin-bottom: 12px;
-  display: block;
+  display: flex;
+  align-items: center;
+  color: var(--accent-blue);
 }
 
 .onboarding-card-title {
@@ -3165,7 +3166,7 @@ footer {
   .screener-goal-btn { font-size: 12px; padding: 7px 12px; }
   #onboarding-modal { padding: 28px 20px 22px; }
   .onboarding-card { padding: 16px; }
-  .onboarding-card-icon { font-size: 28px; }
+  .onboarding-card-icon { display: flex; align-items: center; }
   .onboarding-card-title { font-size: 15px; }
 }
 
@@ -3467,8 +3468,10 @@ footer {
 .quiz-dot.active { background: var(--accent-green); }
 
 .quiz-result-icon {
-  font-size: 48px;
+  display: flex;
+  justify-content: center;
   margin-bottom: 16px;
+  color: var(--accent-blue);
 }
 
 .quiz-result-title {
@@ -3910,7 +3913,7 @@ footer {
 .profile-stat-tile[data-accent="green"]  { border-color: rgba(22,163,74,0.18); }
 .profile-stat-tile[data-accent="purple"] { border-color: rgba(139,92,246,0.18); }
 
-.profile-stat-icon { font-size: 18px; margin-bottom: 8px; line-height: 1; }
+.profile-stat-icon { display: flex; justify-content: center; margin-bottom: 8px; }
 
 .profile-stat-num {
   font-family: var(--display);
@@ -3972,7 +3975,7 @@ footer {
 
 .badge-item.locked { opacity: 0.25; filter: grayscale(1); }
 
-.badge-icon { font-size: 28px; margin-bottom: 10px; line-height: 1; }
+.badge-icon { display: flex; justify-content: center; margin-bottom: 10px; }
 
 .badge-name {
   font-size: 12px;

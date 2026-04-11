@@ -155,31 +155,31 @@
     <div id="onboarding-cards">
 
       <div class="onboarding-card active" data-step="0">
-        <div class="onboarding-card-icon">🔍</div>
+        <div class="onboarding-card-icon"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
         <div class="onboarding-card-title">Analyze Tab</div>
         <div class="onboarding-card-desc">Search any US stock by name or ticker. You'll get a health score out of 100, a plain-English breakdown, price chart, and an AI you can ask anything.</div>
       </div>
 
       <div class="onboarding-card" data-step="1">
-        <div class="onboarding-card-icon">💼</div>
+        <div class="onboarding-card-icon"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg></div>
         <div class="onboarding-card-title">Portfolio Tab</div>
         <div class="onboarding-card-desc">Add stocks you own. StockIQ tracks your gains, shows your allocation, and analyzes your entire portfolio with AI. We already loaded a Demo Portfolio based on your profile.</div>
       </div>
 
       <div class="onboarding-card" data-step="2">
-        <div class="onboarding-card-icon">👁️</div>
+        <div class="onboarding-card-icon"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>
         <div class="onboarding-card-title">Watchlist Tab</div>
         <div class="onboarding-card-desc">Save stocks you're watching. Set price alerts so you're notified when a stock hits your target. Track score history over time.</div>
       </div>
 
       <div class="onboarding-card" data-step="3">
-        <div class="onboarding-card-icon">👤</div>
+        <div class="onboarding-card-icon"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
         <div class="onboarding-card-title">Profile Tab</div>
         <div class="onboarding-card-desc">See your investor type, activity stats, and achievements. Retake the quiz anytime if your goals change.</div>
       </div>
 
       <div class="onboarding-card" data-step="4">
-        <div class="onboarding-card-icon">📖</div>
+        <div class="onboarding-card-icon"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></div>
         <div class="onboarding-card-title">Learn Terms</div>
         <div class="onboarding-card-desc">Tap the gold Learn Terms button anytime to look up P/E ratio, Beta, RSI, and more — explained in plain English with real-world tips.</div>
       </div>
@@ -709,7 +709,9 @@
       <h1>Stock<span>IQ</span></h1>
       <p>Invest smarter. Learn as you go.</p>
     </div>
-    <button id="dark-mode-toggle" onclick="toggleDarkMode()" title="Toggle dark mode">🌙</button>
+    <button id="dark-mode-toggle" onclick="toggleDarkMode()" title="Toggle dark mode">
+      <svg id="dark-mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
   </header>
 
   <!-- NAVIGATION TABS -->
@@ -798,7 +800,9 @@
         </div>
         <div id="search-history" style="display:none;"></div>
         <div id="screener-toggle-row">
-          <button id="screener-toggle-btn" onclick="toggleScreener()">🔍 Discover Stocks</button>
+          <button id="screener-toggle-btn" onclick="toggleScreener()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" style="margin-right:6px;vertical-align:-2px;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Discover Stocks
+          </button>
         </div>
         <div id="screener-panel" style="display:none;">
           <div id="screener-header">
@@ -907,7 +911,9 @@
         <div class="holdings-summary-card">
           <div class="holdings-summary-header">
             <span class="holdings-summary-title">Holdings Summary</span>
-            <button class="holdings-explain-btn" onclick="explainPortfolio()">✨ Explain with AI</button>
+            <button class="holdings-explain-btn" onclick="explainPortfolio()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13" style="margin-right:5px;vertical-align:-2px;"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>AI Analysis
+            </button>
           </div>
           <div class="holdings-summary-body">
             <!-- Left: key metrics -->
@@ -1167,22 +1173,22 @@
           <h2>YOUR ACTIVITY</h2>
           <div id="profile-stats-grid">
             <div class="profile-stat-tile" data-accent="blue">
-              <div class="profile-stat-icon">🔍</div>
+              <div class="profile-stat-icon"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
               <div class="profile-stat-num" id="stat-analyzed">0</div>
               <div class="profile-stat-label">Stocks analyzed</div>
             </div>
             <div class="profile-stat-tile" data-accent="orange">
-              <div class="profile-stat-icon">🔥</div>
+              <div class="profile-stat-icon"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
               <div class="profile-stat-num" id="stat-streak">0</div>
               <div class="profile-stat-label">Day streak</div>
             </div>
             <div class="profile-stat-tile" data-accent="green">
-              <div class="profile-stat-icon">⭐</div>
+              <div class="profile-stat-icon"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>
               <div class="profile-stat-num" id="stat-watchlist">0</div>
               <div class="profile-stat-label">In watchlist</div>
             </div>
             <div class="profile-stat-tile" data-accent="purple">
-              <div class="profile-stat-icon">📊</div>
+              <div class="profile-stat-icon"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg></div>
               <div class="profile-stat-num" id="stat-portfolio">0</div>
               <div class="profile-stat-label">In portfolio</div>
             </div>
@@ -1213,18 +1219,18 @@
   </footer>
 
   <!-- Floating Learn Terms button — mobile only -->
-  <button id="float-dict-btn" onclick="toggleDictionary()" aria-label="Learn Terms">📖</button>
+  <button id="float-dict-btn" onclick="toggleDictionary()" aria-label="Learn Terms"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></button>
 
   <!-- Welcome Onboarding Overlay -->
   <div id="welcome-overlay" style="display:none;">
     <div id="onboarding-modal">
-      <div id="onboarding-logo">📊 StockIQ</div>
+      <div id="onboarding-logo">StockIQ</div>
       <h1 id="onboarding-title">Understand any stock<br>in seconds.</h1>
       <p id="onboarding-sub">No finance degree needed. StockIQ breaks down every number so you actually know what you're looking at.</p>
       <div id="onboarding-bullets">
-        <div class="onboarding-bullet"><span>🔍</span><span>Search any company or ticker</span></div>
-        <div class="onboarding-bullet"><span>📊</span><span>Get an instant 0–100 health score</span></div>
-        <div class="onboarding-bullet"><span>🎓</span><span>Learn what every number means</span></div>
+        <div class="onboarding-bullet"><span><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span><span>Search any company or ticker</span></div>
+        <div class="onboarding-bullet"><span><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg></span><span>Get an instant 0–100 health score</span></div>
+        <div class="onboarding-bullet"><span><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span><span>Learn what every number means</span></div>
       </div>
       <div id="onboarding-search-row">
         <input type="text" id="onboarding-input" placeholder="Try AAPL, TSLA, NVDA…"

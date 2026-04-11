@@ -5,14 +5,18 @@ function toggleDarkMode() {
   document.documentElement.setAttribute('data-theme', next);
   localStorage.setItem('theme', next);
   let btn = document.getElementById('dark-mode-toggle');
-  if (btn) btn.textContent = next === 'dark' ? '☀️' : '🌙';
+  if (btn) btn.innerHTML = next === 'dark'
+    ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>'
+    : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
 }
 
 function initTheme() {
   let saved = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
   document.documentElement.setAttribute('data-theme', saved);
   let btn = document.getElementById('dark-mode-toggle');
-  if (btn) btn.textContent = saved === 'dark' ? '☀️' : '🌙';
+  if (btn) btn.innerHTML = saved === 'dark'
+    ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>'
+    : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
 
   // Follow system changes live, but only if the user hasn't manually picked a theme
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
@@ -20,7 +24,9 @@ function initTheme() {
     let theme = e.matches ? 'dark' : 'light';
     document.documentElement.setAttribute('data-theme', theme);
     let b = document.getElementById('dark-mode-toggle');
-    if (b) b.textContent = theme === 'dark' ? '☀️' : '🌙';
+    if (b) b.innerHTML = theme === 'dark'
+      ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>'
+      : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
   });
 }
 // ── END dark mode ────────────────────────────────────────────
@@ -859,7 +865,7 @@ function renderQuizCTA(ticker, companyName, pe, beta, margin, growth, rsi, total
   el.innerHTML =
     '<div class="quiz-cta-inner">' +
       '<div class="quiz-cta-left">' +
-        '<span class="quiz-cta-icon">🎯</span>' +
+        '<span class="quiz-cta-icon"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></span>' +
         '<div>' +
           '<div class="quiz-cta-title">Test your knowledge</div>' +
           '<div class="quiz-cta-sub">Ready? Answer ' + qs.length + ' quick questions about ' + companyName + '.</div>' +
@@ -1165,10 +1171,14 @@ function showQuizResults() {
   var body = document.getElementById('stock-quiz-body');
   var pct = Math.round((state.score / state.questions.length) * 100);
   var msg = pct === 100 ? 'Perfect score! You\'re learning fast.' : pct >= 66 ? 'Good work! Keep analyzing stocks to sharpen your knowledge.' : 'Keep going — every stock you analyze teaches you something new.';
-  var emoji = pct === 100 ? '🏆' : pct >= 66 ? '👍' : '📚';
+  var icon = pct === 100
+    ? '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>'
+    : pct >= 66
+    ? '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'
+    : '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>';
   body.innerHTML =
     '<div class="quiz-results">' +
-      '<div class="quiz-results-emoji">' + emoji + '</div>' +
+      '<div class="quiz-results-icon">' + icon + '</div>' +
       '<div class="quiz-results-score">' + state.score + ' / ' + state.questions.length + '</div>' +
       '<div class="quiz-results-msg">' + msg + '</div>' +
       '<button class="quiz-next-btn" onclick="closeStockQuiz()">Done</button>' +
@@ -1185,21 +1195,21 @@ function closeStockQuiz() {
 
 // ── DAILY TIP ──────────────────────────────────────────────────────────────
 var DAILY_TIPS = [
-  { term: 'P/E Ratio',          emoji: '📊', tip: 'The P/E ratio tells you how much investors pay for every $1 a company earns. A P/E of 20 means you pay $20 for $1 of profit. Lower can mean cheaper — but also less growth expected.' },
-  { term: 'Beta',               emoji: '📈', tip: 'Beta measures how much a stock moves compared to the market. A beta of 1.5 means if the market drops 10%, this stock typically drops 15%. Higher beta = more risk and more reward.' },
-  { term: 'Dividend',           emoji: '💰', tip: 'A dividend is cash a company pays you just for owning its stock — usually every quarter. If Apple pays a 0.5% dividend and you own $10,000 in stock, you get $50/year without selling anything.' },
-  { term: 'Market Cap',         emoji: '🏢', tip: 'Market cap = share price × number of shares. It tells you the total value of a company. Apple is a mega-cap ($3T+). A small-cap company might be worth $500M. Bigger isn\'t always better.' },
-  { term: 'RSI',                emoji: '⚡', tip: 'RSI (Relative Strength Index) measures momentum on a 0-100 scale. Below 30 means the stock may be oversold and due for a bounce. Above 70 means it may be overbought and due for a pullback.' },
-  { term: 'Moving Average',     emoji: '📉', tip: 'A moving average smooths out daily price swings to show the trend. If a stock is above its 50-day average, it\'s in an uptrend. Below = downtrend. Traders use this as a buy/sell signal.' },
-  { term: 'Profit Margin',      emoji: '💡', tip: 'Profit margin = how many cents of profit a company keeps per dollar of sales. A 20% margin means for every $100 in revenue, $20 is profit. Software companies often have 30%+ margins.' },
-  { term: 'Revenue Growth',     emoji: '🚀', tip: 'Revenue growth shows if a company is selling more over time. 15%+ growth is fast. Negative growth is a warning sign. Growth companies often trade at high P/E ratios because investors expect future profits.' },
-  { term: 'ROE',                emoji: '🏆', tip: 'Return on Equity shows how efficiently a company uses shareholder money to generate profit. ROE of 20% means for every $100 investors put in, the company generates $20 in profit. Warren Buffett loves high ROE.' },
-  { term: 'Diversification',    emoji: '🌍', tip: 'Owning stocks in different sectors reduces risk. If you own 10 tech stocks, a bad tech week hurts everything. But if you also own healthcare and energy, those may hold up while tech falls.' },
-  { term: 'Sector Rotation',    emoji: '🔄', tip: 'As the economy changes, investors move money between sectors. When interest rates rise, money often flows from tech (hurt by high rates) into financials (banks earn more on loans).' },
-  { term: 'EPS',                emoji: '📋', tip: 'EPS (Earnings Per Share) = total profit divided by shares outstanding. If a company earns $1B and has 500M shares, EPS is $2. When EPS grows quarter over quarter, it\'s a positive sign.' },
-  { term: 'DCA',                emoji: '📅', tip: 'Dollar-cost averaging means investing a fixed amount regularly (e.g. $100/month) regardless of price. You buy more shares when prices are low and fewer when high — reducing the impact of volatility.' },
-  { term: 'Free Cash Flow',     emoji: '💸', tip: 'Free cash flow is the actual cash a company generates after paying for operations and investments. It\'s harder to fake than reported earnings. Companies with strong FCF can pay dividends, buy back stock, or invest in growth.' },
-  { term: 'Interest Coverage',  emoji: '🛡️', tip: 'Interest coverage ratio = earnings divided by interest payments. A ratio of 5x means the company earns 5x what it owes in interest. Below 1.5x is dangerous — the company may struggle to pay its debt.' },
+  { term: 'P/E Ratio',          tip: 'The P/E ratio tells you how much investors pay for every $1 a company earns. A P/E of 20 means you pay $20 for $1 of profit. Lower can mean cheaper — but also less growth expected.' },
+  { term: 'Beta',               tip: 'Beta measures how much a stock moves compared to the market. A beta of 1.5 means if the market drops 10%, this stock typically drops 15%. Higher beta = more risk and more reward.' },
+  { term: 'Dividend',           tip: 'A dividend is cash a company pays you just for owning its stock — usually every quarter. If Apple pays a 0.5% dividend and you own $10,000 in stock, you get $50/year without selling anything.' },
+  { term: 'Market Cap',         tip: 'Market cap = share price × number of shares. It tells you the total value of a company. Apple is a mega-cap ($3T+). A small-cap company might be worth $500M. Bigger isn\'t always better.' },
+  { term: 'RSI',                tip: 'RSI (Relative Strength Index) measures momentum on a 0-100 scale. Below 30 means the stock may be oversold and due for a bounce. Above 70 means it may be overbought and due for a pullback.' },
+  { term: 'Moving Average',     tip: 'A moving average smooths out daily price swings to show the trend. If a stock is above its 50-day average, it\'s in an uptrend. Below = downtrend. Traders use this as a buy/sell signal.' },
+  { term: 'Profit Margin',      tip: 'Profit margin = how many cents of profit a company keeps per dollar of sales. A 20% margin means for every $100 in revenue, $20 is profit. Software companies often have 30%+ margins.' },
+  { term: 'Revenue Growth',     tip: 'Revenue growth shows if a company is selling more over time. 15%+ growth is fast. Negative growth is a warning sign. Growth companies often trade at high P/E ratios because investors expect future profits.' },
+  { term: 'ROE',                tip: 'Return on Equity shows how efficiently a company uses shareholder money to generate profit. ROE of 20% means for every $100 investors put in, the company generates $20 in profit. Warren Buffett loves high ROE.' },
+  { term: 'Diversification',    tip: 'Owning stocks in different sectors reduces risk. If you own 10 tech stocks, a bad tech week hurts everything. But if you also own healthcare and energy, those may hold up while tech falls.' },
+  { term: 'Sector Rotation',    tip: 'As the economy changes, investors move money between sectors. When interest rates rise, money often flows from tech (hurt by high rates) into financials (banks earn more on loans).' },
+  { term: 'EPS',                tip: 'EPS (Earnings Per Share) = total profit divided by shares outstanding. If a company earns $1B and has 500M shares, EPS is $2. When EPS grows quarter over quarter, it\'s a positive sign.' },
+  { term: 'DCA',                tip: 'Dollar-cost averaging means investing a fixed amount regularly (e.g. $100/month) regardless of price. You buy more shares when prices are low and fewer when high — reducing the impact of volatility.' },
+  { term: 'Free Cash Flow',     tip: 'Free cash flow is the actual cash a company generates after paying for operations and investments. It\'s harder to fake than reported earnings. Companies with strong FCF can pay dividends, buy back stock, or invest in growth.' },
+  { term: 'Interest Coverage',  tip: 'Interest coverage ratio = earnings divided by interest payments. A ratio of 5x means the company earns 5x what it owes in interest. Below 1.5x is dangerous — the company may struggle to pay its debt.' },
 ];
 
 // ── ONBOARDING ─────────────────────────────────────────────────────────────
@@ -1291,7 +1301,7 @@ function renderDailyTip() {
   el.innerHTML =
     '<div class="daily-tip-inner">' +
       '<div class="daily-tip-left">' +
-        '<span class="daily-tip-emoji">' + tip.emoji + '</span>' +
+        '<span class="daily-tip-icon"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg></span>' +
         '<div>' +
           '<div class="daily-tip-label">DID YOU KNOW?</div>' +
           '<div class="daily-tip-term">' + tip.term + '</div>' +
@@ -1836,16 +1846,16 @@ function showQuizResult() {
   let budget = quizAnswers.step4 || 2500;
   let profile = {};
   if (risk === "low" || goal === "preserve") {
-    profile = { type: "Conservative", icon: "🛡️", desc: "You prefer stable, lower risk investments. StockIQ will warn you about high volatility stocks.", maxBeta: 1.0, minScore: 55 };
+    profile = { type: "Conservative", icon: '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>', desc: "You prefer stable, lower risk investments. StockIQ will warn you about high volatility stocks.", maxBeta: 1.0, minScore: 55 };
   } else if (risk === "high" && horizon === "long") {
-    profile = { type: "Aggressive", icon: "🚀", desc: "You're comfortable with big swings for bigger rewards. StockIQ will highlight high growth opportunities.", maxBeta: 2.5, minScore: 40 };
+    profile = { type: "Aggressive", icon: '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>', desc: "You're comfortable with big swings for bigger rewards. StockIQ will highlight high growth opportunities.", maxBeta: 2.5, minScore: 40 };
   } else {
-    profile = { type: "Balanced", icon: "⚖️", desc: "You want a mix of growth and stability. StockIQ will help you find stocks with solid fundamentals.", maxBeta: 1.5, minScore: 50 };
+    profile = { type: "Balanced", icon: '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="3" x2="12" y2="21"/><polyline points="3 6 12 3 21 6"/><line x1="3" y1="6" x2="3" y2="13"/><line x1="21" y1="6" x2="21" y2="13"/><path d="M3 13a3 3 0 0 0 6 0H3z"/><path d="M15 13a3 3 0 0 0 6 0h-6z"/></svg>', desc: "You want a mix of growth and stability. StockIQ will help you find stocks with solid fundamentals.", maxBeta: 1.5, minScore: 50 };
   }
   profile.horizon = horizon;
   profile.goal = goal;
   profile.budget = budget;
-  document.getElementById("quiz-icon").textContent = profile.icon;
+  document.getElementById("quiz-icon").innerHTML = profile.icon;
   document.getElementById("quiz-result-title").textContent = profile.type + " Investor";
   document.getElementById("quiz-result-desc").textContent = profile.desc;
   document.getElementById("step-result").style.display = "block";
@@ -2073,9 +2083,10 @@ function renderWatchlist() {
       : "";
     let alerts = JSON.parse(localStorage.getItem('price-alerts') || '{}');
     let alertTarget = alerts[item.ticker];
+    let _bellSvg = "<svg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' style='vertical-align:-2px;margin-right:3px'><path d='M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9'/><path d='M13.73 21a2 2 0 0 1-3.46 0'/></svg>";
     let alertHtml = alertTarget
-      ? "<span class='wl-alert-tag' onclick='event.stopPropagation();removeAlert(\"" + item.ticker + "\")' title='Remove alert'>🔔 $" + alertTarget.toFixed(2) + " ✕</span>"
-      : "<button class='wl-alert-btn' onclick='event.stopPropagation();openAlertInput(\"" + item.ticker + "\"," + (price || 0) + ")'>🔔 Alert</button>";
+      ? "<span class='wl-alert-tag' onclick='event.stopPropagation();removeAlert(\"" + item.ticker + "\")' title='Remove alert'>" + _bellSvg + "$" + alertTarget.toFixed(2) + " ✕</span>"
+      : "<button class='wl-alert-btn' onclick='event.stopPropagation();openAlertInput(\"" + item.ticker + "\"," + (price || 0) + ")'>" + _bellSvg + "Alert</button>";
     return "<div class='watchlist-item'>" +
       "<div class='wl-main-row'>" +
         "<div onclick='loadFromWatchlist(\"" + item.ticker + "\")' style='flex:1;cursor:pointer;min-width:0;'>" +
@@ -2164,7 +2175,7 @@ function checkPriceAlerts(quoteMap) {
     if (hit) {
       fired[fireKey] = true;
       localStorage.setItem('alerts-fired', JSON.stringify(fired));
-      showToast('🔔 ' + ticker + ' hit your $' + target.toFixed(2) + ' alert — now $' + q.price.toFixed(2));
+      showToast('Alert: ' + ticker + ' hit your $' + target.toFixed(2) + ' target — now $' + q.price.toFixed(2));
       // Try browser notification if permitted
       if (window.Notification && Notification.permission === 'granted') {
         new Notification('StockIQ Alert', { body: ticker + ' hit $' + target.toFixed(2) + ' — now $' + q.price.toFixed(2) });
@@ -3457,7 +3468,7 @@ function promptNewPortfolio() {
       '<div style="font-size:18px;font-weight:700;margin-bottom:6px;">New Portfolio</div>' +
       '<div style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">How do you want to start?</div>' +
       '<button onclick="closeNewPortChoice();openPortfolioWizard();" style="width:100%;padding:14px 16px;border-radius:12px;border:none;background:var(--accent-blue);color:#fff;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:10px;text-align:left;">' +
-        '✦ Build with guidance' +
+        '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:6px;opacity:0.9"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Build with guidance' +
         '<div style="font-size:11px;font-weight:400;opacity:0.85;margin-top:2px;">Answer 5 questions — we pick the stocks for you</div>' +
       '</button>' +
       '<button onclick="closeNewPortChoice();promptBlankPortfolio();" style="width:100%;padding:14px 16px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--text);font-size:14px;font-weight:600;cursor:pointer;text-align:left;">' +
@@ -3522,10 +3533,10 @@ var WIZARD_QUESTIONS = [
     q: 'Any sector you\'re excited about?',
     sub: 'Optional — we\'ll prioritize stocks from here.',
     options: [
-      { value: 'Technology',  label: '💻 Technology',   desc: 'Software, chips, AI, cloud' },
-      { value: 'Healthcare',  label: '🏥 Healthcare',   desc: 'Pharma, biotech, medical devices' },
-      { value: 'Consumer',    label: '🛍 Consumer',     desc: 'Retail, food, travel, entertainment' },
-      { value: 'Financials',  label: '🏦 Financials',   desc: 'Banks, insurance, payments' },
+      { value: 'Technology',  label: 'Technology',   desc: 'Software, chips, AI, cloud' },
+      { value: 'Healthcare',  label: 'Healthcare',   desc: 'Pharma, biotech, medical devices' },
+      { value: 'Consumer',    label: 'Consumer',     desc: 'Retail, food, travel, entertainment' },
+      { value: 'Financials',  label: 'Financials',   desc: 'Banks, insurance, payments' },
       { value: 'none',        label: 'No preference',   desc: 'Just pick the best ones' }
     ]
   },
@@ -3647,7 +3658,7 @@ function _buildWizardPortfolio(profile, budget, preferredSector) {
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;';
   overlay.innerHTML =
     '<div style="background:var(--surface);border-radius:16px;padding:32px 24px;max-width:360px;width:100%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.4);">' +
-      '<div style="font-size:28px;margin-bottom:12px;">⚙️</div>' +
+      '<div style="margin-bottom:16px;color:var(--text-muted);"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06-.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>' +
       '<div style="font-size:16px;font-weight:700;margin-bottom:6px;">Building your portfolio…</div>' +
       '<div style="font-size:13px;color:var(--text-muted);">Fetching live prices and scores for the best matches</div>' +
     '</div>';
@@ -3847,7 +3858,7 @@ function renderPortfolioTabs() {
   let tabs = Object.keys(all).map(function(id) {
     let p = all[id];
     let isActive = id === activeId;
-    let demoTag = p.isDemo ? '<span class="port-tab-demo-tag">✦</span>' : '';
+    let demoTag = p.isDemo ? '<span class="port-tab-demo-tag">&#9679;</span>' : '';
     return '<button class="port-tab' + (isActive ? ' active' : '') + '" onclick="setActivePortfolio(\'' + id + '\')">' +
       demoTag + escHtml(p.name) +
       (isActive ? '<span class="port-tab-menu-btn" id="port-menu-btn-' + id + '" onclick="event.stopPropagation();openPortfolioMenu(\'' + id + '\')">···</span>' : '') +
@@ -4122,7 +4133,7 @@ function renderPortfolio() {
         demoNote = document.createElement('div');
         demoNote.id = 'port-demo-note';
         demoNote.className = 'port-demo-note';
-        demoNote.innerHTML = '✦ This is a simulated portfolio using fractional shares. Most modern brokers (Robinhood, Fidelity, Schwab) support fractional investing.';
+        demoNote.innerHTML = 'This is a simulated portfolio using fractional shares. Most modern brokers (Robinhood, Fidelity, Schwab) support fractional investing.';
         let listEl = document.getElementById('portfolio-list');
         if (listEl) listEl.parentNode.insertBefore(demoNote, listEl);
       }
@@ -4710,7 +4721,7 @@ function explainPortfolio() {
   modal.innerHTML =
     '<div class="holdings-explain-content">' +
       '<button class="holdings-explain-close" onclick="document.getElementById(\'holdings-explain-modal\').remove()">✕</button>' +
-      '<h3>✨ Understanding Your Portfolio</h3>' +
+      '<h3>Understanding Your Portfolio</h3>' +
       '<div id="holdings-explain-body" style="color:var(--text-muted);font-size:13px;">Generating explanation…</div>' +
     '</div>';
   document.body.appendChild(modal);
@@ -4998,15 +5009,15 @@ function getStreak() {
 
 function renderBadges(analyzed, watchlistLen, portfolioLen, streak) {
   let allBadges = [
-    { icon: '🔍', name: 'First Look',   desc: 'Analyze your first stock',    earned: analyzed >= 1 },
-    { icon: '📊', name: 'Deep Dive',    desc: 'Analyze 10 stocks',            earned: analyzed >= 10 },
-    { icon: '🏆', name: 'Stock Guru',   desc: 'Analyze 50 stocks',            earned: analyzed >= 50 },
-    { icon: '👀', name: 'Watchman',     desc: 'Add a stock to your watchlist', earned: watchlistLen >= 1 },
-    { icon: '💼', name: 'Investor',     desc: 'Add a stock to your portfolio', earned: portfolioLen >= 1 },
-    { icon: '🌍', name: 'Diversified',  desc: 'Hold 5+ stocks in portfolio',   earned: portfolioLen >= 5 },
-    { icon: '🔥', name: '3-Day Streak', desc: 'Use the app 3 days in a row',   earned: streak >= 3 },
-    { icon: '⚡', name: 'Consistent',   desc: 'Use the app 7 days in a row',   earned: streak >= 7 },
-    { icon: '💎', name: 'Dedicated',    desc: 'Use the app 30 days in a row',  earned: streak >= 30 },
+    { icon: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>', name: 'First Look',   desc: 'Analyze your first stock',    earned: analyzed >= 1 },
+    { icon: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>', name: 'Deep Dive',    desc: 'Analyze 10 stocks',            earned: analyzed >= 10 },
+    { icon: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>', name: 'Stock Guru',   desc: 'Analyze 50 stocks',            earned: analyzed >= 50 },
+    { icon: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>', name: 'Watchman',     desc: 'Add a stock to your watchlist', earned: watchlistLen >= 1 },
+    { icon: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>', name: 'Investor',     desc: 'Add a stock to your portfolio', earned: portfolioLen >= 1 },
+    { icon: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>', name: 'Diversified',  desc: 'Hold 5+ stocks in portfolio',   earned: portfolioLen >= 5 },
+    { icon: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>', name: '3-Day Streak', desc: 'Use the app 3 days in a row',   earned: streak >= 3 },
+    { icon: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>', name: 'Consistent',   desc: 'Use the app 7 days in a row',   earned: streak >= 7 },
+    { icon: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="22" x2="12" y2="2"/><path d="M2 8.5h20"/></svg>', name: 'Dedicated',    desc: 'Use the app 30 days in a row',  earned: streak >= 30 },
   ];
   let grid = document.getElementById('badges-grid');
   if (!grid) return;
