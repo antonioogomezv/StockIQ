@@ -207,11 +207,8 @@ function fmtSigned$(amount) {
 }
 
 function _applyRateAndRerender() {
-  var active = document.querySelector('.tab-btn.active');
-  if (!active) return;
-  var tab = active.getAttribute('data-tab') || active.textContent.trim().toLowerCase();
-  if (tab === 'portfolio') renderPortfolio();
-  else if (tab === 'watchlist') renderWatchlist();
+  if (document.getElementById('nav-portfolio').classList.contains('active')) renderPortfolio();
+  else if (document.getElementById('nav-watchlist').classList.contains('active')) renderWatchlist();
 }
 
 function fetchFxRate(callback) {
