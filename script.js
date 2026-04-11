@@ -220,10 +220,11 @@ function fetchFxRate(callback) {
   if (cached && cached.rate && (Date.now() - cached.ts < 43200000)) {
     _fxRate = cached.rate; _fxSym = 'MX$'; if (callback) callback(); return;
   }
-  fetch('/.netlify/functions/fx-rate')
+  // Use existing Finnhub proxy — forex/rates returns all USD pairs
+  fetch(finnhubUrl('/api/v1/forex/rates', { base: 'USD' }))
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      var rate = data && data.rates && data.rates.MXN;
+      var rate = data && data.quote && data.quote.MXN;
       if (rate) {
         _fxRate = rate; _fxSym = 'MX$';
         localStorage.setItem('fx-usdmxn', JSON.stringify({ rate: rate, ts: Date.now() }));
@@ -231,7 +232,6 @@ function fetchFxRate(callback) {
       if (callback) callback();
     })
     .catch(function() {
-      // fallback to last cached rate or approximate
       var cached2 = JSON.parse(localStorage.getItem('fx-usdmxn') || 'null');
       _fxRate = (cached2 && cached2.rate) || 17.5;
       _fxSym = 'MX$';
