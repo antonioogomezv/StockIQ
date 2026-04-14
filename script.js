@@ -3859,19 +3859,36 @@ function confirmDeletePortfolio(id) {
 
   let card = document.createElement('div');
   card.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px 24px;max-width:320px;width:100%;text-align:center;';
-  card.innerHTML =
-    '<div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px;">Delete Portfolio?</div>' +
-    '<div style="font-size:13px;color:var(--text-muted);margin-bottom:24px;">This will permanently delete <strong>' + escHtml(port.name) + '</strong> and all its holdings. This cannot be undone.</div>' +
-    '<div style="display:flex;gap:10px;justify-content:center;">' +
-      '<button id="_del-cancel-btn" style="flex:1;background:var(--surface2);color:var(--text);border:1px solid var(--border);">Cancel</button>' +
-      '<button id="_del-confirm-btn" style="flex:1;background:#ef4444;color:white;border:none;">Delete</button>' +
-    '</div>';
 
+  let title = document.createElement('div');
+  title.style.cssText = 'font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px;';
+  title.textContent = 'Delete Portfolio?';
+
+  let desc = document.createElement('div');
+  desc.style.cssText = 'font-size:13px;color:var(--text-muted);margin-bottom:24px;';
+  desc.innerHTML = 'This will permanently delete <strong>' + escHtml(port.name) + '</strong> and all its holdings. This cannot be undone.';
+
+  let btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display:flex;gap:10px;justify-content:center;';
+
+  let cancelBtn = document.createElement('button');
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.style.cssText = 'flex:1;background:var(--surface2);color:var(--text);border:1px solid var(--border);';
+
+  let deleteBtn = document.createElement('button');
+  deleteBtn.textContent = 'Delete';
+  deleteBtn.style.cssText = 'flex:1;background:#ef4444;color:white;border:none;';
+
+  btnRow.appendChild(cancelBtn);
+  btnRow.appendChild(deleteBtn);
+  card.appendChild(title);
+  card.appendChild(desc);
+  card.appendChild(btnRow);
   overlay.appendChild(card);
   document.body.appendChild(overlay);
 
-  document.getElementById('_del-cancel-btn').addEventListener('click', function() { overlay.remove(); });
-  document.getElementById('_del-confirm-btn').addEventListener('click', function() { overlay.remove(); deletePortfolio(id); });
+  cancelBtn.addEventListener('click', function() { overlay.remove(); });
+  deleteBtn.addEventListener('click', function() { overlay.remove(); deletePortfolio(id); });
 }
 
 function deletePortfolio(id) {
