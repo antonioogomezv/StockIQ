@@ -1534,7 +1534,7 @@ function scoreBar(label, score, tooltip) {
   let whatHtml = panelContent ? "<div class='score-why'>" + panelContent + "</div>" : "";
   let verdictHtml = tooltip ? "<span class='score-verdict " + verdictClass + "'>" + verdictText + " — " + tooltip.verdict + "</span>" : "";
   let whyBtn = "<button class='score-why-btn' onclick='toggleScoreWhy(this)'>Why?</button>";
-  let valueHtml = (tooltip && tooltip.value) ? "<span class='score-item-value'>" + tooltip.value + "</span>" : "";
+  let valueHtml = (tooltip && tooltip.value && tooltip.value !== '—') ? "<span class='score-item-value'>" + tooltip.value + "</span>" : "";
   let dataAttr = "data-factor='" + label.replace(/'/g, '') + "'";
   return "<div class='score-item' " + dataAttr + ">" +
     "<div class='score-item-header'>" +
