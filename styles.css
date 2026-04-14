@@ -574,6 +574,14 @@ button:active { transform: translateY(0); }
   font-weight: 700;
 }
 
+#compare-btn {
+  background: linear-gradient(135deg, var(--accent-blue), #0369a1);
+}
+
+#compare-btn:hover {
+  background: linear-gradient(135deg, #38bdf8, var(--accent-blue));
+}
+
 .range-bar-labels {
   display: flex;
   justify-content: space-between;
