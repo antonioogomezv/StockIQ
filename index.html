@@ -902,6 +902,16 @@
               <button class="chat-suggest" onclick="askStockQuestion('Can you explain the P/E ratio for this stock?')">Explain P/E ratio</button>
               <button class="chat-suggest" onclick="askStockQuestion('What does beta mean and how does it affect me?')">What is beta?</button>
             </div>
+            <div id="ai-scenarios">
+              <div class="ai-scenarios-label">What if...</div>
+              <div class="ai-scenarios-chips">
+                <button class="scenario-chip" onclick="askScenario('rates')">Rates rise</button>
+                <button class="scenario-chip" onclick="askScenario('recession')">Recession hits</button>
+                <button class="scenario-chip" onclick="askScenario('inflation')">Inflation spikes</button>
+                <button class="scenario-chip" onclick="askScenario('dollar')">Dollar strengthens</button>
+                <button class="scenario-chip" onclick="askScenario('bear')">Bear case</button>
+              </div>
+            </div>
             <div id="ai-chat-input-row">
               <input type="text" id="ai-chat-input" placeholder="Ask anything about this stock..." onkeypress="if(event.key==='Enter') sendStockQuestion()">
               <button onclick="sendStockQuestion()" id="ai-chat-send">Ask</button>

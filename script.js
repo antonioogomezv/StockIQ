@@ -5601,6 +5601,18 @@ function askStockQuestion(question) {
   sendStockQuestion();
 }
 
+function askScenario(type) {
+  var name = currentName || currentTicker || 'this stock';
+  var q = {
+    rates:     'If the Federal Reserve significantly raises interest rates, what happens to ' + name + ' specifically? Consider its valuation, debt levels, and sector sensitivity.',
+    recession: 'If the US enters a recession, how would ' + name + ' be affected? Think about its revenue stability, profit margins, and how cyclical its business is.',
+    inflation: 'If inflation stays elevated for the next year, what is the impact on ' + name + '? Consider its pricing power, cost structure, and margins.',
+    dollar:    'If the US dollar strengthens significantly against other currencies, what does that mean for ' + name + '? Think about international revenue exposure and competitiveness.',
+    bear:      'What is the bear case for ' + name + ' right now? What are the biggest risks and scenarios where things could go wrong for this company?'
+  }[type];
+  if (q) askStockQuestion(q);
+}
+
 function sendStockQuestion() {
   let input = document.getElementById('ai-chat-input');
   let question = input.value.trim();

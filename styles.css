@@ -872,6 +872,48 @@ button:active { transform: translateY(0); }
   white-space: nowrap;
 }
 
+#ai-scenarios {
+  margin-bottom: 12px;
+}
+
+.ai-scenarios-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 7px;
+  opacity: 0.7;
+}
+
+.ai-scenarios-chips {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.scenario-chip {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: 20px;
+  font-size: 12px;
+  font-family: var(--sans);
+  padding: 5px 13px;
+  cursor: pointer;
+  box-shadow: none;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.scenario-chip:hover {
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+  background: rgba(14,165,233,0.06);
+  transform: none;
+}
+
 /* CHART */
 #chart-section {
   margin-top: 32px;
@@ -5610,6 +5652,10 @@ footer {
   /* ── Score history diff ── */
   .score-history-diff { padding: 10px 12px; }
   .score-history-diff-row { font-size: 12px; }
+
+  /* ── Scenario chips ── */
+  .ai-scenarios-chips { gap: 5px; }
+  .scenario-chip { font-size: 11px; padding: 4px 11px; }
 
   /* ── Toast ── */
   #toast { bottom: 16px; font-size: 12px; padding: 10px 16px; }
