@@ -4267,21 +4267,20 @@ function renderPortfolio() {
     document.getElementById('port-total-gain').textContent = fmtSigned$(totalGain);
     document.getElementById('port-total-gain').style.color = gainColor;
     document.getElementById('port-total-pct').textContent = (totalGainPct >= 0 ? '+' : '') + totalGainPct.toFixed(2) + '% vs cost';
-    let prevValue = totalValue - totalDayChange;
-    let totalDayChangePct = prevValue > 0 ? (totalDayChange / prevValue) * 100 : 0;
-    document.getElementById('port-today-change').textContent = fmtSigned$(totalDayChange);
-    document.getElementById('port-today-change').style.color = dayColor;
-    let todayPctEl = document.getElementById('port-today-pct');
     var marketOpen = isMarketOpen();
-    if (todayPctEl) { todayPctEl.textContent = (totalDayChangePct >= 0 ? '+' : '') + totalDayChangePct.toFixed(2) + (marketOpen ? '% today' : '% last session'); todayPctEl.style.color = dayColor; }
-    // Update the "Day Change" label based on market status
-    var _portTodayEl = document.getElementById('port-today-change');
-    var _portRow = _portTodayEl && _portTodayEl.closest && _portTodayEl.closest('.holdings-metric-row');
-    var dayLabelEl = _portRow ? _portRow.querySelector('span:first-child') : null;
-    if (dayLabelEl) {
-      var tipBtn = dayLabelEl.querySelector('button');
-      dayLabelEl.textContent = marketOpen ? 'Day Change ' : 'Last Session ';
-      if (tipBtn) dayLabelEl.appendChild(tipBtn);
+    let todayChangeEl = document.getElementById('port-today-change');
+    let todayPctEl = document.getElementById('port-today-pct');
+    if (marketOpen) {
+      let prevValue = totalValue - totalDayChange;
+      let totalDayChangePct = prevValue > 0 ? (totalDayChange / prevValue) * 100 : 0;
+      todayChangeEl.textContent = fmtSigned$(totalDayChange);
+      todayChangeEl.style.color = dayColor;
+      if (todayPctEl) { todayPctEl.textContent = (totalDayChangePct >= 0 ? '+' : '') + totalDayChangePct.toFixed(2) + '% today'; todayPctEl.style.color = dayColor; }
+    } else {
+      todayChangeEl.textContent = '—';
+      todayChangeEl.style.color = 'var(--text-muted)';
+      if (todayPctEl) { todayPctEl.textContent = 'Market closed'; todayPctEl.style.color = 'var(--text-muted)'; }
+      if (todayCard) { todayCard.classList.remove('metric-up', 'metric-down'); }
     }
     // Realized G/L from closed positions
     let closed = active ? (active.closedPositions || []) : [];
@@ -4625,7 +4624,7 @@ function renderPortfolioRows(data) {
             '<div>' +
               '<div style="font-weight:600;font-size:14px;">' + s.ticker + '</div>' +
               '<div style="font-size:11px;color:#64748b;">' + s.shares.toFixed(s.shares % 1 === 0 ? 0 : 2) + ' shares · avg ' + fmt$(s.buyPrice) + (hasMultiple ? ' · ' + s.lots.length + ' lots' : (s.lots && s.lots[0] && s.lots[0].date ? ' · ' + s.lots[0].date : '')) + '</div>' +
-              '<div style="font-size:11px;margin-top:2px;"><span style="color:var(--text-muted);">now ' + fmt$(s.currentPrice) + '</span> <span style="color:' + dc + ';">' + fmtSigned$(s.dayChangeAmt) + (isMarketOpen() ? ' today' : ' last session') + '</span></div>' +
+              '<div style="font-size:11px;margin-top:2px;"><span style="color:var(--text-muted);">now ' + fmt$(s.currentPrice) + '</span>' + (isMarketOpen() ? ' <span style="color:' + dc + ';">' + fmtSigned$(s.dayChangeAmt) + ' today</span>' : '') + '</div>' +
             '</div>' +
           '</div>' +
           '<div><div>' + fmt$(s.value) + '</div></div>' +
