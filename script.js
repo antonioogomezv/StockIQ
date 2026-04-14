@@ -888,9 +888,9 @@ function displayData(data) {
 
   document.getElementById("explanation-simple").innerHTML = "";
 
-  document.getElementById("show-details-btn").style.display = "block";
-  document.getElementById("show-details-btn").textContent = "Show Full Analysis";
+  document.getElementById("show-details-btn").style.display = "none";
 
+  document.getElementById("explanation").style.display = "block";
   document.getElementById("explanation").innerHTML =
     "" +
 (function() {
