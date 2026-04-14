@@ -2580,7 +2580,7 @@ function removeAlert(ticker) {
   let alerts = JSON.parse(localStorage.getItem('price-alerts') || '{}');
   delete alerts[ticker];
   localStorage.setItem('price-alerts', JSON.stringify(alerts));
-  saveToFirestore({ priceAlerts: alerts });
+  replaceInFirestore({ priceAlerts: alerts });
   renderWatchlist();
 }
 
@@ -5808,9 +5808,14 @@ function submitLogin() {
 
 function saveStockNote(ticker, note) {
   let notes = JSON.parse(localStorage.getItem('stock-notes') || '{}');
-  if (note.trim()) { notes[ticker] = note.trim(); } else { delete notes[ticker]; }
+  if (note.trim()) {
+    notes[ticker] = note.trim();
+    saveToFirestore({ stockNotes: notes });
+  } else {
+    delete notes[ticker];
+    replaceInFirestore({ stockNotes: notes });
+  }
   localStorage.setItem('stock-notes', JSON.stringify(notes));
-  saveToFirestore({ stockNotes: notes });
 }
 
 function getStockNote(ticker) {
