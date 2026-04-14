@@ -710,14 +710,17 @@ function buildScoreExplainer(_bd, pe, margin, growth, beta, rsi, _ma50) {
   "</div>";
 }
 
-function saveScoreHistory(ticker, score) {
+function saveScoreHistory(ticker, score, breakdown, metrics) {
   let key = "history_score_" + ticker;
   let history = JSON.parse(localStorage.getItem(key) || "[]");
   let today = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  let entry = { date: today, score: score };
+  if (breakdown) entry.bd = breakdown;
+  if (metrics) entry.m = metrics;
   if (history.length > 0 && history[history.length - 1].date === today) {
-    history[history.length - 1].score = score;
+    history[history.length - 1] = entry;
   } else {
-    history.push({ date: today, score: score });
+    history.push(entry);
   }
   if (history.length > 10) history = history.slice(-10);
   localStorage.setItem(key, JSON.stringify(history));
@@ -727,12 +730,49 @@ function saveScoreHistory(ticker, score) {
 function buildScoreHistoryBars(ticker, currentScore) {
   let key = "history_score_" + ticker;
   let history = JSON.parse(localStorage.getItem(key) || "[]");
-  if (history.length < 2) return { trend: "", bars: "" };
+  if (history.length < 2) return { trend: "", bars: "", diff: "" };
   let prev = history[history.length - 2];
+  let curr = history[history.length - 1];
   let diff = currentScore - prev.score;
   let arrow = diff > 0 ? "▲" : diff < 0 ? "▼" : "—";
   let color = diff > 0 ? "#16a34a" : diff < 0 ? "#dc2626" : "#64748b";
   let label = diff > 0 ? "improving" : diff < 0 ? "declining" : "unchanged";
+
+  // Build "what changed" diff if both entries have breakdown data
+  let diffHtml = "";
+  if (prev.bd && curr.bd) {
+    let factorNames = {
+      pe: "P/E Ratio", margin: "Profit Margin", growth: "Revenue Growth",
+      beta: "Risk (Beta)", rsi: "RSI", ma: "Moving Average",
+      news: "News Sentiment", roe: "ROE", debt: "Debt Level",
+      position: "52wk Position", price: "Price Movement",
+      currentRatio: "Current Ratio", interest: "Interest Coverage"
+    };
+    let changes = [];
+    Object.keys(factorNames).forEach(function(k) {
+      let pv = prev.bd[k], cv = curr.bd[k];
+      if (pv == null || cv == null) return;
+      let d = cv - pv;
+      if (d === 0) return;
+      changes.push({ name: factorNames[k], delta: d });
+    });
+    changes.sort(function(a, b) { return Math.abs(b.delta) - Math.abs(a.delta); });
+    let top = changes.slice(0, 3);
+    if (top.length > 0) {
+      diffHtml = "<div class='score-history-diff'>" +
+        "<div class='score-history-diff-title'>What changed since " + prev.date + ":</div>" +
+        top.map(function(c) {
+          let up = c.delta > 0;
+          return "<div class='score-history-diff-row'>" +
+            "<span class='diff-arrow' style='color:" + (up ? "#16a34a" : "#dc2626") + ";'>" + (up ? "↑" : "↓") + "</span>" +
+            "<span class='diff-name'>" + c.name + "</span>" +
+            "<span class='diff-delta' style='color:" + (up ? "#16a34a" : "#dc2626") + ";'>" + (up ? "+" : "") + c.delta + " pts</span>" +
+          "</div>";
+        }).join("") +
+      "</div>";
+    }
+  }
+
   let bars = history.map(function(h) {
     let barColor = h.score >= 65 ? "#16a34a" : h.score >= 50 ? "#d97706" : "#dc2626";
     let height = Math.max(20, (h.score / 100) * 60);
@@ -749,14 +789,18 @@ function buildScoreHistoryBars(ticker, currentScore) {
           "<span><span style='color:#16a34a;font-weight:700;'>■</span> Strong 65+</span>" +
           "<span><span style='color:#d97706;font-weight:700;'>■</span> Watch 50–64</span>" +
           "<span><span style='color:#dc2626;font-weight:700;'>■</span> Risky &lt;50</span>" +
-          "</div>"
+          "</div>",
+    diff: diffHtml
   };
 }
 
 function getScoreHistoryHtml(ticker, currentScore) {
   let h = buildScoreHistoryBars(ticker, currentScore);
   if (!h.bars) return "";
-  return "<br><br><strong>Score History:</strong><br>" + h.trend + h.bars;
+  return "<div class='score-history-section'>" +
+    "<div class='score-history-title'>SCORE HISTORY</div>" +
+    h.trend + h.bars + h.diff +
+  "</div>";
 }
 
 function displayData(data) {
@@ -806,7 +850,7 @@ function displayData(data) {
   let totalScore = result.total;
   let breakdown = result.breakdown;
 
-  saveScoreHistory(ticker, totalScore);
+  saveScoreHistory(ticker, totalScore, breakdown, { pe, margin, growth, beta, rsi, roe, currentRatio, interestCoverage });
   let analyzed = parseInt(localStorage.getItem('total-analyzed') || '0');
   analyzed += 1;
   localStorage.setItem('total-analyzed', analyzed);
@@ -815,6 +859,7 @@ function displayData(data) {
   currentTicker = ticker;
   currentScore = totalScore;
   currentName = companyName;
+  window._currentMetrics = { pe, beta, margin, growth, roe, rsi, ma50, ma20, price, week52High, changePct };
   saveSearchHistory(ticker, companyName);
 
   document.getElementById("action-btns").style.display = "flex";
@@ -2100,6 +2145,119 @@ function quickAddToPortfolio() {
     .then(function(q) { if (q.c) document.getElementById('port-price').value = q.c.toFixed(2); });
   document.getElementById('port-shares').focus();
 }
+
+// ── COMPARE ──────────────────────────────────────────────────
+var _compareData = null;
+
+function openCompare() {
+  var sec = document.getElementById('compare-section');
+  if (sec) { sec.style.display = 'block'; document.getElementById('compare-input').focus(); }
+}
+function closeCompare() {
+  var sec = document.getElementById('compare-section');
+  if (sec) sec.style.display = 'none';
+  document.getElementById('compare-result').style.display = 'none';
+  document.getElementById('compare-result').innerHTML = '';
+  document.getElementById('compare-input').value = '';
+}
+
+function runCompare() {
+  var ticker2 = (document.getElementById('compare-input').value || '').trim().toUpperCase();
+  if (!ticker2 || !currentTicker) return;
+  if (ticker2 === currentTicker) { showToast("Pick a different stock to compare!"); return; }
+
+  var loadEl = document.getElementById('compare-loading');
+  var resultEl = document.getElementById('compare-result');
+  loadEl.style.display = 'block';
+  resultEl.style.display = 'none';
+
+  var today = new Date();
+  var from = new Date(today); from.setDate(today.getDate() - 30);
+  function fetchStock(t) {
+    return Promise.all([
+      fetch(finnhubUrl('/api/v1/quote', {symbol: t})).then(function(r){return r.json();}),
+      fetch(finnhubUrl('/api/v1/stock/metric', {symbol: t, metric: 'all'})).then(function(r){return r.json();}),
+      fetch(finnhubUrl('/api/v1/stock/profile2', {symbol: t})).then(function(r){return r.json();}),
+      fetch(finnhubUrl('/api/v1/stock/candle', {symbol: t, resolution: 'D', from: Math.floor(from.getTime()/1000), to: Math.floor(today.getTime()/1000)})).then(function(r){return r.json();}).catch(function(){return {};})
+    ]).then(function(res) {
+      var q = res[0], m = res[1].metric || {}, p = res[2], candles = res[3];
+      var prices = (candles.c && Array.isArray(candles.c)) ? candles.c : [];
+      var rsi = prices.length > 14 ? calculateRSI(prices, 14) : null;
+      var ma50 = prices.length >= 50 ? calculateMA(prices, 50) : null;
+      var ma20 = prices.length >= 20 ? calculateMA(prices, 20) : null;
+      var ma = ma50 || ma20;
+      var pe = m['peBasicExclExtraTTM'] || 0;
+      var beta = m['beta'] || 0;
+      var margin = m['netProfitMarginTTM'] || 0;
+      var growth = m['revenueGrowthTTMYoy'] || 0;
+      var roe = m['roeAnnual'] || m['roeTTM'] || 0;
+      var week52High = m['52WeekHigh'] || 0;
+      var score = calcQuickScore(pe, beta, margin, growth, q.dp || 0, q.c || 0, week52High);
+      return {
+        ticker: t, name: p.name || t, logo: p.logo || '',
+        price: q.c || 0, changePct: q.dp || 0,
+        pe: pe, beta: beta, margin: margin, growth: growth,
+        roe: roe, rsi: rsi, ma: ma, price_vs_ma: ma ? (q.c > ma ? 'above' : 'below') : null,
+        week52High: week52High, score: score
+      };
+    });
+  }
+
+  fetchStock(ticker2).then(function(d2) {
+    loadEl.style.display = 'none';
+    var m = window._currentMetrics || {};
+    var ma = m.ma50 || m.ma20;
+    var d1 = {
+      ticker: currentTicker, name: currentName, score: currentScore,
+      price: m.price || 0, changePct: m.changePct || 0,
+      pe: m.pe || 0, beta: m.beta || 0, margin: m.margin || 0,
+      growth: m.growth || 0, roe: m.roe || 0, rsi: m.rsi || null,
+      ma: ma || null, price_vs_ma: ma ? (m.price > ma ? 'above' : 'below') : null,
+      week52High: m.week52High || 0
+    };
+    renderCompare(d1, d2);
+  }).catch(function() {
+    loadEl.style.display = 'none';
+    showToast('Could not load data for ' + ticker2);
+  });
+}
+
+function renderCompare(d1, d2) {
+  var resultEl = document.getElementById('compare-result');
+
+  var rows = [
+    { label: 'Score',          v1: d1.score + '/100',                            v2: d2.score + '/100',                            better: d1.score > d2.score ? 1 : d2.score > d1.score ? 2 : 0 },
+    { label: 'P/E Ratio',      v1: d1.pe > 0 ? d1.pe.toFixed(1) + 'x' : '—',    v2: d2.pe > 0 ? d2.pe.toFixed(1) + 'x' : '—',    better: (d1.pe > 0 && d2.pe > 0) ? (d1.pe < d2.pe ? 1 : d2.pe < d1.pe ? 2 : 0) : 0 },
+    { label: 'Profit Margin',  v1: d1.margin ? d1.margin.toFixed(1) + '%' : '—', v2: d2.margin ? d2.margin.toFixed(1) + '%' : '—', better: d1.margin > d2.margin ? 1 : d2.margin > d1.margin ? 2 : 0 },
+    { label: 'Revenue Growth', v1: d1.growth ? (d1.growth > 0 ? '+' : '') + d1.growth.toFixed(1) + '%' : '—', v2: d2.growth ? (d2.growth > 0 ? '+' : '') + d2.growth.toFixed(1) + '%' : '—', better: d1.growth > d2.growth ? 1 : d2.growth > d1.growth ? 2 : 0 },
+    { label: 'Beta (Risk)',    v1: d1.beta ? d1.beta.toFixed(2) : '—',           v2: d2.beta ? d2.beta.toFixed(2) : '—',           better: (d1.beta > 0 && d2.beta > 0) ? (d1.beta < d2.beta ? 1 : d2.beta < d1.beta ? 2 : 0) : 0 },
+    { label: 'ROE',            v1: d1.roe ? d1.roe.toFixed(1) + '%' : '—',       v2: d2.roe ? d2.roe.toFixed(1) + '%' : '—',       better: d1.roe > d2.roe ? 1 : d2.roe > d1.roe ? 2 : 0 },
+    { label: 'RSI',            v1: d1.rsi != null ? d1.rsi + '' : '—',           v2: d2.rsi != null ? d2.rsi + '' : '—',           better: 0 },
+    { label: 'vs 50-day MA',   v1: d1.price_vs_ma || '—',                        v2: d2.price_vs_ma || '—',                        better: (d1.price_vs_ma === 'above' && d2.price_vs_ma !== 'above') ? 1 : (d2.price_vs_ma === 'above' && d1.price_vs_ma !== 'above') ? 2 : 0 },
+  ];
+
+  var html = "<div class='cmp-table'>" +
+    "<div class='cmp-header'>" +
+      "<div class='cmp-metric-col'></div>" +
+      "<div class='cmp-stock-col'>" + (d1.ticker) + "</div>" +
+      "<div class='cmp-stock-col'>" + (d2.ticker) + "</div>" +
+    "</div>" +
+    rows.map(function(r) {
+      var c1 = r.better === 1 ? ' cmp-win' : '';
+      var c2 = r.better === 2 ? ' cmp-win' : '';
+      return "<div class='cmp-row'>" +
+        "<div class='cmp-metric-col'>" + r.label + "</div>" +
+        "<div class='cmp-stock-col" + c1 + "'>" + r.v1 + (r.better === 1 ? " <span class='cmp-badge'>✓</span>" : "") + "</div>" +
+        "<div class='cmp-stock-col" + c2 + "'>" + r.v2 + (r.better === 2 ? " <span class='cmp-badge'>✓</span>" : "") + "</div>" +
+      "</div>";
+    }).join('') +
+  "</div>" +
+  "<p class='cmp-note'>✓ marks the stronger value for each metric. Lower P/E and Beta are better; higher is better for everything else.</p>";
+
+  resultEl.innerHTML = html;
+  resultEl.style.display = 'block';
+}
+// ── END COMPARE ───────────────────────────────────────────────
 
 function addToWatchlist() {
   if (!currentTicker) return;

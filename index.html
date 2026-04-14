@@ -866,7 +866,22 @@
         <div id="action-btns" style="display:none;">
           <button type="button" id="watchlist-btn" onclick="addToWatchlist()">+ Watchlist</button>
           <button type="button" id="portfolio-quick-btn" onclick="quickAddToPortfolio()">+ Portfolio</button>
+          <button type="button" id="compare-btn" onclick="openCompare()">⇄ Compare</button>
           <button type="button" id="share-btn" onclick="shareStockAnalysis()">Share ↗</button>
+        </div>
+
+        <!-- Compare overlay -->
+        <div id="compare-section" style="display:none;">
+          <div id="compare-header">
+            <span id="compare-title">Compare</span>
+            <button id="compare-close" onclick="closeCompare()">✕</button>
+          </div>
+          <div id="compare-search-row">
+            <input type="text" id="compare-input" placeholder="Enter ticker to compare (e.g. MSFT)" onkeypress="if(event.key==='Enter')runCompare()">
+            <button onclick="runCompare()">Compare →</button>
+          </div>
+          <div id="compare-loading" style="display:none;">Loading…</div>
+          <div id="compare-result" style="display:none;"></div>
         </div>
         <div id="broker-hint" style="display:none;">
           StockIQ is for education only — not financial advice. To actually buy stocks, you'll need a brokerage account (e.g. Robinhood, Fidelity, or Schwab).
