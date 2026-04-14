@@ -436,13 +436,11 @@ function selectPortAutocomplete(ticker) {
   let priceEl = document.getElementById('port-price');
   priceEl.value = '';
   if (loadingEl) loadingEl.style.display = 'inline';
-  fetch(finnhubUrl('/api/v1/quote', {symbol: ticker}))
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (loadingEl) loadingEl.style.display = 'none';
-      if (data && data.c) priceEl.value = data.c.toFixed(2);
-    })
-    .catch(function() { if (loadingEl) loadingEl.style.display = 'none'; });
+  getSharedPrices([ticker], 60000).then(function(m) {
+    if (loadingEl) loadingEl.style.display = 'none';
+    var price = (m[ticker] || {}).price;
+    if (price) priceEl.value = price.toFixed(2);
+  }).catch(function() { if (loadingEl) loadingEl.style.display = 'none'; });
 }
 
 function saveSearchHistory(ticker, name) {
@@ -2140,9 +2138,11 @@ function quickAddToPortfolio() {
   if (!currentTicker) return;
   showTab('portfolio');
   document.getElementById('port-ticker').value = currentTicker;
-  fetch(finnhubUrl('/api/v1/quote', {symbol: currentTicker}))
-    .then(function(r) { return r.json(); })
-    .then(function(q) { if (q.c) document.getElementById('port-price').value = q.c.toFixed(2); });
+  // Use the same price source as the portfolio renderer so cost basis = current price = 0 G/L on add
+  getSharedPrices([currentTicker], 60000).then(function(m) {
+    var price = (m[currentTicker] || {}).price;
+    if (price) document.getElementById('port-price').value = price.toFixed(2);
+  });
   document.getElementById('port-shares').focus();
 }
 
