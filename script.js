@@ -4267,21 +4267,13 @@ function renderPortfolio() {
     document.getElementById('port-total-gain').textContent = fmtSigned$(totalGain);
     document.getElementById('port-total-gain').style.color = gainColor;
     document.getElementById('port-total-pct').textContent = (totalGainPct >= 0 ? '+' : '') + totalGainPct.toFixed(2) + '% vs cost';
-    var marketOpen = isMarketOpen();
+    let prevValue = totalValue - totalDayChange;
+    let totalDayChangePct = prevValue > 0 ? (totalDayChange / prevValue) * 100 : 0;
     let todayChangeEl = document.getElementById('port-today-change');
     let todayPctEl = document.getElementById('port-today-pct');
-    if (marketOpen) {
-      let prevValue = totalValue - totalDayChange;
-      let totalDayChangePct = prevValue > 0 ? (totalDayChange / prevValue) * 100 : 0;
-      todayChangeEl.textContent = fmtSigned$(totalDayChange);
-      todayChangeEl.style.color = dayColor;
-      if (todayPctEl) { todayPctEl.textContent = (totalDayChangePct >= 0 ? '+' : '') + totalDayChangePct.toFixed(2) + '% today'; todayPctEl.style.color = dayColor; }
-    } else {
-      todayChangeEl.textContent = '—';
-      todayChangeEl.style.color = 'var(--text-muted)';
-      if (todayPctEl) { todayPctEl.textContent = 'Market closed'; todayPctEl.style.color = 'var(--text-muted)'; }
-      if (todayCard) { todayCard.classList.remove('metric-up', 'metric-down'); }
-    }
+    todayChangeEl.textContent = fmtSigned$(totalDayChange);
+    todayChangeEl.style.color = dayColor;
+    if (todayPctEl) { todayPctEl.textContent = (totalDayChangePct >= 0 ? '+' : '') + totalDayChangePct.toFixed(2) + '% vs yesterday'; todayPctEl.style.color = dayColor; }
     // Realized G/L from closed positions
     let closed = active ? (active.closedPositions || []) : [];
     let totalRealized = closed.reduce(function(sum, c) { return sum + (c.realizedGain || 0); }, 0);
@@ -4624,7 +4616,7 @@ function renderPortfolioRows(data) {
             '<div>' +
               '<div style="font-weight:600;font-size:14px;">' + s.ticker + '</div>' +
               '<div style="font-size:11px;color:#64748b;">' + s.shares.toFixed(s.shares % 1 === 0 ? 0 : 2) + ' shares · avg ' + fmt$(s.buyPrice) + (hasMultiple ? ' · ' + s.lots.length + ' lots' : (s.lots && s.lots[0] && s.lots[0].date ? ' · ' + s.lots[0].date : '')) + '</div>' +
-              '<div style="font-size:11px;margin-top:2px;"><span style="color:var(--text-muted);">now ' + fmt$(s.currentPrice) + '</span>' + (isMarketOpen() ? ' <span style="color:' + dc + ';">' + fmtSigned$(s.dayChangeAmt) + ' today</span>' : '') + '</div>' +
+              '<div style="font-size:11px;margin-top:2px;"><span style="color:var(--text-muted);">now ' + fmt$(s.currentPrice) + '</span> <span style="color:' + dc + ';">' + fmtSigned$(s.dayChangeAmt) + ' today</span></div>' +
             '</div>' +
           '</div>' +
           '<div><div>' + fmt$(s.value) + '</div></div>' +
