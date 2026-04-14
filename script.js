@@ -482,10 +482,6 @@ function searchStock() {
   if (loadingTickerEl) loadingTickerEl.textContent = query;
   document.getElementById("stock-name").innerHTML = "";
   document.getElementById("health-score").innerHTML = "";
-  document.getElementById("signal").textContent = "Finding stock...";
-  document.getElementById("signal").style.color = "#6b8fa6";
-  document.getElementById("signal").style.background = "none";
-  document.getElementById("signal").style.border = "none";
   document.getElementById("explanation").textContent = "";
   let aiBox = document.getElementById("ai-explanation");
   if (aiBox) aiBox.style.display = "none";
@@ -4279,7 +4275,9 @@ function renderPortfolio() {
     var marketOpen = isMarketOpen();
     if (todayPctEl) { todayPctEl.textContent = (totalDayChangePct >= 0 ? '+' : '') + totalDayChangePct.toFixed(2) + (marketOpen ? '% today' : '% last session'); todayPctEl.style.color = dayColor; }
     // Update the "Day Change" label based on market status
-    var dayLabelEl = document.querySelector('#port-today-change')?.closest('.holdings-metric-row')?.querySelector('span:first-child');
+    var _portTodayEl = document.getElementById('port-today-change');
+    var _portRow = _portTodayEl && _portTodayEl.closest && _portTodayEl.closest('.holdings-metric-row');
+    var dayLabelEl = _portRow ? _portRow.querySelector('span:first-child') : null;
     if (dayLabelEl) {
       var tipBtn = dayLabelEl.querySelector('button');
       dayLabelEl.textContent = marketOpen ? 'Day Change ' : 'Last Session ';
