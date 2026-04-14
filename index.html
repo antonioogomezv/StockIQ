@@ -155,30 +155,48 @@
     <div id="onboarding-cards">
 
       <div class="onboarding-card active" data-step="0">
+        <div class="onboarding-card-icon"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 1 0 0 7h5a3.5 3.5 0 1 1 0 7H6"/></svg></div>
+        <div class="onboarding-card-title">Your Currency</div>
+        <div class="onboarding-card-desc">Which currency do you invest in? All prices and portfolio values will be shown in your choice.</div>
+        <div id="ob-currency-btns">
+          <button class="ob-currency-btn active" id="ob-usd" onclick="obSetCurrency('USD')">
+            <span class="ob-currency-symbol">$</span>
+            <span class="ob-currency-name">US Dollar</span>
+            <span class="ob-currency-code">USD</span>
+          </button>
+          <button class="ob-currency-btn" id="ob-mxn" onclick="obSetCurrency('MXN')">
+            <span class="ob-currency-symbol">MX$</span>
+            <span class="ob-currency-name">Peso Mexicano</span>
+            <span class="ob-currency-code">MXN</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="onboarding-card" data-step="1">
         <div class="onboarding-card-icon"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
         <div class="onboarding-card-title">Analyze Tab</div>
         <div class="onboarding-card-desc">Search any US stock by name or ticker. You'll get a health score out of 100, a plain-English breakdown, price chart, and an AI you can ask anything.</div>
       </div>
 
-      <div class="onboarding-card" data-step="1">
+      <div class="onboarding-card" data-step="2">
         <div class="onboarding-card-icon"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg></div>
         <div class="onboarding-card-title">Portfolio Tab</div>
         <div class="onboarding-card-desc">Add stocks you own. StockIQ tracks your gains, shows your allocation, and analyzes your entire portfolio with AI. We already loaded a Demo Portfolio based on your profile.</div>
       </div>
 
-      <div class="onboarding-card" data-step="2">
+      <div class="onboarding-card" data-step="3">
         <div class="onboarding-card-icon"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>
         <div class="onboarding-card-title">Watchlist Tab</div>
         <div class="onboarding-card-desc">Save stocks you're watching. Set price alerts so you're notified when a stock hits your target. Track score history over time.</div>
       </div>
 
-      <div class="onboarding-card" data-step="3">
+      <div class="onboarding-card" data-step="4">
         <div class="onboarding-card-icon"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
         <div class="onboarding-card-title">Profile Tab</div>
         <div class="onboarding-card-desc">See your investor type, activity stats, and achievements. Retake the quiz anytime if your goals change.</div>
       </div>
 
-      <div class="onboarding-card" data-step="4">
+      <div class="onboarding-card" data-step="5">
         <div class="onboarding-card-icon"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></div>
         <div class="onboarding-card-title">Learn Terms</div>
         <div class="onboarding-card-desc">Tap the gold Learn Terms button anytime to look up P/E ratio, Beta, RSI, and more — explained in plain English with real-world tips.</div>
@@ -190,6 +208,7 @@
       <button id="onboarding-prev" onclick="onboardingStep(-1)">←</button>
       <div id="onboarding-dots">
         <div class="ob-dot active"></div>
+        <div class="ob-dot"></div>
         <div class="ob-dot"></div>
         <div class="ob-dot"></div>
         <div class="ob-dot"></div>

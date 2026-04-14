@@ -1963,6 +1963,12 @@ function finishQuiz() {
   _obStep = 0;
   document.querySelectorAll('.onboarding-card').forEach(function(c, i) { c.classList.toggle('active', i === 0); });
   document.querySelectorAll('.ob-dot').forEach(function(d, i) { d.classList.toggle('active', i === 0); });
+  // Pre-select saved currency
+  var savedCur = localStorage.getItem('currency') || 'USD';
+  var usdBtn = document.getElementById('ob-usd');
+  var mxnBtn = document.getElementById('ob-mxn');
+  if (usdBtn) usdBtn.classList.toggle('active', savedCur === 'USD');
+  if (mxnBtn) mxnBtn.classList.toggle('active', savedCur === 'MXN');
   let prevBtn = document.getElementById('onboarding-prev');
   if (prevBtn) prevBtn.style.visibility = 'hidden';
   let nextBtn = document.getElementById('onboarding-next');
@@ -1970,7 +1976,26 @@ function finishQuiz() {
 }
 
 let _obStep = 0;
-const _obTotal = 5;
+const _obTotal = 6;
+
+function obSetCurrency(code) {
+  _currency = code;
+  localStorage.setItem('currency', code);
+  // Update button highlights
+  document.getElementById('ob-usd').classList.toggle('active', code === 'USD');
+  document.getElementById('ob-mxn').classList.toggle('active', code === 'MXN');
+  // Apply rate — fetch if MXN, instant if USD
+  if (code === 'MXN') {
+    fetchFxRate(function() {
+      var btn = document.getElementById('currency-toggle');
+      if (btn) btn.textContent = 'MX$';
+    });
+  } else {
+    _fxRate = 1; _fxSym = '$';
+    var btn = document.getElementById('currency-toggle');
+    if (btn) btn.textContent = 'USD';
+  }
+}
 
 function onboardingStep(dir) {
   let cards = document.querySelectorAll('.onboarding-card');
