@@ -1484,18 +1484,64 @@ function renderNewsSection(news, ticker, companyName) {
   section.style.display = 'block';
 }
 
+var _WHY_EXPLANATIONS = {
+  "P/E Ratio": "The Price-to-Earnings ratio tells you how much investors are paying per dollar of profit. A P/E of 25 means you're paying $25 for every $1 the company earns annually. <span class='score-why-deep'>Context matters here: a P/E of 30 is cheap for a software company growing 40% per year, but expensive for a slow-growth retailer. Compare against the sector average, not just an abstract number. High P/E = high expectations baked in, so any miss on earnings hits harder. Negative P/E means the company is currently unprofitable — not automatically bad if they're investing heavily in growth (Amazon was unprofitable for years).</span>",
+
+  "Profit Margin": "Profit margin is the percentage of revenue the company keeps as profit after all costs. A 20% margin means for every $100 in sales, $20 flows to the bottom line. <span class='score-why-deep'>Software companies often run 25–40% margins because their product costs almost nothing to replicate. Retailers like Walmart run 2–3% because they have massive operating costs. So \"good\" is entirely sector-dependent. What you really want to watch: is the margin expanding or shrinking over time? A business compressing margins while growing revenue fast can still be fine — but shrinking margins with flat growth is a warning sign.</span>",
+
+  "Revenue Growth": "Revenue growth measures how fast the company's sales are expanding year-over-year. It's the top line — before any costs are taken out. <span class='score-why-deep'>Growth is the engine of future value. A company growing revenue 20%+ annually is compounding its business base, which can justify a high P/E today. But growth alone isn't enough — it needs to eventually convert to profit. Watch for the combination: strong growth + expanding margins = compounding value. Declining revenue is a serious flag, especially if the company carries debt, because the math on debt repayment stops working fast.</span>",
+
+  "Risk (Beta)": "Beta measures how much a stock moves relative to the overall market (S&P 500 = 1.0). Beta 1.5 means when the market drops 10%, this stock typically drops 15%. <span class='score-why-deep'>Beta is a double-edged sword: high-beta stocks amplify your gains in bull markets but amplify losses in downturns. Conservative investors prefer beta under 1.0 — utilities, consumer staples, healthcare tend to sit here. Aggressive investors or traders seek high beta for bigger moves. Important caveat: beta is calculated from historical price data and can change. A stock with low beta can suddenly become volatile if the business fundamentally shifts.</span>",
+
+  "RSI": "RSI (Relative Strength Index) is a momentum indicator from 0–100 measuring how fast and how much a stock has moved recently. Above 70 = overbought. Below 30 = oversold. <span class='score-why-deep'>RSI doesn't tell you what a stock is worth — it tells you how stretched the recent move is. An RSI of 80 doesn't mean \"sell immediately\" but it does mean the stock has run hard and a pause or pullback is statistically more likely. Conversely, RSI under 30 can signal a capitulation bottom — fear-driven selling that's created an opportunity. Most useful as one signal among many, not in isolation. RSI works better in range-bound markets than in strong trending ones.</span>",
+
+  "Moving Average": "A moving average smooths out daily price noise to reveal the underlying trend. The 50-day average is one of the most-watched levels on Wall Street — institutions buy and sell around it. <span class='score-why-deep'>When a stock is above its 50-day average, it's in an uptrend by definition — buyers are in control. Below it, sellers have the edge. The 200-day average is an even longer-term trend signal. The \"golden cross\" (50-day crossing above 200-day) is a classic bullish signal; the \"death cross\" is the opposite. These aren't magic — they work because enough traders watch them that they become self-fulfilling at key levels.</span>",
+
+  "News Sentiment": "This scores recent headlines and news coverage around the stock, from strongly negative to strongly positive. <span class='score-why-deep'>News sentiment moves prices in the short term, sometimes dramatically. An earnings beat with positive guidance can send a stock up 10–20% overnight. But sentiment is also the most noise-heavy signal here — a negative headline about a competitor, a CEO quote taken out of context, or general market fear can all drag sentiment without changing the underlying business at all. Use this as a short-term awareness signal, not a fundamental judgment. If sentiment is negative but fundamentals are strong, that's often where long-term opportunity lives.</span>",
+
+  "ROE": "Return on Equity measures how efficiently management is generating profit from shareholders' money. ROE of 20% means for every $100 of equity in the business, they're generating $20 in profit. <span class='score-why-deep'>Warren Buffett considers ROE one of the most important metrics — he looks for companies consistently generating 15%+ ROE without taking on excessive debt. The trap: ROE can look artificially high if a company uses a lot of debt (since debt reduces equity in the denominator). Always pair ROE with the debt level. A company with 40% ROE and no debt is exceptional. A company with 40% ROE and massive leverage is a different animal entirely.</span>",
+
+  "Debt Level": "Measures how much debt the company carries relative to its assets or earnings. High debt amplifies both gains and risk — it's leverage in both directions. <span class='score-why-deep'>Debt isn't inherently bad. A company borrowing cheaply to expand into high-return opportunities is smart capital allocation. The danger zone is high debt + falling revenue + rising interest rates — a combination that can turn a business problem into an existential crisis fast. Key ratio to watch: interest coverage (how many times earnings cover interest payments). Below 3x is where it starts getting uncomfortable. Below 1x means they can't cover their interest from operations alone.</span>",
+
+  "Current Ratio": "Current ratio compares what a company owns in the short term (current assets) vs. what it owes in the short term (current liabilities). A ratio above 1.0 means it can cover its near-term obligations. <span class='score-why-deep'>Think of it as a liquidity stress test for the next 12 months. A ratio of 2.0+ is very healthy — plenty of buffer. Below 1.0 is a yellow flag: the company would need to generate cash quickly or find financing to meet its obligations if things slowed down. That said, some excellent companies run low current ratios intentionally (Amazon, for example) because they collect cash from customers before paying suppliers — a powerful business model advantage.</span>",
+
+  "Interest Coverage": "Interest coverage shows how many times a company's operating earnings cover its interest payments. A ratio of 5x means it earns 5 times what it pays in interest — comfortable. <span class='score-why-deep'>This is the debt reality check. A company might look fine on paper but if it's barely covering interest payments, any revenue softness creates a cash crunch. Below 3x, investors start getting nervous. Below 1.5x, credit rating agencies start paying attention. During the 2008 and 2020 crises, companies with strong interest coverage survived; those with weak coverage either diluted shareholders massively or went bankrupt. It's one of the clearest early warning signals of financial fragility.</span>",
+
+  "52wk Position": "Shows where the stock sits relative to its 52-week high — the highest price it's traded at over the past year. <span class='score-why-deep'>Being near the 52-week high is generally bullish — it means buyers keep showing up and the stock keeps getting bid higher. Being far below it could mean opportunity (the business hasn't changed but fear drove the price down) or it could mean a fundamental deterioration (the market repriced it lower for good reason). This signal works best alongside the fundamentals: a stock 40% below its high with strong earnings growth is very different from one 40% below its high with declining revenue.</span>",
+
+  "Price Movement": "Today's price change as a percentage, reflecting buying and selling pressure in the current session. <span class='score-why-deep'>Single-day moves are mostly noise unless accompanied by high volume or a specific catalyst (earnings, news, analyst upgrade). A stock up 5% on 3x normal volume on a good earnings report is meaningful. A stock up 1.2% on a quiet day is essentially random. Where single-day moves matter most: they can trigger stop-losses and momentum strategies, which can then cascade into bigger moves than the original catalyst warranted. Don't make long-term decisions based on a one-day swing.</span>"
+};
+
+function toggleScoreWhy(btn) {
+  var item = btn.closest('.score-item');
+  if (!item) return;
+  var panel = item.querySelector('.score-why');
+  if (!panel) return;
+  var isOpen = panel.classList.contains('open');
+  panel.classList.toggle('open', !isOpen);
+  btn.classList.toggle('open', !isOpen);
+  btn.textContent = isOpen ? 'Why?' : 'Close';
+}
+
 function scoreBar(label, score, tooltip) {
   let color = score >= 7 ? "#16a34a" : score >= 4 ? "#d97706" : "#dc2626";
   let verdictClass = score >= 7 ? "good" : score >= 4 ? "mid" : "bad";
   let verdictText = score >= 7 ? "Strong" : score >= 4 ? "Average" : "Weak";
   let width = (score / 10) * 100;
-  let whatHtml = tooltip ? "<div class='score-why'>" + tooltip.what + "</div>" : "";
+  let deepExp = _WHY_EXPLANATIONS[label] || '';
+  // Use deep explanation if available, otherwise fall back to the data-specific sentence
+  let panelContent = deepExp || (tooltip ? tooltip.what : '');
+  let whatHtml = panelContent ? "<div class='score-why'>" + panelContent + "</div>" : "";
   let verdictHtml = tooltip ? "<span class='score-verdict " + verdictClass + "'>" + verdictText + " — " + tooltip.verdict + "</span>" : "";
+  let whyBtn = "<button class='score-why-btn' onclick='toggleScoreWhy(this)'>Why?</button>";
   let dataAttr = "data-factor='" + label.replace(/'/g, '') + "'";
   return "<div class='score-item' " + dataAttr + ">" +
     "<div class='score-item-header'>" +
-      "<span class='score-item-name term-link' onclick=\"event.stopPropagation();openTerm('" + label.replace(/'/g, "\\'") + "')\" title='Learn more'>" + label + "</span>" +
-      "<span class='score-item-num' style='color:" + color + ";'>" + score + "/10</span>" +
+      "<span class='score-item-name'>" + label + "</span>" +
+      "<div style='display:flex;align-items:center;gap:8px;'>" +
+        whyBtn +
+        "<span class='score-item-num' style='color:" + color + ";'>" + score + "/10</span>" +
+      "</div>" +
     "</div>" +
     "<div class='score-bar-wrap'>" +
       "<div class='score-bar-fill' style='width:" + width + "%;background:" + color + ";'></div>" +
