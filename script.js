@@ -3817,6 +3817,26 @@ function createPortfolio(name, isDemo, stocks) {
   return id;
 }
 
+function confirmDeletePortfolio(id) {
+  let all = getAllPortfolios();
+  if (Object.keys(all).length <= 1) { showToast("Can't delete your only portfolio — create another one first."); return; }
+  let port = all[id];
+  if (!port) return;
+  // Use a custom modal instead of confirm() which breaks on some browsers
+  let overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:2000;display:flex;align-items:center;justify-content:center;padding:24px;';
+  overlay.innerHTML =
+    '<div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px 24px;max-width:320px;width:100%;text-align:center;">' +
+      '<div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px;">Delete Portfolio?</div>' +
+      '<div style="font-size:13px;color:var(--text-muted);margin-bottom:24px;">This will permanently delete <strong>' + escHtml(port.name) + '</strong> and all its holdings. This cannot be undone.</div>' +
+      '<div style="display:flex;gap:10px;justify-content:center;">' +
+        '<button onclick="this.closest(\'div[style]\').remove();" style="flex:1;background:var(--surface2);color:var(--text);border:1px solid var(--border);">Cancel</button>' +
+        '<button onclick="this.closest(\'div[style]\').remove();deletePortfolio(\'' + id + '\');" style="flex:1;background:#ef4444;color:white;border:none;">Delete</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(overlay);
+}
+
 function deletePortfolio(id) {
   let all = getAllPortfolios();
   if (Object.keys(all).length <= 1) { showToast("Can't delete your only portfolio"); return; }
@@ -3827,6 +3847,25 @@ function deletePortfolio(id) {
   saveToFirestore({ portfolios: all, activePortfolioId: newActive });
   renderPortfolioTabs();
   renderPortfolio();
+}
+
+function promptRenamePortfolio(id) {
+  let all = getAllPortfolios();
+  let port = all[id];
+  if (!port) return;
+  let overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:2000;display:flex;align-items:center;justify-content:center;padding:24px;';
+  overlay.innerHTML =
+    '<div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px 24px;max-width:320px;width:100%;">' +
+      '<div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:16px;">Rename Portfolio</div>' +
+      '<input id="_rename-input" type="text" value="' + escHtml(port.name) + '" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:14px;margin-bottom:16px;box-sizing:border-box;">' +
+      '<div style="display:flex;gap:10px;">' +
+        '<button onclick="this.closest(\'div[style]\').remove();" style="flex:1;background:var(--surface2);color:var(--text);border:1px solid var(--border);">Cancel</button>' +
+        '<button onclick="let v=document.getElementById(\'_rename-input\').value;this.closest(\'div[style]\').remove();if(v)renamePortfolio(\'' + id + '\',v);" style="flex:1;">Save</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(overlay);
+  setTimeout(function() { var inp = document.getElementById('_rename-input'); if(inp){inp.focus();inp.select();} }, 50);
 }
 
 function renamePortfolio(id, name) {
@@ -4237,8 +4276,8 @@ function openPortfolioMenu(id) {
   menu.id = 'port-tab-menu-popup';
   menu.className = 'port-tab-menu-popup';
   menu.innerHTML =
-    '<button onclick="document.getElementById(\'port-tab-menu-popup\').remove();let n=prompt(\'Rename:\',\'' + escHtml(port.name) + '\');if(n)renamePortfolio(\'' + id + '\',n);">Rename</button>' +
-    '<button onclick="document.getElementById(\'port-tab-menu-popup\').remove();if(confirm(\'Delete \\\'' + escHtml(port.name) + '\\\'?\'))deletePortfolio(\'' + id + '\');" style="color:#ef4444;">Delete</button>';
+    '<button onclick="document.getElementById(\'port-tab-menu-popup\').remove();promptRenamePortfolio(\'' + id + '\');">Rename</button>' +
+    '<button onclick="document.getElementById(\'port-tab-menu-popup\').remove();confirmDeletePortfolio(\'' + id + '\');" style="color:#ef4444;">Delete</button>';
   let btn = document.getElementById('port-menu-btn-' + id);
   if (btn) { btn.parentNode.appendChild(menu); }
   else { document.getElementById('portfolio-tabs-bar').appendChild(menu); }
