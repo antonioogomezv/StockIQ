@@ -40,14 +40,17 @@ function loadFirestoreUserData(callback) {
   }, 10000);
 
   _firestoreUnsub = ref.onSnapshot(function(doc) {
+    // Skip snapshots triggered by our own pending local writes — we already updated localStorage directly
+    if (!firstCall && doc.metadata.hasPendingWrites) return;
+
     let data = doc.exists ? doc.data() : {};
     if (firstCall) {
-      // First snapshot = initial load, pass to callback (replaces old ref.get)
+      // First snapshot = initial load, pass to callback
       firstCall = false;
       clearTimeout(timer);
       if (callback) callback(data);
     } else {
-      // Subsequent snapshots = change from another device — sync silently
+      // Server-confirmed change from another device — sync silently
       _applyFirestoreData(data);
     }
   }, function() {

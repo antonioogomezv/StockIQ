@@ -4607,8 +4607,7 @@ function renderPortfolio() {
     let totalDayChangePct = prevValue > 0 ? (totalDayChange / prevValue) * 100 : 0;
     let todayChangeEl = document.getElementById('port-today-change');
     let todayPctEl = document.getElementById('port-today-pct');
-    todayChangeEl.textContent = fmtSigned$(totalDayChange);
-    todayChangeEl.style.color = dayColor;
+    if (todayChangeEl) { todayChangeEl.textContent = fmtSigned$(totalDayChange); todayChangeEl.style.color = dayColor; }
     if (todayPctEl) { todayPctEl.textContent = (totalDayChangePct >= 0 ? '+' : '') + totalDayChangePct.toFixed(2) + '% vs yesterday'; todayPctEl.style.color = dayColor; }
     // Realized G/L from closed positions
     let closed = active ? (active.closedPositions || []) : [];
@@ -4628,13 +4627,15 @@ function renderPortfolio() {
     let sorted = stockData.slice().sort(function(a, b) { return b.gainPct - a.gainPct; });
     let best = sorted[0], worst = sorted[sorted.length - 1];
     let winnersCard = document.getElementById('port-winners-card');
-    if (winnersCard) winnersCard.style.display = 'grid';
-    document.getElementById('port-best-ticker').textContent = best.ticker;
-    document.getElementById('port-best-gain').textContent = fmtSigned$(best.gain) + ' · ' + (best.gainPct >= 0 ? '+' : '') + best.gainPct.toFixed(1) + '%';
-    document.getElementById('port-best-gain').style.color = best.gain >= 0 ? '#16a34a' : '#dc2626';
-    document.getElementById('port-worst-ticker').textContent = worst.ticker;
-    document.getElementById('port-worst-gain').textContent = fmtSigned$(worst.gain) + ' · ' + (worst.gainPct >= 0 ? '+' : '') + worst.gainPct.toFixed(1) + '%';
-    document.getElementById('port-worst-gain').style.color = worst.gain >= 0 ? '#16a34a' : '#dc2626';
+    if (winnersCard) winnersCard.style.display = stockData.length > 0 ? 'grid' : 'none';
+    if (best && worst) {
+      document.getElementById('port-best-ticker').textContent = best.ticker;
+      document.getElementById('port-best-gain').textContent = fmtSigned$(best.gain) + ' · ' + (best.gainPct >= 0 ? '+' : '') + best.gainPct.toFixed(1) + '%';
+      document.getElementById('port-best-gain').style.color = best.gain >= 0 ? '#16a34a' : '#dc2626';
+      document.getElementById('port-worst-ticker').textContent = worst.ticker;
+      document.getElementById('port-worst-gain').textContent = fmtSigned$(worst.gain) + ' · ' + (worst.gainPct >= 0 ? '+' : '') + worst.gainPct.toFixed(1) + '%';
+      document.getElementById('port-worst-gain').style.color = worst.gain >= 0 ? '#16a34a' : '#dc2626';
+    }
     if (failedTickers.length > 0) {
       showToast('Prices unavailable for ' + failedTickers.join(', ') + ' — showing cost basis instead.');
     }
