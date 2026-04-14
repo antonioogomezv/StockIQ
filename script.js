@@ -851,26 +851,7 @@ function displayData(data) {
       "<div class='score-badge-num' style='color:" + scoreColor + ";'>" + totalScore + "</div>" +
       "<div class='score-badge-label'>/ 100</div>" +
       "<div class='score-badge-tag' style='color:" + scoreColor + ";'>" + scoreLabel + "</div>" +
-    "</div>" +
-    buildScoreExplainer(breakdown, pe, margin, growth, beta, rsi, ma50);
-
-  let signalEl = document.getElementById("signal");
-  if (totalScore >= 65) {
-    signalEl.textContent = "Strong Opportunity — fundamentals look solid";
-    signalEl.style.color = "#16a34a";
-    signalEl.style.background = "rgba(22,163,74,0.1)";
-    signalEl.style.border = "1px solid rgba(22,163,74,0.2)";
-  } else if (totalScore >= 50) {
-    signalEl.textContent = "Watch & Wait — some positives, some risks";
-    signalEl.style.color = "#d97706";
-    signalEl.style.background = "rgba(217,119,6,0.1)";
-    signalEl.style.border = "1px solid rgba(217,119,6,0.2)";
-  } else {
-    signalEl.textContent = "High Risk — proceed with caution";
-    signalEl.style.color = "#dc2626";
-    signalEl.style.background = "rgba(220,38,38,0.1)";
-    signalEl.style.border = "1px solid rgba(220,38,38,0.2)";
-  }
+    "</div>";
 
 
   // Risk profile bar (between signal and action buttons)
@@ -938,7 +919,6 @@ function displayData(data) {
   renderFundamentals({ price, changePct, prevClose, dayHigh, dayLow, week52High, week52Low, pe, beta, margin, growth, roe, marketCap: profile.marketCapitalization, dividend: metrics['dividendYieldIndicatedAnnual'], nextEarningsDate, lastEarnings });
   renderEarningsCard(nextEarningsDate, lastEarnings, companyName);
   renderScoreExplainer(totalScore);
-  renderContextualTerms(pe, beta, margin, growth, rsi, ma50, currentRatio, interestCoverage);
   renderNewsSection(news, ticker, companyName);
   renderQuizCTA(ticker, companyName, pe, beta, margin, growth, rsi, totalScore, currentRatio);
 }
