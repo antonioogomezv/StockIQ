@@ -242,7 +242,10 @@ function setCurrency(code) {
 function _updateCurrencyLabels() {
   // Header button
   var btn = document.getElementById('currency-toggle');
-  if (btn) btn.textContent = _currency === 'MXN' ? 'MX$' : 'USD';
+  if (btn) {
+    btn.textContent = _currency === 'MXN' ? 'MX$' : 'USD';
+    btn.classList.toggle('active', _currency === 'MXN');
+  }
   // Quiz step 4 budget range labels
   var labels = _currency === 'MXN'
     ? ['Menos de MX$20,000', 'MX$20,000 – MX$100,000', 'MX$100,000 – MX$400,000', 'MX$400,000+']
@@ -3207,7 +3210,7 @@ function showSectorStocks(name) {
       var dp = q.changePct || 0;
       var up = dp >= 0;
       var color = up ? 'var(--accent-green, #16a34a)' : '#dc2626';
-      row.querySelector('.sector-stock-price').textContent = price > 0 ? '$' + price.toFixed(2) : '—';
+      row.querySelector('.sector-stock-price').textContent = price > 0 ? fmt$(price) : '—';
       var chgEl = row.querySelector('.sector-stock-chg');
       chgEl.textContent = price > 0 ? (up ? '+' : '') + dp.toFixed(2) + '%' : '—';
       chgEl.style.color = price > 0 ? color : '';
