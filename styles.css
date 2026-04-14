@@ -3714,7 +3714,8 @@ footer {
   margin-bottom: 8px;
 }
 
-.score-item-name { font-size: 13px; color: var(--text); font-weight: 500; }
+.score-item-name { font-size: 13px; color: var(--text); font-weight: 500; white-space: nowrap; }
+.score-item-value { font-size: 12px; font-weight: 700; font-family: var(--mono); color: var(--text-muted); white-space: nowrap; }
 .score-item-num { font-size: 13px; font-weight: 700; font-family: var(--mono); }
 
 .term-link {
