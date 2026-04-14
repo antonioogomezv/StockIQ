@@ -11,6 +11,12 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="StockIQ">
+  <script>
+    (function() {
+      var t = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
@@ -1125,7 +1131,10 @@
   <div class="tab-content" id="tab-watchlist">
     <main>
       <div id="watchlist-section">
-        <h2>MY WATCHLIST</h2>
+        <div id="wl-subtabs">
+          <button class="wl-subtab active" id="wl-subtab-list" onclick="switchWlTab('list')">My Watchlist</button>
+          <button class="wl-subtab" id="wl-subtab-news" onclick="switchWlTab('news')">News</button>
+        </div>
         <div id="watchlist-empty" class="empty-state">
           <div class="empty-state-icon">
             <svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
@@ -1138,10 +1147,14 @@
           </div>
         </div>
         <div id="watchlist-items"></div>
-      </div>
-      <div id="wl-news-section" style="display:none;">
-        <h2>LATEST NEWS FOR YOUR WATCHLIST</h2>
-        <div id="wl-news-list"></div>
+        <div id="wl-news-section" style="display:none;">
+          <div id="wl-news-list"></div>
+          <div id="wl-news-empty" style="display:none;">
+            <div class="empty-state-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8z"/></svg></div>
+            <div class="empty-state-title">No news yet</div>
+            <div class="empty-state-subtitle">Add stocks to your watchlist to see the latest headlines here.</div>
+          </div>
+        </div>
       </div>
     </main>
   </div>

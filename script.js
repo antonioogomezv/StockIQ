@@ -2087,10 +2087,48 @@ function setWlSort(sort) {
   renderWatchlist();
 }
 
+var _wlActiveTab = 'list';
+
+function switchWlTab(tab) {
+  _wlActiveTab = tab;
+  document.getElementById('wl-subtab-list').classList.toggle('active', tab === 'list');
+  document.getElementById('wl-subtab-news').classList.toggle('active', tab === 'news');
+  var watchlist = JSON.parse(localStorage.getItem('watchlist') || '[]');
+  var items = document.getElementById('watchlist-items');
+  var sortBar = document.getElementById('wl-sort-bar');
+  var newsSection = document.getElementById('wl-news-section');
+  var empty = document.getElementById('watchlist-empty');
+  if (tab === 'list') {
+    if (items) items.style.display = '';
+    if (sortBar) sortBar.style.display = '';
+    if (newsSection) newsSection.style.display = 'none';
+    if (watchlist.length === 0 && empty) empty.style.display = 'flex';
+  } else {
+    if (items) items.style.display = 'none';
+    if (sortBar) sortBar.style.display = 'none';
+    if (empty) empty.style.display = 'none';
+    if (newsSection) newsSection.style.display = 'block';
+    if (watchlist.length === 0) {
+      document.getElementById('wl-news-list').innerHTML = '';
+      document.getElementById('wl-news-empty').style.display = 'block';
+    } else {
+      loadWatchlistNews(watchlist.map(function(w) { return w.ticker; }));
+    }
+  }
+}
+
+function _wlNewsTimeAgo(ts) {
+  var diff = Math.floor((Date.now() - ts * 1000) / 1000);
+  if (diff < 3600)  return Math.max(1, Math.floor(diff / 60)) + 'm ago';
+  if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+  if (diff < 172800) return 'Yesterday';
+  return new Date(ts * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
 function loadWatchlistNews(tickers) {
-  var section = document.getElementById('wl-news-section');
   var list = document.getElementById('wl-news-list');
-  if (!section || !list || !tickers || tickers.length === 0) return;
+  var emptyEl = document.getElementById('wl-news-empty');
+  if (!list || !tickers || tickers.length === 0) return;
 
   var cacheKey = 'wl-news-cache-' + tickers.slice().sort().join(',');
   var cached = localStorage.getItem(cacheKey);
@@ -2101,18 +2139,30 @@ function loadWatchlistNews(tickers) {
     } catch(e) {}
   }
 
+  // Show skeleton while loading
+  if (emptyEl) emptyEl.style.display = 'none';
+  list.innerHTML = [0,1,2,3,4].map(function() {
+    return "<div class='wl-news-skeleton'>" +
+      "<div class='wl-skel-thumb'></div>" +
+      "<div class='wl-skel-body'>" +
+        "<div class='wl-skel-line short'></div>" +
+        "<div class='wl-skel-line medium'></div>" +
+        "<div class='wl-skel-line short'></div>" +
+      "</div>" +
+    "</div>";
+  }).join('');
+
   var today = new Date();
   var from = new Date(today); from.setDate(today.getDate() - 7);
   var toStr = today.toISOString().split('T')[0];
   var fromStr = from.toISOString().split('T')[0];
 
-  // Fetch news for up to 5 tickers, merge and deduplicate
   var limit = tickers.slice(0, 5);
   var promises = limit.map(function(t) {
     return fetch(finnhubUrl('/api/v1/company-news', {symbol: t, from: fromStr, to: toStr}))
       .then(function(r) { return r.json(); })
       .then(function(news) {
-        return (Array.isArray(news) ? news : []).slice(0, 5).map(function(a) {
+        return (Array.isArray(news) ? news : []).slice(0, 8).map(function(a) {
           return Object.assign({}, a, { _ticker: t });
         });
       })
@@ -2121,36 +2171,46 @@ function loadWatchlistNews(tickers) {
 
   Promise.all(promises).then(function(results) {
     var all = [].concat.apply([], results);
-    // Deduplicate by headline, sort by date desc
     var seen = {};
     var unique = all.filter(function(a) {
       if (seen[a.headline]) return false;
       seen[a.headline] = true;
       return true;
-    }).sort(function(a, b) { return b.datetime - a.datetime; }).slice(0, 12);
+    }).sort(function(a, b) { return b.datetime - a.datetime; }).slice(0, 20);
     localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), articles: unique }));
     renderWatchlistNews(unique);
   });
 }
 
 function renderWatchlistNews(articles) {
-  var section = document.getElementById('wl-news-section');
   var list = document.getElementById('wl-news-list');
-  if (!section || !list) return;
-  if (!articles || articles.length === 0) { section.style.display = 'none'; return; }
+  var emptyEl = document.getElementById('wl-news-empty');
+  if (!list) return;
+  if (!articles || articles.length === 0) {
+    list.innerHTML = '';
+    if (emptyEl) emptyEl.style.display = 'block';
+    return;
+  }
+  if (emptyEl) emptyEl.style.display = 'none';
   list.innerHTML = articles.map(function(a) {
-    var date = a.datetime ? new Date(a.datetime * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+    var timeStr = a.datetime ? _wlNewsTimeAgo(a.datetime) : '';
     var source = escHtml(a.source || '');
     var url = a.url || '#';
-    return "<a class='news-item wl-news-item' href='" + escHtml(url) + "' target='_blank' rel='noopener'>" +
-      "<span class='wl-news-ticker'>" + escHtml(a._ticker || '') + "</span>" +
-      "<div class='wl-news-right'>" +
+    var imgHtml = (a.image && a.image.startsWith('http'))
+      ? "<img class='wl-news-thumb' src='" + escHtml(a.image) + "' alt='' loading='lazy' onerror=\"this.style.display='none'\">"
+      : '';
+    return "<a class='wl-news-item' href='" + escHtml(url) + "' target='_blank' rel='noopener'>" +
+      imgHtml +
+      "<div class='wl-news-body'>" +
+        "<div class='wl-news-top-row'>" +
+          "<span class='wl-news-ticker'>" + escHtml(a._ticker || '') + "</span>" +
+          (source ? "<span class='wl-news-source'>" + source + "</span>" : '') +
+        "</div>" +
         "<div class='news-headline'>" + escHtml(a.headline) + "</div>" +
-        "<div class='news-meta'>" + (source ? source + ' · ' : '') + date + "</div>" +
+        "<div class='news-meta'>" + timeStr + "</div>" +
       "</div>" +
     "</a>";
   }).join('');
-  section.style.display = 'block';
 }
 
 function renderWatchlist() {
@@ -2159,7 +2219,8 @@ function renderWatchlist() {
   let items = document.getElementById("watchlist-items");
   if (watchlist.length === 0) { empty.style.display = "flex"; items.innerHTML = ""; document.getElementById('wl-news-section').style.display = 'none'; return; }
   empty.style.display = "none";
-  loadWatchlistNews(watchlist.map(function(w) { return w.ticker; }));
+  // News loads on demand when user switches to news sub-tab
+  document.getElementById('wl-news-section').style.display = 'none';
 
   // Sort bar
   let sortBar = document.getElementById('wl-sort-bar');
