@@ -828,15 +828,20 @@ function displayData(data) {
   let priceEl = document.getElementById("stock-name");
   if (priceEl) priceEl._rawPrice = price;
   document.getElementById("stock-name").innerHTML =
-    "<div class='stock-header-row'>" +
-      logoHtml +
-      "<div class='stock-header-meta'>" +
-        "<div class='stock-header-ticker'>" + escHtml(ticker) + " · <span class='stock-header-fullname'>" + escHtml(companyName) + "</span></div>" +
+    "<div class='stock-hero'>" +
+      "<div class='stock-hero-left'>" +
+        logoHtml +
+        "<div class='stock-hero-identity'>" +
+          "<div class='stock-header-ticker'>" + escHtml(ticker) + "</div>" +
+          "<div class='stock-header-fullname'>" + escHtml(companyName) + "</div>" +
+        "</div>" +
       "</div>" +
-    "</div>" +
-    "<div class='stock-header-price' id='stock-price'>" +
-      fmt$(price) + (_currency !== 'USD' ? "<span class='stock-currency-label'>" + _currency + "</span>" : "") +
-      changePill +
+      "<div class='stock-hero-right'>" +
+        "<div class='stock-header-price' id='stock-price'>" +
+          fmt$(price) + (_currency !== 'USD' ? "<span class='stock-currency-label'>" + _currency + "</span>" : "") +
+        "</div>" +
+        (changePill ? "<div class='stock-hero-change'>" + changePill + "</div>" : "") +
+      "</div>" +
     "</div>";
 
   let scoreColor = totalScore >= 65 ? "#16a34a" : totalScore >= 50 ? "#d97706" : "#dc2626";

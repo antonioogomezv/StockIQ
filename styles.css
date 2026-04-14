@@ -432,41 +432,71 @@ button:active { transform: translateY(0); }
 
 #stock-name { font-family: var(--display); color: var(--text); }
 
-.stock-header-row {
+.stock-hero {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 22px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 18px;
 }
-.stock-logo {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  object-fit: contain;
-  background: white;
-  padding: 3px;
+.stock-hero-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+.stock-hero-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.stock-hero-right {
+  text-align: right;
   flex-shrink: 0;
 }
+.stock-hero-change {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+.stock-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  object-fit: contain;
+  background: white;
+  padding: 5px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+}
 .stock-header-ticker {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--text-muted);
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 .stock-header-fullname {
-  font-weight: 500;
-  text-transform: none;
-  letter-spacing: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.3px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .stock-header-price {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 36px;
+  font-size: 40px;
   font-weight: 700;
-  letter-spacing: -1px;
+  letter-spacing: -1.5px;
   line-height: 1;
+  color: var(--text);
 }
 .price-change-pill {
   font-size: 13px;
@@ -5353,7 +5383,11 @@ footer {
 
   /* ── Results card ── */
   #results-section { padding: 16px 14px; gap: 14px; border-radius: var(--radius); }
-  .stock-header-price { font-size: 26px; letter-spacing: -0.5px; }
+  .stock-hero { padding: 14px 16px; }
+  .stock-logo { width: 44px; height: 44px; border-radius: 10px; }
+  .stock-header-fullname { font-size: 15px; }
+  .stock-header-price { font-size: 28px; letter-spacing: -1px; }
+  .price-change-pill { font-size: 12px; }
   .price-change-pill { font-size: 12px; }
   #earnings-badge { flex-wrap: wrap; gap: 12px; padding: 12px 14px; }
   #action-btns button { font-size: 12px; padding: 10px 10px; }
