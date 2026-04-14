@@ -233,18 +233,32 @@ function fetchFxRate(callback) {
 function setCurrency(code) {
   _currency = code;
   localStorage.setItem('currency', code);
+  fetchFxRate(function() {
+    _updateCurrencyLabels();
+    _applyRateAndRerender();
+  });
+}
+
+function _updateCurrencyLabels() {
+  // Header button
   var btn = document.getElementById('currency-toggle');
-  if (btn) btn.textContent = code === 'MXN' ? 'MX$' : 'USD';
-  fetchFxRate(_applyRateAndRerender);
+  if (btn) btn.textContent = _currency === 'MXN' ? 'MX$' : 'USD';
+  // Quiz step 4 budget range labels
+  var labels = _currency === 'MXN'
+    ? ['Menos de MX$20,000', 'MX$20,000 – MX$100,000', 'MX$100,000 – MX$400,000', 'MX$400,000+']
+    : ['Under $1,000', '$1,000 – $5,000', '$5,000 – $20,000', '$20,000+'];
+  ['q4-opt1','q4-opt2','q4-opt3','q4-opt4'].forEach(function(id, i) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = labels[i];
+  });
 }
 
 function initCurrency() {
-  var btn = document.getElementById('currency-toggle');
   if (_currency === 'MXN') {
-    fetchFxRate(function() { if (btn) btn.textContent = 'MX$'; });
+    fetchFxRate(function() { _updateCurrencyLabels(); });
   } else {
     _fxRate = 1; _fxSym = '$';
-    if (btn) btn.textContent = 'USD';
+    _updateCurrencyLabels();
   }
 }
 // ── END CURRENCY ──────────────────────────────────────────────────────────────
@@ -1909,7 +1923,9 @@ function showQuizResult() {
   let risk = quizAnswers.step2;
   let horizon = quizAnswers.step1;
   let goal = quizAnswers.step3;
-  let budget = quizAnswers.step4 || 2500;
+  // step4 value is in user's currency — convert to USD for portfolio math
+  let budgetRaw = quizAnswers.step4 || (_currency === 'MXN' ? 50000 : 2500);
+  let budget = (_currency === 'MXN' && _fxRate > 1) ? budgetRaw / _fxRate : budgetRaw;
   let profile = {};
   if (risk === "low" || goal === "preserve") {
     profile = { type: "Conservative", desc: "You prefer stable, lower risk investments. StockIQ will warn you about high volatility stocks.", maxBeta: 1.0, minScore: 55 };
@@ -3634,7 +3650,7 @@ var WIZARD_QUESTIONS = [
   },
   {
     id: 'budget',
-    q: 'How much are you starting with?',
+    get q() { return 'How much are you starting with?' + (_currency === 'MXN' ? ' (MXN)' : ' (USD)'); },
     sub: 'We\'ll split it evenly across your 5 stocks.',
     type: 'number'
   }
@@ -3659,13 +3675,16 @@ function _renderWizardStep(step) {
 
   let optionsHtml = '';
   if (q.type === 'number') {
+    var minAmt = _currency === 'MXN' ? 2000 : 100;
+    var placeholder = _currency === 'MXN' ? 'ej. 20000' : 'e.g. 1000';
+    var minLabel = _currency === 'MXN' ? 'Mínimo MX$2,000' : 'Minimum $100';
     optionsHtml =
       '<div style="margin:8px 0 24px;">' +
         '<div style="display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;">' +
-          '<span style="font-size:18px;color:var(--text-muted);">$</span>' +
-          '<input id="wizard-budget" type="number" min="100" placeholder="e.g. 1000" style="background:none;border:none;outline:none;font-size:20px;font-weight:600;color:var(--text);width:100%;">' +
+          '<span style="font-size:18px;color:var(--text-muted);">' + _fxSym + '</span>' +
+          '<input id="wizard-budget" type="number" min="' + minAmt + '" placeholder="' + placeholder + '" style="background:none;border:none;outline:none;font-size:20px;font-weight:600;color:var(--text);width:100%;">' +
         '</div>' +
-        '<div style="font-size:11px;color:var(--text-muted);margin-top:8px;">Minimum $100 · We use fractional shares so any amount works</div>' +
+        '<div style="font-size:11px;color:var(--text-muted);margin-top:8px;">' + minLabel + ' · We use fractional shares so any amount works</div>' +
       '</div>';
   } else {
     optionsHtml = '<div style="display:flex;flex-direction:column;gap:8px;margin:8px 0 24px;">' +
@@ -3729,8 +3748,11 @@ function _wizardNext(step) {
 
 function _wizardFinish() {
   let budget = parseFloat(document.getElementById('wizard-budget').value);
-  if (!budget || budget < 100) { showToast('Please enter a budget of at least $100'); return; }
-  _wizardAnswers.budget = budget;
+  var minBudget = _currency === 'MXN' ? 2000 : 100;
+  if (!budget || budget < minBudget) { showToast('Please enter a budget of at least ' + _fxSym + minBudget.toLocaleString()); return; }
+  // Always store budget in USD for stock allocation calculations
+  var budgetUSD = _currency === 'MXN' && _fxRate > 1 ? budget / _fxRate : budget;
+  _wizardAnswers.budget = budgetUSD;
 
   // Map answers to profile
   let goalScore    = { growth: 2, income: 0, safe: -2 }[_wizardAnswers.goal] || 0;

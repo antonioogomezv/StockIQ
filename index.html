@@ -125,10 +125,10 @@
     <div class="quiz-step" id="step-4" style="display:none;">
       <div class="quiz-question">How much are you looking to invest?</div>
       <div class="quiz-options">
-        <div class="quiz-option" onclick="selectOption(4, 500, this)">Under $1,000</div>
-        <div class="quiz-option" onclick="selectOption(4, 2500, this)">$1,000 – $5,000</div>
-        <div class="quiz-option" onclick="selectOption(4, 10000, this)">$5,000 – $20,000</div>
-        <div class="quiz-option" onclick="selectOption(4, 50000, this)">$20,000+</div>
+        <div class="quiz-option" id="q4-opt1" onclick="selectOption(4, 500, this)">Under $1,000</div>
+        <div class="quiz-option" id="q4-opt2" onclick="selectOption(4, 2500, this)">$1,000 – $5,000</div>
+        <div class="quiz-option" id="q4-opt3" onclick="selectOption(4, 10000, this)">$5,000 – $20,000</div>
+        <div class="quiz-option" id="q4-opt4" onclick="selectOption(4, 50000, this)">$20,000+</div>
       </div>
     </div>
     <div class="quiz-step" id="step-result" style="display:none;">
@@ -728,14 +728,16 @@
       <h1>Stock<span>IQ</span></h1>
       <p>Invest smarter. Learn as you go.</p>
     </div>
-    <button id="currency-toggle" onclick="setCurrency(_currency==='USD'?'MXN':'USD')" title="Switch currency">USD</button>
-    <button id="dark-mode-toggle" onclick="toggleDarkMode()" title="Toggle dark mode" aria-label="Toggle dark mode">
-      <span class="theme-pill-track">
-        <span class="theme-pill-thumb"></span>
-        <span class="theme-pill-sun"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></span>
-        <span class="theme-pill-moon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span>
-      </span>
-    </button>
+    <div id="header-right">
+      <button id="currency-toggle" onclick="setCurrency(_currency==='USD'?'MXN':'USD')" title="Switch currency">USD</button>
+      <button id="dark-mode-toggle" onclick="toggleDarkMode()" title="Toggle dark mode" aria-label="Toggle dark mode">
+        <span class="theme-pill-track">
+          <span class="theme-pill-thumb"></span>
+          <span class="theme-pill-sun"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></span>
+          <span class="theme-pill-moon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span>
+        </span>
+      </button>
+    </div>
   </header>
 
   <!-- NAVIGATION TABS -->
