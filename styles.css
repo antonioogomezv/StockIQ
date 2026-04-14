@@ -629,9 +629,9 @@ button:active { transform: translateY(0); }
 }
 
 #watchlist-btn {
-  background: none;
-  border: 1px solid var(--border);
-  color: var(--accent-blue);
+  background: linear-gradient(135deg, var(--accent-gold), #b45309);
+  border: none;
+  color: #fff;
   border-radius: 10px;
   font-size: 13px;
   font-family: var(--sans);
@@ -640,17 +640,18 @@ button:active { transform: translateY(0); }
   transition: all 0.15s;
   width: fit-content;
   box-shadow: none;
+  font-weight: 700;
 }
 
 #watchlist-btn:hover {
-  border-color: var(--accent-blue);
-  background: rgba(79,195,247,0.05);
+  background: linear-gradient(135deg, #fbbf24, var(--accent-gold));
   transform: none;
 }
 
 #watchlist-btn.added {
-  border-color: var(--accent-green);
-  color: var(--accent-green);
+  background: linear-gradient(135deg, var(--accent-green), #15803d);
+  border: none;
+  color: #fff;
 }
 
 #share-btn {
