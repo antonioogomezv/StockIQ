@@ -4031,9 +4031,9 @@ function _renderWizardStep(step) {
 
   let optionsHtml = '';
   if (q.type === 'number') {
-    var minAmt = _currency === 'MXN' ? 2000 : 100;
+    var minAmt = 1;
     var placeholder = _currency === 'MXN' ? 'ej. 20000' : 'e.g. 1000';
-    var minLabel = _currency === 'MXN' ? 'Mínimo MX$2,000' : 'Minimum $100';
+    var minLabel = _currency === 'MXN' ? 'Cualquier monto' : 'Any amount';
     optionsHtml =
       '<div style="margin:8px 0 24px;">' +
         '<div style="display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;">' +
@@ -4104,8 +4104,7 @@ function _wizardNext(step) {
 
 function _wizardFinish() {
   let budget = parseFloat(document.getElementById('wizard-budget').value);
-  var minBudget = _currency === 'MXN' ? 2000 : 100;
-  if (!budget || budget < minBudget) { showToast('Please enter a budget of at least ' + _fxSym + minBudget.toLocaleString()); return; }
+  if (!budget || budget <= 0) { showToast('Please enter a valid amount'); return; }
   // Always store budget in USD for stock allocation calculations
   var budgetUSD = _currency === 'MXN' && _fxRate > 1 ? budget / _fxRate : budget;
   _wizardAnswers.budget = budgetUSD;
