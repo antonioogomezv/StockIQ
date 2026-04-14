@@ -1810,6 +1810,63 @@ button:active { transform: translateY(0); }
   border-radius: 8px;
   white-space: nowrap;
 }
+/* Compare hero headers */
+.cmp-heroes {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.cmp-col-header {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.cmp-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  object-fit: contain;
+  background: white;
+  border: 1px solid var(--border);
+  padding: 4px;
+  flex-shrink: 0;
+}
+.cmp-logo-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface2);
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--mono);
+  color: var(--text-muted);
+}
+.cmp-col-header-info { min-width: 0; }
+.cmp-col-ticker { font-size: 13px; font-weight: 700; font-family: var(--mono); color: var(--text); }
+.cmp-col-name { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cmp-col-price { font-size: 13px; font-weight: 700; color: var(--text); margin-top: 2px; }
+.cmp-vs {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.cmp-wins-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  font-size: 12px;
+}
+.cmp-wins { font-weight: 700; font-family: var(--mono); color: var(--text-muted); }
+.cmp-wins.cmp-wins-lead { color: #16a34a; }
+.cmp-wins-label { font-size: 11px; color: var(--text-muted); }
+
 .cmp-table { width: 100%; border-collapse: collapse; }
 .cmp-header {
   display: grid;
@@ -5532,6 +5589,27 @@ footer {
 
   /* ── Dictionary drawer: full width on phone ── */
   #dict-drawer { width: 100%; right: -100%; }
+
+  /* ── Score breakdown rows ── */
+  .score-item-header { flex-wrap: wrap; gap: 4px; }
+  .score-item-name { font-size: 12px; }
+  .score-item-value { font-size: 11px; }
+  .score-why-btn { font-size: 10px; padding: 2px 6px; }
+  .score-item-num { font-size: 12px; }
+  .score-why { font-size: 12px; padding: 10px 12px; }
+
+  /* ── Compare ── */
+  #compare-section { padding: 14px 12px; }
+  #compare-search-row { flex-direction: column; }
+  #compare-search-row button { width: 100%; }
+  .cmp-header, .cmp-row { grid-template-columns: 1.2fr 1fr 1fr; }
+  .cmp-metric-col { font-size: 11px; }
+  .cmp-stock-col { font-size: 12px; }
+  .cmp-col-header { font-size: 10px; }
+
+  /* ── Score history diff ── */
+  .score-history-diff { padding: 10px 12px; }
+  .score-history-diff-row { font-size: 12px; }
 
   /* ── Toast ── */
   #toast { bottom: 16px; font-size: 12px; padding: 10px 16px; }

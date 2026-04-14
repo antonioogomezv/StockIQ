@@ -2222,25 +2222,56 @@ function runCompare() {
   });
 }
 
+function _cmpStockHeader(d) {
+  var logoHtml = d.logo
+    ? "<img src='" + escHtml(d.logo) + "' class='cmp-logo' onerror=\"this.style.display='none'\">"
+    : "<div class='cmp-logo cmp-logo-placeholder'>" + escHtml(d.ticker.slice(0,2)) + "</div>";
+  var changeColor = (d.changePct || 0) >= 0 ? '#16a34a' : '#dc2626';
+  var changeStr = d.changePct != null ? ((d.changePct >= 0 ? '+' : '') + d.changePct.toFixed(2) + '%') : '';
+  return "<div class='cmp-col-header'>" +
+    logoHtml +
+    "<div class='cmp-col-header-info'>" +
+      "<div class='cmp-col-ticker'>" + escHtml(d.ticker) + "</div>" +
+      "<div class='cmp-col-name'>" + escHtml(d.name || '') + "</div>" +
+      (d.price ? "<div class='cmp-col-price'>" + fmt$(d.price) + " <span style='color:" + changeColor + ";font-size:11px;'>" + changeStr + "</span></div>" : "") +
+    "</div>" +
+  "</div>";
+}
+
 function renderCompare(d1, d2) {
   var resultEl = document.getElementById('compare-result');
 
   var rows = [
-    { label: 'Score',          v1: d1.score + '/100',                            v2: d2.score + '/100',                            better: d1.score > d2.score ? 1 : d2.score > d1.score ? 2 : 0 },
-    { label: 'P/E Ratio',      v1: d1.pe > 0 ? d1.pe.toFixed(1) + 'x' : '—',    v2: d2.pe > 0 ? d2.pe.toFixed(1) + 'x' : '—',    better: (d1.pe > 0 && d2.pe > 0) ? (d1.pe < d2.pe ? 1 : d2.pe < d1.pe ? 2 : 0) : 0 },
-    { label: 'Profit Margin',  v1: d1.margin ? d1.margin.toFixed(1) + '%' : '—', v2: d2.margin ? d2.margin.toFixed(1) + '%' : '—', better: d1.margin > d2.margin ? 1 : d2.margin > d1.margin ? 2 : 0 },
-    { label: 'Revenue Growth', v1: d1.growth ? (d1.growth > 0 ? '+' : '') + d1.growth.toFixed(1) + '%' : '—', v2: d2.growth ? (d2.growth > 0 ? '+' : '') + d2.growth.toFixed(1) + '%' : '—', better: d1.growth > d2.growth ? 1 : d2.growth > d1.growth ? 2 : 0 },
-    { label: 'Beta (Risk)',    v1: d1.beta ? d1.beta.toFixed(2) : '—',           v2: d2.beta ? d2.beta.toFixed(2) : '—',           better: (d1.beta > 0 && d2.beta > 0) ? (d1.beta < d2.beta ? 1 : d2.beta < d1.beta ? 2 : 0) : 0 },
-    { label: 'ROE',            v1: d1.roe ? d1.roe.toFixed(1) + '%' : '—',       v2: d2.roe ? d2.roe.toFixed(1) + '%' : '—',       better: d1.roe > d2.roe ? 1 : d2.roe > d1.roe ? 2 : 0 },
-    { label: 'RSI',            v1: d1.rsi != null ? d1.rsi + '' : '—',           v2: d2.rsi != null ? d2.rsi + '' : '—',           better: 0 },
-    { label: 'vs 50-day MA',   v1: d1.price_vs_ma || '—',                        v2: d2.price_vs_ma || '—',                        better: (d1.price_vs_ma === 'above' && d2.price_vs_ma !== 'above') ? 1 : (d2.price_vs_ma === 'above' && d1.price_vs_ma !== 'above') ? 2 : 0 },
+    { label: 'StockIQ Score', v1: d1.score + '/100',                            v2: d2.score + '/100',                            better: d1.score > d2.score ? 1 : d2.score > d1.score ? 2 : 0 },
+    { label: 'P/E Ratio',     v1: d1.pe > 0 ? d1.pe.toFixed(1) + 'x' : '—',    v2: d2.pe > 0 ? d2.pe.toFixed(1) + 'x' : '—',    better: (d1.pe > 0 && d2.pe > 0) ? (d1.pe < d2.pe ? 1 : d2.pe < d1.pe ? 2 : 0) : 0 },
+    { label: 'Profit Margin', v1: d1.margin ? d1.margin.toFixed(1) + '%' : '—', v2: d2.margin ? d2.margin.toFixed(1) + '%' : '—', better: d1.margin > d2.margin ? 1 : d2.margin > d1.margin ? 2 : 0 },
+    { label: 'Rev. Growth',   v1: d1.growth ? (d1.growth > 0 ? '+' : '') + d1.growth.toFixed(1) + '%' : '—', v2: d2.growth ? (d2.growth > 0 ? '+' : '') + d2.growth.toFixed(1) + '%' : '—', better: d1.growth > d2.growth ? 1 : d2.growth > d1.growth ? 2 : 0 },
+    { label: 'Beta (Risk)',   v1: d1.beta ? d1.beta.toFixed(2) : '—',           v2: d2.beta ? d2.beta.toFixed(2) : '—',           better: (d1.beta > 0 && d2.beta > 0) ? (d1.beta < d2.beta ? 1 : d2.beta < d1.beta ? 2 : 0) : 0 },
+    { label: 'ROE',           v1: d1.roe ? d1.roe.toFixed(1) + '%' : '—',       v2: d2.roe ? d2.roe.toFixed(1) + '%' : '—',       better: d1.roe > d2.roe ? 1 : d2.roe > d1.roe ? 2 : 0 },
+    { label: 'RSI',           v1: d1.rsi != null ? d1.rsi + '' : '—',           v2: d2.rsi != null ? d2.rsi + '' : '—',           better: 0 },
+    { label: 'vs 50-day MA',  v1: d1.price_vs_ma || '—',                        v2: d2.price_vs_ma || '—',                        better: (d1.price_vs_ma === 'above' && d2.price_vs_ma !== 'above') ? 1 : (d2.price_vs_ma === 'above' && d1.price_vs_ma !== 'above') ? 2 : 0 },
   ];
 
-  var html = "<div class='cmp-table'>" +
+  // Tally wins
+  var wins1 = rows.filter(function(r) { return r.better === 1; }).length;
+  var wins2 = rows.filter(function(r) { return r.better === 2; }).length;
+
+  var html =
+    "<div class='cmp-heroes'>" +
+      _cmpStockHeader(d1) +
+      "<div class='cmp-vs'>VS</div>" +
+      _cmpStockHeader(d2) +
+    "</div>" +
+    "<div class='cmp-wins-bar'>" +
+      "<span class='cmp-wins " + (wins1 >= wins2 ? 'cmp-wins-lead' : '') + "'>" + wins1 + " wins</span>" +
+      "<span class='cmp-wins-label'>out of " + rows.filter(function(r){return r.better!==0;}).length + " metrics</span>" +
+      "<span class='cmp-wins " + (wins2 >= wins1 ? 'cmp-wins-lead' : '') + "'>" + wins2 + " wins</span>" +
+    "</div>" +
+    "<div class='cmp-table'>" +
     "<div class='cmp-header'>" +
       "<div class='cmp-metric-col'></div>" +
-      "<div class='cmp-stock-col'>" + (d1.ticker) + "</div>" +
-      "<div class='cmp-stock-col'>" + (d2.ticker) + "</div>" +
+      "<div class='cmp-stock-col'>" + escHtml(d1.ticker) + "</div>" +
+      "<div class='cmp-stock-col'>" + escHtml(d2.ticker) + "</div>" +
     "</div>" +
     rows.map(function(r) {
       var c1 = r.better === 1 ? ' cmp-win' : '';
@@ -2251,8 +2282,8 @@ function renderCompare(d1, d2) {
         "<div class='cmp-stock-col" + c2 + "'>" + r.v2 + (r.better === 2 ? " <span class='cmp-badge'>✓</span>" : "") + "</div>" +
       "</div>";
     }).join('') +
-  "</div>" +
-  "<p class='cmp-note'>✓ marks the stronger value for each metric. Lower P/E and Beta are better; higher is better for everything else.</p>";
+    "</div>" +
+    "<p class='cmp-note'>✓ = stronger value. Lower P/E and Beta are better; higher is better for all others.</p>";
 
   resultEl.innerHTML = html;
   resultEl.style.display = 'block';
