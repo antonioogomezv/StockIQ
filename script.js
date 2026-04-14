@@ -18,6 +18,19 @@ function initTheme() {
 }
 // ── END dark mode ────────────────────────────────────────────
 
+// ── Market hours ─────────────────────────────────────────────
+function isMarketOpen() {
+  try {
+    var etStr = new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });
+    var et = new Date(etStr);
+    var day = et.getDay(); // 0=Sun, 6=Sat
+    if (day === 0 || day === 6) return false;
+    var mins = et.getHours() * 60 + et.getMinutes();
+    return mins >= 570 && mins < 960; // 9:30 AM – 4:00 PM ET
+  } catch(e) { return false; }
+}
+// ── END market hours ─────────────────────────────────────────
+
 let _toastTimer = null;
 function showToast(msg) {
   let el = document.getElementById("toast");
@@ -4263,7 +4276,15 @@ function renderPortfolio() {
     document.getElementById('port-today-change').textContent = fmtSigned$(totalDayChange);
     document.getElementById('port-today-change').style.color = dayColor;
     let todayPctEl = document.getElementById('port-today-pct');
-    if (todayPctEl) { todayPctEl.textContent = (totalDayChangePct >= 0 ? '+' : '') + totalDayChangePct.toFixed(2) + '% vs yesterday'; todayPctEl.style.color = dayColor; }
+    var marketOpen = isMarketOpen();
+    if (todayPctEl) { todayPctEl.textContent = (totalDayChangePct >= 0 ? '+' : '') + totalDayChangePct.toFixed(2) + (marketOpen ? '% today' : '% last session'); todayPctEl.style.color = dayColor; }
+    // Update the "Day Change" label based on market status
+    var dayLabelEl = document.querySelector('#port-today-change')?.closest('.holdings-metric-row')?.querySelector('span:first-child');
+    if (dayLabelEl) {
+      var tipBtn = dayLabelEl.querySelector('button');
+      dayLabelEl.textContent = marketOpen ? 'Day Change ' : 'Last Session ';
+      if (tipBtn) dayLabelEl.appendChild(tipBtn);
+    }
     // Realized G/L from closed positions
     let closed = active ? (active.closedPositions || []) : [];
     let totalRealized = closed.reduce(function(sum, c) { return sum + (c.realizedGain || 0); }, 0);
@@ -4606,7 +4627,7 @@ function renderPortfolioRows(data) {
             '<div>' +
               '<div style="font-weight:600;font-size:14px;">' + s.ticker + '</div>' +
               '<div style="font-size:11px;color:#64748b;">' + s.shares.toFixed(s.shares % 1 === 0 ? 0 : 2) + ' shares · avg ' + fmt$(s.buyPrice) + (hasMultiple ? ' · ' + s.lots.length + ' lots' : (s.lots && s.lots[0] && s.lots[0].date ? ' · ' + s.lots[0].date : '')) + '</div>' +
-              '<div style="font-size:11px;margin-top:2px;"><span style="color:var(--text-muted);">now ' + fmt$(s.currentPrice) + '</span> <span style="color:' + dc + ';">' + fmtSigned$(s.dayChangeAmt) + ' today</span></div>' +
+              '<div style="font-size:11px;margin-top:2px;"><span style="color:var(--text-muted);">now ' + fmt$(s.currentPrice) + '</span> <span style="color:' + dc + ';">' + fmtSigned$(s.dayChangeAmt) + (isMarketOpen() ? ' today' : ' last session') + '</span></div>' +
             '</div>' +
           '</div>' +
           '<div><div>' + fmt$(s.value) + '</div></div>' +
