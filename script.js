@@ -3893,17 +3893,15 @@ function confirmDeletePortfolio(id) {
 
 function deletePortfolio(id) {
   let all = getAllPortfolios();
-  let count = Object.keys(all).length;
-  showToast('DEBUG: ' + count + ' portfolios, deleting ' + id);
-  if (count <= 1) { showToast("Can't delete your only portfolio"); return; }
+  if (Object.keys(all).length <= 1) { showToast("Can't delete your only portfolio"); return; }
   delete all[id];
   let newActive = Object.keys(all)[0];
   localStorage.setItem('portfolios', JSON.stringify(all));
   localStorage.setItem('activePortfolioId', newActive);
-  saveToFirestore({ portfolios: all, activePortfolioId: newActive });
+  // Must use update() not set+merge — merge never removes deleted map keys in Firestore
+  replaceInFirestore({ portfolios: all, activePortfolioId: newActive });
   renderPortfolioTabs();
   renderPortfolio();
-  showToast('Deleted. Now ' + Object.keys(all).length + ' portfolios.');
 }
 
 function promptRenamePortfolio(id) {

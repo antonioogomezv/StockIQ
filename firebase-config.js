@@ -89,3 +89,10 @@ function saveToFirestore(data) {
   if (!ref) return Promise.resolve();
   return ref.set(data, { merge: true });
 }
+
+// Hard-replace fields (use for deletions — merge:true never removes map keys)
+function replaceInFirestore(data) {
+  let ref = userRef();
+  if (!ref) return Promise.resolve();
+  return ref.update(data);
+}
