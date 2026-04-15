@@ -4935,15 +4935,36 @@ footer {
   padding: 14px 16px;
   margin-bottom: 14px;
 }
+.port-earnings-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  padding: 2px 0;
+}
+.port-earnings-header:hover .port-earnings-title { color: var(--text); }
 .port-earnings-title {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
   color: var(--text-muted);
-  margin-bottom: 10px;
   text-transform: uppercase;
+  flex-shrink: 0;
 }
-.port-earnings-list { display: flex; flex-direction: column; gap: 6px; }
+.port-earnings-preview {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+.port-earnings-chevron {
+  font-size: 10px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.port-earnings-list { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
 .port-earnings-row {
   display: flex;
   align-items: center;

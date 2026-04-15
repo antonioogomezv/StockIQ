@@ -5325,6 +5325,17 @@ function togglePortLots(ticker) {
 
 var _portEarningsCache = {}; // ticker → { date, ts }
 
+function togglePortEarnings() {
+  var el = document.getElementById('port-earnings-calendar');
+  var list = document.getElementById('port-earnings-list');
+  var chevron = document.getElementById('port-earnings-chevron');
+  if (!el || !list) return;
+  var open = list.style.display !== 'none';
+  list.style.display = open ? 'none' : 'flex';
+  if (chevron) chevron.textContent = open ? '▾' : '▴';
+  el._earningsOpen = !open;
+}
+
 function renderPortfolioEarningsCalendar(tickers) {
   var el = document.getElementById('port-earnings-calendar');
   if (!el || !tickers || tickers.length === 0) return;
@@ -5355,8 +5366,25 @@ function renderPortfolioEarningsCalendar(tickers) {
     if (upcoming.length === 0) { el.style.display = 'none'; return; }
     upcoming.sort(function(a, b) { return a.daysAway - b.daysAway; });
 
-    el.innerHTML = '<div class="port-earnings-title">UPCOMING EARNINGS</div>' +
-      '<div class="port-earnings-list">' +
+    // Soonest event — shown in the collapsed header
+    var soonest = upcoming[0];
+    var soonestColor = soonest.daysAway === 0 ? '#dc2626' : soonest.daysAway <= 7 ? '#d97706' : 'var(--text-muted)';
+    var soonestText = soonest.daysAway === 0 ? 'Today' : soonest.daysAway === 1 ? 'Tomorrow' : 'In ' + soonest.daysAway + 'd';
+
+    // Preserve open/closed state across re-renders
+    var wasOpen = el._earningsOpen || false;
+
+    el.innerHTML =
+      '<div class="port-earnings-header" onclick="togglePortEarnings()">' +
+        '<span class="port-earnings-title">UPCOMING EARNINGS</span>' +
+        '<span class="port-earnings-preview">' +
+          '<span style="font-family:var(--mono);font-weight:700;color:var(--text);font-size:12px;">' + escHtml(soonest.ticker) + '</span>' +
+          ' <span style="color:' + soonestColor + ';font-size:11px;font-weight:600;">' + soonestText + '</span>' +
+          (upcoming.length > 1 ? ' <span style="color:var(--text-muted);font-size:11px;">+' + (upcoming.length - 1) + ' more</span>' : '') +
+        '</span>' +
+        '<span class="port-earnings-chevron" id="port-earnings-chevron">' + (wasOpen ? '▴' : '▾') + '</span>' +
+      '</div>' +
+      '<div class="port-earnings-list" id="port-earnings-list" style="display:' + (wasOpen ? 'flex' : 'none') + ';">' +
       upcoming.map(function(e) {
         var urgColor = e.daysAway === 0 ? '#dc2626' : e.daysAway <= 7 ? '#d97706' : 'var(--text-muted)';
         var countText = e.daysAway === 0 ? 'Today' : e.daysAway === 1 ? 'Tomorrow' : 'In ' + e.daysAway + 'd';
