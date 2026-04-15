@@ -4681,7 +4681,7 @@ function renderPortfolio() {
 
     if (totalValue > 0) savePortfolioValueHistory(totalValue);
     renderPortfolioChart(stockData, totalValue);
-    renderHoldingsChart(totalGain);
+    renderHoldingsChart();
     renderSectorAllocation(stockData, totalValue);
     let portAiBtn = document.getElementById('port-ai-btn');
     if (portAiBtn) portAiBtn.style.display = 'block';
@@ -5140,7 +5140,7 @@ function setHsRange(range) {
   renderHoldingsChart();
 }
 
-function renderHoldingsChart(totalGain) {
+function renderHoldingsChart() {
   let active = getActivePortfolio();
   let history = active ? (active.valueHistory || []) : [];
   let canvas = document.getElementById('holdingsChart');
@@ -5169,9 +5169,8 @@ function renderHoldingsChart(totalGain) {
   let base = filtered[0].value;
   let labels = filtered.map(function(h) { return h.date; });
   let pcts = filtered.map(function(h) { return base > 0 ? ((h.value - base) / base * 100) : 0; });
-  // Color based on unrealized G/L vs cost basis (what user sees in the summary card),
-  // not vs the first snapshot (which could be a high point)
-  let isUp = totalGain != null ? totalGain >= 0 : pcts[pcts.length - 1] >= 0;
+  // Color based on whether the line ends above or below where it started in this view
+  let isUp = pcts[pcts.length - 1] >= 0;
   let lineColor = isUp ? '#16a34a' : '#dc2626';
   let fillColor = isUp ? 'rgba(22,163,74,0.08)' : 'rgba(220,38,38,0.08)';
 
