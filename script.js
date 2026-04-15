@@ -514,7 +514,11 @@ function searchStock() {
     .then(function(r) { return r.json(); })
     .then(function(searchData) {
       let ticker = query;
-      if (searchData.result && searchData.result.length > 0) ticker = searchData.result[0].symbol;
+      let isEtf = false;
+      if (searchData.result && searchData.result.length > 0) {
+        ticker = searchData.result[0].symbol;
+        isEtf = searchData.result[0].type === 'ETP';
+      }
 
       let today = new Date();
       let toDate = today.toISOString().split("T")[0];
@@ -542,7 +546,9 @@ function searchStock() {
         fetch(finnhubUrl("/api/v1/stock/metric", {symbol: ticker, metric: "all"})).then(function(r) { return r.json(); }),
         fetch(finnhubUrl("/api/v1/calendar/earnings", {symbol: ticker, from: earningsFrom, to: earningsToStr})).then(function(r) { return r.json(); }).catch(function() { return {}; }),
         fetch(finnhubUrl("/api/v1/stock/earnings", {symbol: ticker, limit: "1"})).then(function(r) { return r.json(); }).catch(function() { return []; }),
-        fetch(polygonUrl("/v3/reference/tickers/" + ticker, {})).then(function(r) { return r.json(); }).catch(function() { return {}; })
+        fetch(polygonUrl("/v3/reference/tickers/" + ticker, {})).then(function(r) { return r.json(); }).catch(function() { return {}; }),
+        isEtf ? fetch(finnhubUrl("/api/v1/etf/profile", {symbol: ticker})).then(function(r) { return r.json(); }).catch(function() { return {}; }) : Promise.resolve({}),
+        isEtf ? fetch(finnhubUrl("/api/v1/etf/holdings", {symbol: ticker})).then(function(r) { return r.json(); }).catch(function() { return {}; }) : Promise.resolve({})
       ]).then(function(results) {
         let quote      = results[0];
         let profile    = results[1];
@@ -551,7 +557,11 @@ function searchStock() {
         let earningsData = results[4];
         let pastEarnings = results[5];
         let tickerDetails = results[6].results || {};
+        let etfProfile = results[7] || {};
+        let etfHoldings = results[8] || {};
         if (tickerDetails.description) profile.description = tickerDetails.description;
+        // Polygon type=ETF is a secondary ETF detection (overrides search result type)
+        if (tickerDetails.type === 'ETF') isEtf = true;
 
         // Unsupported ticker — no price and no company name means Finnhub doesn't cover it
         if (!quote.c && !profile.name) {
@@ -561,7 +571,7 @@ function searchStock() {
           return;
         }
 
-        let data = { ticker, quote, profile, news, metrics, prices: [], dates: [], volumes: [], earningsData, pastEarnings };
+        let data = { ticker, quote, profile, news, metrics, prices: [], dates: [], volumes: [], earningsData, pastEarnings, isEtf, etfProfile, etfHoldings };
         cache[query] = data;
         displayData(data);
 
@@ -609,6 +619,22 @@ function calculateRSI(prices, period) {
   let avgLoss = losses / period;
   if (avgLoss === 0) return 100;
   return parseFloat((100 - (100 / (1 + avgGain / avgLoss))).toFixed(2));
+}
+
+// ETF score — only uses factors relevant to funds (no P/E, margin, ROE, debt)
+function calculateEtfScore(changePct, week52High, price, beta, rsi, ma50, dividend, qualScore) {
+  let priceScore   = changePct > 3 ? 10 : changePct > 1 ? 8 : changePct > 0 ? 6 : changePct < -3 ? 1 : changePct < -1 ? 3 : 4;
+  let posScore     = 5;
+  if (week52High > 0) { let p = ((price - week52High) / week52High) * 100; posScore = p > -5 ? 9 : p > -15 ? 7 : p > -25 ? 5 : p > -40 ? 3 : 1; }
+  let betaScore    = beta < 0.5 ? 8 : beta < 1 ? 7 : beta < 1.5 ? 5 : beta < 2 ? 3 : 1;
+  let divScore     = dividend > 3 ? 9 : dividend > 1.5 ? 7 : dividend > 0.5 ? 6 : 5;
+  let rsiScore     = rsi === null ? 5 : rsi < 30 ? 9 : rsi < 45 ? 7 : rsi < 55 ? 5 : rsi < 70 ? 4 : 1;
+  let maScore      = 5;
+  if (ma50 !== null) { let p = ((price - ma50) / ma50) * 100; maScore = p > 5 ? 8 : p > 0 ? 7 : p > -5 ? 4 : 2; }
+  let newsScore    = qualScore || 5;
+  let total = Math.round((priceScore + posScore + betaScore + divScore + rsiScore + maScore + newsScore) / 7 * 10);
+  total = Math.max(10, Math.min(100, total));
+  return { total, breakdown: { price: priceScore, position: posScore, beta: betaScore, div: divScore, rsi: rsiScore, ma: maScore, news: newsScore } };
 }
 
 function calculateScore(changePct, week52High, price, pe, metrics, qualScore, rsi, ma50) {
@@ -817,7 +843,10 @@ function displayData(data) {
   hideQuickTickers();
   setTimeout(maybeShowCoachMark, 600);
 
-  let { ticker, quote, profile, news, metrics, prices, dates, volumes, earningsData, pastEarnings } = data;
+  let { ticker, quote, profile, news, metrics, prices, dates, volumes, earningsData, pastEarnings, isEtf, etfProfile, etfHoldings } = data;
+  isEtf = isEtf || false;
+  etfProfile = etfProfile || {};
+  etfHoldings = etfHoldings || {};
   let price = quote.c, changePct = quote.dp, prevClose = quote.pc, dayHigh = quote.h, dayLow = quote.l;
   let companyName = profile.name || ticker;
   let industry = profile.finnhubIndustry || "";
@@ -854,7 +883,9 @@ function displayData(data) {
     qualScore = s > 3 ? 9 : s > 1 ? 7 : s > 0 ? 6 : s === 0 ? 5 : s > -2 ? 4 : 2;
   }
 
-  let result = calculateScore(changePct, week52High, price, pe, metrics, qualScore, rsi, ma50);
+  let result = isEtf
+    ? calculateEtfScore(changePct, week52High, price, beta, rsi, ma50, metrics['dividendYieldIndicatedAnnual'] || 0, qualScore)
+    : calculateScore(changePct, week52High, price, pe, metrics, qualScore, rsi, ma50);
   let totalScore = result.total;
   let breakdown = result.breakdown;
 
@@ -944,8 +975,29 @@ function displayData(data) {
   document.getElementById("show-details-btn").style.display = "none";
 
   document.getElementById("explanation").style.display = "block";
-  document.getElementById("explanation").innerHTML =
-    "" +
+
+  let _divYield = metrics['dividendYieldIndicatedAnnual'] || 0;
+
+  if (isEtf) {
+    // ── ETF score breakdown — only fund-relevant factors ────────────────────
+    document.getElementById("explanation").innerHTML =
+(function() {
+  let factors = [
+    { label: "Price Movement", value: (changePct >= 0 ? "+" : "") + changePct.toFixed(2) + "%", score: breakdown.price, what: "Today " + (changePct >= 0 ? "+" : "") + changePct.toFixed(2) + "% change. " + (changePct > 1 ? "Positive momentum — the fund is moving up." : changePct < -1 ? "The fund is under selling pressure today." : "Low movement — quiet day for this fund."), verdict: changePct > 1 ? "Moving up today" : changePct < -1 ? "Dropping today" : "No significant movement" },
+    { label: "52wk Position", value: pctFrom52High !== null ? Math.abs(pctFrom52High) + "% from high" : "—", score: breakdown.position, what: pctFrom52High !== null ? "Fund is " + Math.abs(pctFrom52High) + "% " + (parseFloat(pctFrom52High) < 0 ? "below" : "near") + " its yearly high ($" + week52High.toFixed(2) + "). " + (breakdown.position >= 7 ? "Near yearly high — strong momentum." : breakdown.position >= 4 ? "Pulled back but in normal range." : "Well below yearly high — weakness signal.") : "No yearly high data.", verdict: breakdown.position >= 7 ? "Near yearly high" : breakdown.position >= 4 ? "Pullback from high" : "Far from yearly high" },
+    { label: "Volatility (Beta)", value: beta > 0 ? beta.toFixed(2) : "—", score: breakdown.beta, what: beta > 0 ? "Beta " + beta.toFixed(2) + " — if the market moves 10%, this ETF typically moves " + (beta * 10).toFixed(1) + "%. " + (beta < 0.8 ? "Defensive fund — less volatile than the market." : beta < 1.2 ? "Tracks the market closely." : "More volatile than the market — higher risk.") : "No beta data.", verdict: beta < 0.8 ? "Defensive — low volatility" : beta < 1.2 ? "Tracks market" : "Higher volatility than market" },
+    { label: "Distribution Yield", value: _divYield > 0 ? _divYield.toFixed(2) + "%" : "None", score: breakdown.div, what: _divYield > 0 ? "This ETF distributes " + _divYield.toFixed(2) + "% annually from dividends or interest of its holdings. " + (_divYield > 3 ? "High yield — significant income component." : "Moderate income on top of price return.") : "This ETF does not pay distributions — all return comes from price appreciation.", verdict: _divYield > 3 ? "High yield — income focused" : _divYield > 0 ? "Pays distributions" : "Growth-only — no distributions" },
+    { label: "RSI", value: rsi !== null ? rsi + "" : "—", score: breakdown.rsi, what: rsi !== null ? "RSI " + rsi + "/100. " + (rsi < 30 ? "Oversold — the fund has fallen sharply and could bounce." : rsi > 70 ? "Overbought — the fund has rallied hard and could pull back." : "Neutral zone — no extreme signal.") : "Not enough data.", verdict: rsi !== null && rsi < 30 ? "Oversold — possible bounce" : rsi !== null && rsi > 70 ? "Overbought — possible pullback" : "Neutral zone" },
+    { label: "Moving Average", value: ma50 !== null ? (price > ma50 ? "↑ above" : "↓ below") + " $" + ma50.toFixed(2) : "—", score: breakdown.ma, what: ma50 !== null ? "50-day avg $" + ma50.toFixed(2) + ", current $" + price.toFixed(2) + ". " + (price > ma50 ? "Trading above its average — uptrend intact." : "Below its average — downtrend signal. Caution.") : "Not enough data.", verdict: (ma50 !== null && price > ma50) ? "Uptrend — above average" : "Downtrend — below average" },
+    { label: "News Sentiment", value: null, score: breakdown.news, what: "Analysis of recent headlines about this fund. " + (breakdown.news >= 7 ? "Mostly positive coverage." : breakdown.news >= 4 ? "Mixed coverage — typical for broad-market ETFs." : "Recent negative news — may be impacting the fund."), verdict: breakdown.news >= 7 ? "Positive news" : breakdown.news >= 4 ? "Mixed news" : "Negative news" },
+  ];
+  factors.sort(function(a, b) { return b.score - a.score; });
+  return factors.map(function(f) { return scoreBar(f.label, f.score, { what: f.what, verdict: f.verdict, value: f.value }); }).join("");
+})() + getScoreHistoryHtml(ticker, totalScore);
+
+  } else {
+    // ── Stock score breakdown ────────────────────────────────────────────────
+    document.getElementById("explanation").innerHTML =
 (function() {
   let factors = [
     { label: "Price Movement", value: (changePct >= 0 ? "+" : "") + changePct.toFixed(2) + "%", score: breakdown.price, what: "Today " + (changePct >= 0 ? "+" : "") + changePct.toFixed(2) + "% change. " + (changePct > 1 ? "Moving up more than 1% today is a positive momentum signal." : changePct < -1 ? "Dropping more than 1% today indicates selling pressure." : "Less than 1% movement means low activity today."), verdict: changePct > 1 ? "Moving up today" : changePct < -1 ? "Dropping today" : "No significant movement" },
@@ -962,27 +1014,35 @@ function displayData(data) {
     { label: "Current Ratio", value: currentRatio !== 0 ? currentRatio.toFixed(2) + "x" : "—", score: breakdown.currentRatio, what: currentRatio !== 0 ? "Current ratio of " + currentRatio.toFixed(2) + ". " + (currentRatio > 2 ? "Very healthy — can easily cover short-term liabilities." : currentRatio > 1 ? "Adequate — can cover current liabilities." : "Warning — may struggle to pay short-term obligations.") : "No current ratio data.", verdict: currentRatio > 2 ? "Very healthy — easily covers bills" : currentRatio > 1 ? "Adequate — covers current bills" : "Warning — may struggle with bills" },
     { label: "Interest Coverage", value: interestCoverage !== 0 ? interestCoverage.toFixed(1) + "x" : "—", score: breakdown.interest, what: interestCoverage !== 0 ? "Covers interest " + interestCoverage.toFixed(1) + "x. " + (interestCoverage > 5 ? "Very safe — earnings far exceed debt payments." : interestCoverage > 3 ? "Adequate — can cover interest payments." : interestCoverage > 1 ? "Tight — barely covering interest. Risky if revenue drops." : "Danger — cannot cover interest payments.") : "No interest coverage data.", verdict: interestCoverage > 5 ? "Very safe — earnings far exceed debt" : interestCoverage > 3 ? "Adequate — covers interest payments" : "Tight or dangerous — debt risk" },
   ];
-
   factors.sort(function(a, b) { return b.score - a.score; });
   return factors.map(function(f) { return scoreBar(f.label, f.score, { what: f.what, verdict: f.verdict, value: f.value }); }).join("");
 })() +
-
-
-
     getScoreHistoryHtml(ticker, totalScore) +
     getSectorContext(industry, pe, margin, growth, beta);
+  }
 
   initStockChat(ticker, companyName, totalScore, changePct, pe, margin, growth, beta, rsi, price);
   let chatEl = document.getElementById('ai-chat');
   if (chatEl) { chatEl.style.display = 'none'; document.getElementById('ai-chat-messages').innerHTML = ''; document.getElementById('ai-chat-suggestions').style.display = 'flex'; }
   getAIExplanation(ticker, companyName, totalScore, changePct, pe, margin, growth, beta, rsi, ma50, price, topHeadline, roe, currentRatio, interestCoverage);
   loadChart(prices, dates, volumes || [], prevClose, dayHigh, dayLow, week52High);
-  renderCompanyAbout(profile, metrics['dividendYieldIndicatedAnnual'] || 0);
-  renderFundamentals({ price, changePct, prevClose, dayHigh, dayLow, week52High, week52Low, pe, beta, margin, growth, roe, marketCap: profile.marketCapitalization, dividend: metrics['dividendYieldIndicatedAnnual'], nextEarningsDate, lastEarnings });
-  renderEarningsCard(nextEarningsDate, lastEarnings, companyName);
+
+  if (isEtf) {
+    renderEtfAbout(profile, etfProfile);
+    renderEtfStats(metrics, etfProfile, _divYield);
+    renderEtfHoldings(etfHoldings);
+    document.getElementById('earnings-card').style.display = 'none';
+    document.getElementById('quiz-cta') && (document.getElementById('quiz-cta').style.display = 'none');
+  } else {
+    renderCompanyAbout(profile, _divYield);
+    renderFundamentals({ price, changePct, prevClose, dayHigh, dayLow, week52High, week52Low, pe, beta, margin, growth, roe, marketCap: profile.marketCapitalization, dividend: _divYield, nextEarningsDate, lastEarnings });
+    renderEarningsCard(nextEarningsDate, lastEarnings, companyName);
+    document.getElementById('etf-holdings-card').style.display = 'none';
+    renderQuizCTA(ticker, companyName, pe, beta, margin, growth, rsi, totalScore, currentRatio);
+  }
+
   renderScoreExplainer(totalScore);
   renderNewsSection(news, ticker, companyName);
-  renderQuizCTA(ticker, companyName, pe, beta, margin, growth, rsi, totalScore, currentRatio);
 }
 
 function renderQuizCTA(ticker, companyName, pe, beta, margin, growth, rsi, totalScore, currentRatio) {
@@ -1037,6 +1097,101 @@ function renderCompanyAbout(profile, dividend) {
     items.map(function(i) {
       return "<div class='about-item'><div class='about-label'>" + i.label + "</div><div class='about-value'>" + i.value + "</div></div>";
     }).join('') + '</div>';
+  el.style.display = 'block';
+}
+
+// ── ETF-specific render functions ──────────────────────────────────────────
+
+function renderEtfAbout(profile, etfProfile) {
+  let el = document.getElementById('company-about');
+  if (!el) return;
+
+  let items = [];
+  let benchmark = etfProfile.benchmark || etfProfile.index || '';
+  let inception  = etfProfile.inceptionDate || (profile.ipo ? profile.ipo.split('-')[0] : '');
+  let website    = profile.weburl || '';
+  let country    = profile.country || 'US';
+
+  if (benchmark)  items.push({ label: 'Tracks',        value: escHtml(benchmark) });
+  if (inception)  items.push({ label: 'Inception',      value: escHtml(inception) });
+  if (country)    items.push({ label: 'Listed',         value: escHtml(country) });
+  if (website)    items.push({ label: 'Website', value: "<a href='" + escHtml(website) + "' target='_blank' rel='noopener' style='color:var(--accent-blue);text-decoration:none;'>" + escHtml(website.replace(/^https?:\/\//, '').replace(/\/$/, '')) + "</a>" });
+
+  let descHtml = '';
+  let desc = etfProfile.description || profile.description || '';
+  if (desc) descHtml = '<p class="company-description">' + escHtml(desc) + '</p>';
+
+  el.innerHTML = '<h2>ABOUT THIS ETF</h2>' + descHtml +
+    (items.length ? '<div class="about-grid">' + items.map(function(i) {
+      return "<div class='about-item'><div class='about-label'>" + i.label + "</div><div class='about-value'>" + i.value + "</div></div>";
+    }).join('') + '</div>' : '');
+  el.style.display = 'block';
+}
+
+function renderEtfStats(metrics, etfProfile, divYield) {
+  let el = document.getElementById('fundamentals-card');
+  if (!el) return;
+
+  // Expense ratio — Finnhub returns it as a decimal (0.0945 = 0.0945%), multiply by 100
+  let rawExp = etfProfile.expenseRatio || etfProfile.expense_ratio || null;
+  let expStr = rawExp != null
+    ? (rawExp < 1 ? (rawExp * 100).toFixed(2) : rawExp.toFixed(2)) + '%'
+    : '—';
+
+  // AUM — Finnhub returns in millions
+  let aum = etfProfile.aum || etfProfile.totalAssets || 0;
+  let aumStr = aum > 0
+    ? (aum >= 1000000 ? '$' + (aum / 1000000).toFixed(2) + 'T'
+      : aum >= 1000   ? '$' + (aum / 1000).toFixed(1) + 'B'
+      :                 '$' + aum.toFixed(0) + 'M')
+    : '—';
+
+  let beta   = metrics['beta']           || 0;
+  let high52 = metrics['52WeekHigh']     || 0;
+  let low52  = metrics['52WeekLow']      || 0;
+  let nav    = etfProfile.nav            || 0;
+
+  let items = [
+    { label: 'Expense Ratio', value: expStr },
+    { label: 'Fund Size (AUM)', value: aumStr },
+    { label: 'Dist. Yield', value: divYield > 0 ? divYield.toFixed(2) + '%' : 'None' },
+    { label: 'Beta', value: beta > 0 ? beta.toFixed(2) : '—' },
+    { label: '52-Wk High', value: high52 > 0 ? '$' + high52.toFixed(2) : '—' },
+    { label: '52-Wk Low',  value: low52  > 0 ? '$' + low52.toFixed(2)  : '—' },
+    { label: 'NAV', value: nav > 0 ? '$' + nav.toFixed(2) : '—' },
+  ];
+
+  el.innerHTML = '<h2>ETF STATS</h2><div class="fundamentals-grid">' +
+    items.map(function(i) {
+      return "<div class='fund-item'><div class='fund-label'>" + i.label + "</div><div class='fund-value'>" + i.value + "</div></div>";
+    }).join('') + '</div>';
+  el.style.display = 'block';
+}
+
+function renderEtfHoldings(etfHoldings) {
+  let el = document.getElementById('etf-holdings-card');
+  if (!el) return;
+
+  let holdings = (etfHoldings.holdings || []).slice(0, 10);
+  if (holdings.length === 0) { el.style.display = 'none'; return; }
+
+  el.innerHTML = '<h2>TOP HOLDINGS</h2>' +
+    '<div class="etf-holdings-list">' +
+    holdings.map(function(h, i) {
+      let pct = h.percent != null ? h.percent : (h.weight != null ? h.weight : null);
+      let pctStr = pct != null ? pct.toFixed(2) + '%' : '—';
+      let barW   = pct != null ? Math.min(100, pct * 5) : 0; // scale bar: ~20% fills full bar
+      return '<div class="etf-holding-row" onclick="quickSearch(\'' + escHtml(h.symbol || '') + '\')">' +
+        '<span class="etf-holding-rank">' + (i + 1) + '</span>' +
+        '<span class="etf-holding-ticker">' + escHtml(h.symbol || '—') + '</span>' +
+        '<span class="etf-holding-name">' + escHtml(h.name || '') + '</span>' +
+        '<div class="etf-holding-right">' +
+          '<div class="etf-holding-bar-wrap"><div class="etf-holding-bar" style="width:' + barW + '%"></div></div>' +
+          '<span class="etf-holding-pct">' + pctStr + '</span>' +
+        '</div>' +
+      '</div>';
+    }).join('') +
+    '</div>';
   el.style.display = 'block';
 }
 
