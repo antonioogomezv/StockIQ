@@ -4258,14 +4258,16 @@ function _buildWizardPortfolio(profile, budget, preferredSector) {
       // Try to include at least 1-2 from preferred sector
       var top5 = valid.slice(0, 5);
       if (top5.length < 3) {
-        // Fallback defaults
-        top5 = [
-          { ticker: 'AAPL', price: 0, score: 70 },
-          { ticker: 'MSFT', price: 0, score: 70 },
-          { ticker: 'JPM',  price: 0, score: 65 },
-          { ticker: 'V',    price: 0, score: 65 },
-          { ticker: 'KO',   price: 0, score: 60 }
-        ];
+        // Fallback defaults — fetch live prices first
+        var fallbackTickers = ['AAPL', 'MSFT', 'JPM', 'V', 'KO'];
+        getSharedPrices(fallbackTickers, 120000).then(function(pm) {
+          top5 = fallbackTickers.map(function(t, i) {
+            return { ticker: t, price: (pm[t] || {}).price || 0, score: [70, 70, 65, 65, 60][i] };
+          });
+          document.getElementById('wizard-loading-overlay').remove();
+          _showWizardPreview(top5, budget, profile, today);
+        });
+        return;
       }
 
       document.getElementById('wizard-loading-overlay').remove();
