@@ -1032,6 +1032,7 @@ function displayData(data) {
     renderEtfStats(metrics, etfProfile, _divYield);
     renderEtfHoldings(etfHoldings);
     document.getElementById('earnings-card').style.display = 'none';
+    document.getElementById('dividend-card').style.display = 'none';
     document.getElementById('quiz-cta') && (document.getElementById('quiz-cta').style.display = 'none');
   } else {
     renderCompanyAbout(profile, _divYield);
@@ -1039,6 +1040,12 @@ function displayData(data) {
     renderEarningsCard(nextEarningsDate, lastEarnings, companyName);
     document.getElementById('etf-holdings-card').style.display = 'none';
     renderQuizCTA(ticker, companyName, pe, beta, margin, growth, rsi, totalScore, currentRatio);
+    // Fetch dividend details for dividend-paying stocks (non-blocking)
+    if (_divYield > 0) {
+      loadDividendCard(ticker);
+    } else {
+      document.getElementById('dividend-card').style.display = 'none';
+    }
   }
 
   renderScoreExplainer(totalScore);
@@ -1236,6 +1243,66 @@ function renderFundamentals(f) {
         ? "<span class='term-link' onclick=\"openTerm('" + i.label.replace(/'/g, "\\'") + "')\" title='Learn more'>" + i.label + "</span>"
         : i.label;
       return "<div class='fund-item'><div class='fund-label'>" + labelHtml + "</div><div class='fund-value'>" + i.value + "</div></div>";
+    }).join('') + '</div>';
+  el.style.display = 'block';
+}
+
+function loadDividendCard(ticker) {
+  var el = document.getElementById('dividend-card');
+  if (!el) return;
+  fetch(finnhubUrl('/api/v1/stock/dividend2', { symbol: ticker }))
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var divs = (data.data || []).filter(function(d) { return d.exDate; });
+      if (divs.length === 0) { el.style.display = 'none'; return; }
+      // Sort descending by exDate
+      divs.sort(function(a, b) { return b.exDate > a.exDate ? 1 : -1; });
+      renderDividendCard(divs, el);
+    })
+    .catch(function() { el.style.display = 'none'; });
+}
+
+function renderDividendCard(divs, el) {
+  var latest = divs[0];
+  var exDate  = latest.exDate  ? new Date(latest.exDate  + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+  var payDate = latest.payDate ? new Date(latest.payDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+  var amount  = latest.amount  ? '$' + parseFloat(latest.amount).toFixed(4) + ' / share' : '—';
+  var freq    = latest.frequency || '';
+  var freqMap = { annual: 'Annual', 'semi-annual': 'Semi-Annual', quarterly: 'Quarterly', monthly: 'Monthly' };
+  var freqStr = freqMap[freq.toLowerCase()] || freq || '—';
+
+  // Calculate annual run-rate from recent dividends
+  var recentYear = divs.filter(function(d) {
+    return d.exDate && d.exDate >= new Date(Date.now() - 365 * 86400000).toISOString().split('T')[0];
+  });
+  var annualAmt = recentYear.reduce(function(sum, d) { return sum + (parseFloat(d.amount) || 0); }, 0);
+
+  // Is next ex-date in the future?
+  var nextExEl = '';
+  var futureDiv = divs.find(function(d) { return d.exDate && d.exDate > new Date().toISOString().split('T')[0]; });
+  if (futureDiv) {
+    var daysTo = Math.round((new Date(futureDiv.exDate + 'T12:00:00') - new Date()) / 86400000);
+    var urgColor = daysTo <= 7 ? '#d97706' : 'var(--text-muted)';
+    nextExEl = '<div class="div-next-ex">Next ex-date: <strong>' +
+      new Date(futureDiv.exDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
+      '</strong> <span style="color:' + urgColor + ';font-size:11px;">(' + (daysTo === 0 ? 'Today' : daysTo === 1 ? 'Tomorrow' : 'In ' + daysTo + 'd') + ')</span>' +
+      '<div class="div-next-ex-tip">Own shares before this date to receive the dividend</div>' +
+      '</div>';
+  }
+
+  var items = [
+    { label: 'Last Ex-Date',  value: exDate },
+    { label: 'Payment Date',  value: payDate },
+    { label: 'Per Share',     value: amount },
+    { label: 'Frequency',     value: freqStr },
+    { label: 'Annual (est.)', value: annualAmt > 0 ? '$' + annualAmt.toFixed(2) + ' / share' : '—' },
+  ];
+
+  el.innerHTML = '<h2>DIVIDEND</h2>' +
+    nextExEl +
+    '<div class="fundamentals-grid">' +
+    items.map(function(i) {
+      return "<div class='fund-item'><div class='fund-label'>" + i.label + "</div><div class='fund-value'>" + i.value + "</div></div>";
     }).join('') + '</div>';
   el.style.display = 'block';
 }
@@ -5150,11 +5217,16 @@ function fetchSpyBenchmark(portfolio, callback) {
   }).catch(function() { _spyBenchmark = false; callback(null); });
 }
 
-function portSignal(score) {
+function portSignal(score, ticker) {
   if (!score) return '<span style="color:#64748b;font-size:11px;">—</span>';
   let cls = score >= 65 ? 'buy' : score >= 50 ? 'hold' : 'sell';
   let txt = score >= 65 ? 'Strong' : score >= 50 ? 'Watch' : 'Risky';
-  return '<span class="signal-pill ' + cls + '">' + txt + '</span>';
+  let pill = '<span class="signal-pill ' + cls + '">' + txt + '</span>';
+  if (ticker) {
+    let h = buildScoreHistoryBars(ticker, score);
+    if (h.trend) pill += '<div class="port-score-trend">' + h.trend + '</div>';
+  }
+  return pill;
 }
 
 function fetchMissingPortfolioScores(stockData) {
@@ -5174,7 +5246,7 @@ function fetchMissingPortfolioScores(stockData) {
           saveScoreHistory(s.ticker, score);
           // Update the signal pill in the DOM without re-rendering the whole list
           let el = document.getElementById('port-signal-' + s.ticker);
-          if (el) el.innerHTML = portSignal(score);
+          if (el) el.innerHTML = portSignal(score, s.ticker);
         })
         .catch(function() {});
     }, 400 * (i + 1)); // stagger 400ms per ticker
@@ -5497,7 +5569,7 @@ function renderPortfolioRows(data) {
           '<div class="hide-mobile" style="color:var(--text-muted);font-size:13px;">' + fmt$(s.cost) + '</div>' +
           '<div class="hide-mobile" style="color:' + gc + ';">' + fmtSigned$(s.gain) + '<br><span style="font-size:11px;">' + (s.gainPct >= 0 ? '+' : '') + s.gainPct.toFixed(1) + '%</span></div>' +
           '<div class="hide-mobile" style="color:' + dc + ';">' + fmtSigned$(s.dayChangeAmt) + '<br><span style="font-size:11px;color:' + dc + ';">' + (s.dayChangeAmt >= 0 ? '+' : '') + (s.currentPrice > 0 ? ((s.dayChangeAmt / (s.value - s.dayChangeAmt)) * 100).toFixed(2) : '0.00') + '%</span></div>' +
-          '<div style="display:flex;align-items:center;gap:8px;"><span id="port-signal-' + s.ticker + '">' + portSignal(s.score) + '</span>' +
+          '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;"><span id="port-signal-' + s.ticker + '">' + portSignal(s.score, s.ticker) + '</span>' +
             '<button onclick="event.stopPropagation();openSellModal(' + escHtml(JSON.stringify(s.ticker)) + ',' + s.currentPrice + ',' + s.shares + ')" class="sell-btn">Sell</button>' +
           '</div>' +
         '</div>' +

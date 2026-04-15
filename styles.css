@@ -1220,6 +1220,7 @@ button:active { transform: translateY(0); }
 .watchlist-score { font-family: var(--display); font-size: 13px; font-weight: 600; }
 .wl-score-block { display: flex; flex-direction: column; gap: 3px; }
 .wl-score-trend { font-size: 11px; font-weight: 500; }
+.port-score-trend { font-size: 10px; font-weight: 500; text-align: right; }
 
 .wl-price-block {
   display: flex;
@@ -3086,6 +3087,32 @@ details[open] .sector-summary { color: var(--text); }
   margin-bottom: 0;
 }
 #fundamentals-card h2 { margin-bottom: 16px; }
+
+/* ── Dividend card ── */
+#dividend-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin-bottom: 16px;
+}
+#dividend-card h2 { margin-bottom: 12px; }
+.div-next-ex {
+  background: rgba(16,185,129,0.07);
+  border: 1px solid rgba(16,185,129,0.2);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 500;
+}
+.div-next-ex-tip {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  font-weight: 400;
+}
 .fundamentals-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
