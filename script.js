@@ -5395,12 +5395,8 @@ function renderPortfolioLineChart() {
   }
 
   // Fetch SPY candles for the same time window as valueHistory
-  var earliest = history[0].date;
-  var fromDate = new Date(earliest);
-  if (isNaN(fromDate)) {
-    buildChart(null);
-    return;
-  }
+  // Dates are stored as "Apr 14" (no year) — estimate from date using history length
+  var fromDate = new Date(Date.now() - (history.length + 5) * 86400000);
   var fromStr = fromDate.toISOString().split('T')[0];
   var toStr   = new Date().toISOString().split('T')[0];
   fetch(polygonUrl('/v2/aggs/ticker/SPY/range/1/day/' + fromStr + '/' + toStr, { adjusted: 'true' }))
