@@ -2035,6 +2035,18 @@ function showQuizResult() {
   userProfile = profile;
 }
 
+function _regenerateDemoPortfolio() {
+  let all = getAllPortfolios();
+  Object.keys(all).forEach(function(id) { if (all[id].isDemo) delete all[id]; });
+  savePortfolios(all);
+  let activeId = getActiveId();
+  if (!all[activeId]) {
+    let remaining = Object.keys(all);
+    if (remaining.length > 0) localStorage.setItem('activePortfolioId', remaining[0]);
+  }
+  createDemoPortfolio(userProfile.type, userProfile.budget);
+}
+
 function finishQuiz() {
   let isRetake = !!localStorage.getItem('userProfile');
   localStorage.setItem("userProfile", JSON.stringify(userProfile));
@@ -2042,34 +2054,53 @@ function finishQuiz() {
   // On retake, offer to regenerate the Recommended Portfolio
   if (isRetake) {
     let hasDemo = Object.values(getAllPortfolios()).some(function(p) { return p.isDemo; });
-    if (hasDemo && confirm('Regenerate your Recommended Portfolio for your new ' + userProfile.type + ' profile?')) {
-      // Delete existing demo portfolio then create new one
-      let all = getAllPortfolios();
-      Object.keys(all).forEach(function(id) { if (all[id].isDemo) delete all[id]; });
-      savePortfolios(all);
-      // Reset activeId if it was the deleted demo
-      let activeId = getActiveId();
-      if (!all[activeId]) {
-        let remaining = Object.keys(all);
-        if (remaining.length > 0) localStorage.setItem('activePortfolioId', remaining[0]);
-      }
-      createDemoPortfolio(userProfile.type, userProfile.budget);
+    if (hasDemo) {
+      // Custom modal instead of confirm() which breaks on iOS
+      let overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:3000;display:flex;align-items:center;justify-content:center;padding:24px;';
+      let card = document.createElement('div');
+      card.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px 24px;max-width:320px;width:100%;text-align:center;';
+      let title = document.createElement('div');
+      title.style.cssText = 'font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px;';
+      title.textContent = 'Update Recommended Portfolio?';
+      let desc = document.createElement('div');
+      desc.style.cssText = 'font-size:13px;color:var(--text-muted);margin-bottom:24px;';
+      desc.textContent = 'Regenerate your Recommended Portfolio for your new ' + userProfile.type + ' profile?';
+      let btnRow = document.createElement('div');
+      btnRow.style.cssText = 'display:flex;gap:10px;justify-content:center;';
+      let skipBtn = document.createElement('button');
+      skipBtn.textContent = 'Keep existing';
+      skipBtn.style.cssText = 'flex:1;background:var(--surface2);color:var(--text);border:1px solid var(--border);';
+      let regenBtn = document.createElement('button');
+      regenBtn.textContent = 'Regenerate';
+      regenBtn.style.cssText = 'flex:1;';
+      btnRow.appendChild(skipBtn);
+      btnRow.appendChild(regenBtn);
+      card.appendChild(title); card.appendChild(desc); card.appendChild(btnRow);
+      overlay.appendChild(card);
+      document.body.appendChild(overlay);
+      skipBtn.addEventListener('click', function() { overlay.remove(); _finishQuizUI(); });
+      regenBtn.addEventListener('click', function() { overlay.remove(); _regenerateDemoPortfolio(); _finishQuizUI(); });
+      return;
     }
   } else {
     migrateToMultiPortfolio([], [], []);  // ensure structure exists first
     createDemoPortfolio(userProfile.type, userProfile.budget);
   }
+  _finishQuizUI();
+}
+
+function _finishQuizUI() {
   document.getElementById("quiz-overlay").style.display = "none";
   updateRiskBadge();
+  renderProfile();
   if (localStorage.getItem('tour-done')) return;
   let nameEl = document.getElementById("onboarding-profile-name");
   if (nameEl) nameEl.innerHTML = userProfile.icon + " " + userProfile.type;
   document.getElementById("onboarding-overlay").style.display = "flex";
-  // Reset card state
   _obStep = 0;
   document.querySelectorAll('.onboarding-card').forEach(function(c, i) { c.classList.toggle('active', i === 0); });
   document.querySelectorAll('.ob-dot').forEach(function(d, i) { d.classList.toggle('active', i === 0); });
-  // Pre-select saved currency
   var savedCur = localStorage.getItem('currency') || 'USD';
   var usdBtn = document.getElementById('ob-usd');
   var mxnBtn = document.getElementById('ob-mxn');
@@ -4925,33 +4956,37 @@ function renderPortfolioRows(data) {
       let dc = s.dayChangeAmt >= 0 ? '#16a34a' : '#dc2626';
       let hasMultiple = s.lots && s.lots.length > 1;
       let lotsHtml = '';
-      if (s.lots && s.lots.length > 0) {
+      if (s.lots) {
         let note = getStockNote(s.ticker);
+        let lotsRowsHtml = s.lots.map(function(lot, i) {
+          let lotCost = lot.shares * lot.price;
+          let lotValue = s.currentPrice * lot.shares;
+          let lotGain = lotValue - lotCost;
+          let lotGainPct = lotCost > 0 ? ((lotGain / lotCost) * 100) : 0;
+          let lotGc = lotGain >= 0 ? '#16a34a' : '#dc2626';
+          return '<div class="port-lot-row">' +
+            '<div class="port-lot-info">' +
+              '<span class="port-lot-num">Lot ' + (i + 1) + '</span>' +
+              '<span>' + lot.shares + ' shares @ ' + fmt$(lot.price) + (lot.date ? ' · ' + lot.date : '') + '</span>' +
+            '</div>' +
+            '<div class="port-lot-gain" style="color:' + lotGc + ';">' + fmtSigned$(lotGain) + ' (' + (lotGainPct >= 0 ? '+' : '') + lotGainPct.toFixed(1) + '%)</div>' +
+            (hasMultiple ? '<button onclick="event.stopPropagation();removeLotFromPortfolio(' + escHtml(JSON.stringify(s.ticker)) + ',' + i + ')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:13px;padding:2px 6px;flex-shrink:0;">✕</button>' : '') +
+          '</div>';
+        }).join('');
         lotsHtml = '<div id="lots-' + s.ticker + '" class="port-lots-drawer" style="display:none;">' +
-          s.lots.map(function(lot, i) {
-            let lotCost = lot.shares * lot.price;
-            let lotValue = s.currentPrice * lot.shares;
-            let lotGain = lotValue - lotCost;
-            let lotGainPct = lotCost > 0 ? ((lotGain / lotCost) * 100) : 0;
-            let lotGc = lotGain >= 0 ? '#16a34a' : '#dc2626';
-            return '<div class="port-lot-row">' +
-              '<div class="port-lot-info">' +
-                '<span class="port-lot-num">Lot ' + (i + 1) + '</span>' +
-                '<span>' + lot.shares + ' shares @ ' + fmt$(lot.price) + (lot.date ? ' · ' + lot.date : '') + '</span>' +
-              '</div>' +
-              '<div class="port-lot-gain" style="color:' + lotGc + ';">' + fmtSigned$(lotGain) + ' (' + (lotGainPct >= 0 ? '+' : '') + lotGainPct.toFixed(1) + '%)</div>' +
-              '<button onclick="event.stopPropagation();removeLotFromPortfolio(' + escHtml(JSON.stringify(s.ticker)) + ',' + i + ')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:13px;padding:2px 6px;flex-shrink:0;">✕</button>' +
-            '</div>';
-          }).join('') +
+          lotsRowsHtml +
           '<div class="port-note-row">' +
             '<textarea id="note-input-' + s.ticker + '" class="port-note-input" placeholder="Why did you buy this? Notes…" oninput="saveStockNote(' + escHtml(JSON.stringify(s.ticker)) + ',this.value)">' + escHtml(note) + '</textarea>' +
+          '</div>' +
+          '<div style="padding:8px 12px 4px;text-align:right;">' +
+            '<button onclick="event.stopPropagation();removeFromPortfolio(' + escHtml(JSON.stringify(s.ticker)) + ')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:11px;padding:0;">Remove from portfolio</button>' +
           '</div>' +
         '</div>';
       }
       return '<div class="port-stock-wrapper" data-ticker="' + s.ticker + '">' +
         '<div class="port-stock-row" onclick="openStockFromPortfolio(' + escHtml(JSON.stringify(s.ticker)) + ')">' +
           '<div style="display:flex;align-items:center;gap:6px;">' +
-            (hasMultiple ? '<button id="lots-btn-' + s.ticker + '" onclick="event.stopPropagation();togglePortLots(' + escHtml(JSON.stringify(s.ticker)) + ')" class="port-lots-toggle">▾</button>' : '') +
+            '<button id="lots-btn-' + s.ticker + '" onclick="event.stopPropagation();togglePortLots(' + escHtml(JSON.stringify(s.ticker)) + ')" class="port-lots-toggle">▾</button>' +
             '<div>' +
               '<div style="font-weight:600;font-size:14px;">' + s.ticker + '</div>' +
               '<div style="font-size:11px;color:#64748b;">' + s.shares.toFixed(s.shares % 1 === 0 ? 0 : 2) + ' shares · avg ' + fmt$(s.buyPrice) + (hasMultiple ? ' · ' + s.lots.length + ' lots' : (s.lots && s.lots[0] && s.lots[0].date ? ' · ' + s.lots[0].date : '')) + '</div>' +
@@ -4964,7 +4999,6 @@ function renderPortfolioRows(data) {
           '<div class="hide-mobile" style="color:' + dc + ';">' + fmtSigned$(s.dayChangeAmt) + '<br><span style="font-size:11px;color:' + dc + ';">' + (s.dayChangeAmt >= 0 ? '+' : '') + (s.currentPrice > 0 ? ((s.dayChangeAmt / (s.value - s.dayChangeAmt)) * 100).toFixed(2) : '0.00') + '%</span></div>' +
           '<div style="display:flex;align-items:center;gap:8px;"><span id="port-signal-' + s.ticker + '">' + portSignal(s.score) + '</span>' +
             '<button onclick="event.stopPropagation();openSellModal(' + escHtml(JSON.stringify(s.ticker)) + ',' + s.currentPrice + ',' + s.shares + ')" class="sell-btn">Sell</button>' +
-            '<button onclick="event.stopPropagation();removeFromPortfolio(' + escHtml(JSON.stringify(s.ticker)) + ')" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:16px;padding:0;">✕</button>' +
           '</div>' +
         '</div>' +
         lotsHtml +
@@ -5291,59 +5325,99 @@ function renderPortfolioLineChart() {
   canvas.style.display = 'block';
   if (emptyEl) emptyEl.style.display = 'none';
 
+  // Convert to % return from first point
+  let base = history[0].value;
   let labels = history.map(function(h) { return h.date; });
-  let values = history.map(function(h) { return h.value; });
-  let isUp   = values[values.length - 1] >= values[0];
+  let pcts   = history.map(function(h) { return base > 0 ? parseFloat(((h.value - base) / base * 100).toFixed(2)) : 0; });
+  let isUp   = pcts[pcts.length - 1] >= 0;
   let lineColor = isUp ? '#16a34a' : '#dc2626';
   let fillColor = isUp ? 'rgba(22,163,74,0.06)' : 'rgba(220,38,38,0.06)';
 
-  if (portfolioLineChartInstance) portfolioLineChartInstance.destroy();
-  portfolioLineChartInstance = new Chart(canvas.getContext('2d'), {
-    type: 'line',
-    data: {
-      labels: labels,
-      datasets: [{
-        label: 'Portfolio Value',
-        data: values,
-        borderColor: lineColor,
-        backgroundColor: fillColor,
-        borderWidth: 2,
-        pointRadius: 3,
-        pointBackgroundColor: lineColor,
-        pointHoverRadius: 6,
+  function buildChart(spyPcts) {
+    if (portfolioLineChartInstance) portfolioLineChartInstance.destroy();
+    let datasets = [{
+      label: 'Portfolio',
+      data: pcts,
+      borderColor: lineColor,
+      backgroundColor: fillColor,
+      borderWidth: 2,
+      pointRadius: 2,
+      pointHoverRadius: 5,
+      tension: 0.3,
+      fill: true
+    }];
+    if (spyPcts && spyPcts.length === pcts.length) {
+      datasets.push({
+        label: 'S&P 500',
+        data: spyPcts,
+        borderColor: 'rgba(148,163,184,0.7)',
+        backgroundColor: 'transparent',
+        borderWidth: 1.5,
+        borderDash: [4, 3],
+        pointRadius: 0,
+        pointHoverRadius: 4,
         tension: 0.3,
-        fill: true
-      }]
-    },
-    options: {
-      responsive: true,
-      interaction: { mode: 'index', intersect: false },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: '#ffffff',
-          borderColor: '#e2e8f0',
-          borderWidth: 1,
-          titleColor: '#1a202c',
-          bodyColor: '#64748b',
-          padding: 12,
-          callbacks: {
-            label: function(ctx) { return '  Value: $' + ctx.parsed.y.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+        fill: false
+      });
+    }
+    portfolioLineChartInstance = new Chart(canvas.getContext('2d'), {
+      type: 'line',
+      data: { labels: labels, datasets: datasets },
+      options: {
+        responsive: true,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#ffffff',
+            borderColor: '#e2e8f0',
+            borderWidth: 1,
+            titleColor: '#1a202c',
+            bodyColor: '#64748b',
+            padding: 12,
+            callbacks: {
+              label: function(ctx) {
+                let sign = ctx.parsed.y >= 0 ? '+' : '';
+                return '  ' + ctx.dataset.label + ': ' + sign + ctx.parsed.y.toFixed(2) + '%';
+              }
+            }
           }
-        }
-      },
-      scales: {
-        y: {
-          ticks: { color: '#64748b', callback: function(v) { return '$' + v.toLocaleString(); } },
-          grid: { color: '#e2e8f0' }
         },
-        x: {
-          ticks: { color: '#64748b' },
-          grid: { display: false }
+        scales: {
+          y: {
+            ticks: { color: '#64748b', callback: function(v) { return (v >= 0 ? '+' : '') + v.toFixed(1) + '%'; } },
+            grid: { color: '#e2e8f0' }
+          },
+          x: { ticks: { color: '#64748b' }, grid: { display: false } }
         }
       }
-    }
-  });
+    });
+  }
+
+  // Fetch SPY candles for the same time window as valueHistory
+  var earliest = history[0].date;
+  var fromDate = new Date(earliest);
+  if (isNaN(fromDate)) {
+    buildChart(null);
+    return;
+  }
+  var fromStr = fromDate.toISOString().split('T')[0];
+  var toStr   = new Date().toISOString().split('T')[0];
+  fetch(polygonUrl('/v2/aggs/ticker/SPY/range/1/day/' + fromStr + '/' + toStr, { adjusted: 'true' }))
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.results || data.results.length < 2) { buildChart(null); return; }
+      var spyBase = data.results[0].c;
+      // Map SPY candles to same number of points as portfolio history using linear interpolation
+      var spyResults = data.results;
+      var spyPcts = history.map(function(_, i) {
+        var idx = Math.round(i / (history.length - 1) * (spyResults.length - 1));
+        var spyVal = spyResults[Math.min(idx, spyResults.length - 1)].c;
+        return parseFloat(((spyVal - spyBase) / spyBase * 100).toFixed(2));
+      });
+      buildChart(spyPcts);
+    })
+    .catch(function() { buildChart(null); });
 }
 
 function renderPortfolioChart(stockData, totalValue) {
