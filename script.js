@@ -2721,7 +2721,10 @@ function renderWatchlist() {
         "<button class='watchlist-remove' onclick='event.stopPropagation();removeFromWatchlist(\"" + item.ticker + "\")'>✕</button>" +
       "</div>" +
       "<div class='wl-action-row'>" +
-        "<div class='watchlist-score' style='color:" + scoreColor + ";'>" + signal + " · " + item.score + "/100</div>" +
+        "<div class='wl-score-block'>" +
+          "<div class='watchlist-score' style='color:" + scoreColor + ";'>" + signal + " · " + item.score + "/100</div>" +
+          (hist.trend ? "<div class='wl-score-trend'>" + hist.trend + "</div>" : "") +
+        "</div>" +
         "<div class='wl-action-btns'>" +
           histToggle +
           alertHtml +
@@ -4962,6 +4965,8 @@ function renderPortfolio() {
     if (exportBtn) exportBtn.style.display = 'none';
     let winnersCard = document.getElementById('port-winners-card');
     if (winnersCard) winnersCard.style.display = 'none';
+    var earningsCalEl = document.getElementById('port-earnings-calendar');
+    if (earningsCalEl) earningsCalEl.style.display = 'none';
     let searchWrap = document.getElementById('port-search-wrap');
     if (searchWrap) searchWrap.style.display = 'none';
     portfolioStockData = [];
@@ -5047,6 +5052,7 @@ function renderPortfolio() {
       showToast('Prices unavailable for ' + failedTickers.join(', ') + ' — showing cost basis instead.');
     }
     portfolioStockData = stockData;
+    renderPortfolioEarningsCalendar(portfolio.map(function(s) { return s.ticker; }));
     let searchWrap = document.getElementById('port-search-wrap');
     if (searchWrap) searchWrap.style.display = 'block';
     renderPortfolioRows(stockData);
@@ -5315,6 +5321,76 @@ function togglePortLots(ticker) {
   let isOpen = el.style.display !== 'none';
   el.style.display = isOpen ? 'none' : 'block';
   if (btn) btn.textContent = isOpen ? '▾' : '▴';
+}
+
+var _portEarningsCache = {}; // ticker → { date, ts }
+
+function renderPortfolioEarningsCalendar(tickers) {
+  var el = document.getElementById('port-earnings-calendar');
+  if (!el || !tickers || tickers.length === 0) return;
+
+  var today = new Date(); today.setHours(0, 0, 0, 0);
+  var toDate = new Date(today); toDate.setDate(today.getDate() + 45);
+  var fromStr = today.toISOString().split('T')[0];
+  var toStr = toDate.toISOString().split('T')[0];
+
+  // Use cached results if fresh (< 4h)
+  var now = Date.now();
+  var allCached = tickers.every(function(t) {
+    return _portEarningsCache[t] && (now - _portEarningsCache[t].ts < 14400000);
+  });
+
+  function renderCalendar() {
+    var upcoming = [];
+    tickers.forEach(function(t) {
+      var d = _portEarningsCache[t];
+      if (!d || !d.date) return;
+      var earningsDate = new Date(d.date + 'T00:00:00');
+      var daysAway = Math.round((earningsDate - today) / 86400000);
+      if (daysAway >= 0 && daysAway <= 45) {
+        upcoming.push({ ticker: t, date: d.date, daysAway: daysAway });
+      }
+    });
+
+    if (upcoming.length === 0) { el.style.display = 'none'; return; }
+    upcoming.sort(function(a, b) { return a.daysAway - b.daysAway; });
+
+    el.innerHTML = '<div class="port-earnings-title">UPCOMING EARNINGS</div>' +
+      '<div class="port-earnings-list">' +
+      upcoming.map(function(e) {
+        var urgColor = e.daysAway === 0 ? '#dc2626' : e.daysAway <= 7 ? '#d97706' : 'var(--text-muted)';
+        var countText = e.daysAway === 0 ? 'Today' : e.daysAway === 1 ? 'Tomorrow' : 'In ' + e.daysAway + 'd';
+        var dateStr = new Date(e.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        return '<div class="port-earnings-row" onclick="quickSearch(\'' + escHtml(e.ticker) + '\')">' +
+          '<span class="port-earnings-ticker">' + escHtml(e.ticker) + '</span>' +
+          '<span class="port-earnings-date">' + dateStr + '</span>' +
+          '<span class="port-earnings-count" style="color:' + urgColor + ';">' + countText + '</span>' +
+        '</div>';
+      }).join('') +
+      '</div>';
+    el.style.display = 'block';
+  }
+
+  if (allCached) { renderCalendar(); return; }
+
+  // Fetch in parallel — one call per ticker (Finnhub calendar endpoint)
+  var fetches = tickers.map(function(ticker) {
+    if (_portEarningsCache[ticker] && (now - _portEarningsCache[ticker].ts < 14400000)) {
+      return Promise.resolve();
+    }
+    return fetch(finnhubUrl('/api/v1/calendar/earnings', { symbol: ticker, from: fromStr, to: toStr }))
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var cal = data.earningsCalendar || [];
+        var next = cal.length > 0 ? cal[0].date : null;
+        _portEarningsCache[ticker] = { date: next, ts: Date.now() };
+      })
+      .catch(function() {
+        _portEarningsCache[ticker] = { date: null, ts: Date.now() };
+      });
+  });
+
+  Promise.all(fetches).then(renderCalendar);
 }
 
 function renderPortfolioRows(data) {
