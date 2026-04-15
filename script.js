@@ -5486,11 +5486,21 @@ function savePortfolioValueHistory(value) {
 
 function switchPortfolioChart(view) {
   document.querySelectorAll('.port-chart-btn').forEach(function(b) { b.classList.remove('active'); });
-  document.querySelector('.port-chart-btn[data-view="' + view + '"]').classList.add('active');
+  var btn = document.querySelector('.port-chart-btn[data-view="' + view + '"]');
+  if (btn) btn.classList.add('active');
   document.getElementById('portfolio-pie-view').style.display     = view === 'pie'     ? 'block' : 'none';
-  document.getElementById('portfolio-line-view').style.display    = view === 'line'    ? 'block' : 'none';
   document.getElementById('portfolio-sectors-view').style.display = view === 'sectors' ? 'block' : 'none';
-  if (view === 'line') renderPortfolioLineChart();
+}
+
+function switchHoldingsView(view) {
+  document.querySelectorAll('.hs-view-btn').forEach(function(b) { b.classList.remove('active'); });
+  var btn = document.querySelector('.hs-view-btn[data-view="' + view + '"]');
+  if (btn) btn.classList.add('active');
+  var valueView  = document.getElementById('holdings-value-view');
+  var returnView = document.getElementById('holdings-return-view');
+  if (valueView)  valueView.style.display  = view === 'value'  ? 'block' : 'none';
+  if (returnView) returnView.style.display = view === 'return' ? 'block' : 'none';
+  if (view === 'return') renderPortfolioLineChart();
 }
 
 // Build reverse ticker→sector lookup from SECTOR_TICKERS
