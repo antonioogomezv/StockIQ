@@ -2770,12 +2770,14 @@ function setAlert(ticker, price, currentPrice) {
   alerts[ticker] = parseFloat(price);
   localStorage.setItem('price-alerts', JSON.stringify(alerts));
   saveToFirestore({ priceAlerts: alerts });
-  let dir = price >= currentPrice ? '↑ above' : '↓ below';
+  let dir = parseFloat(price) >= currentPrice ? '↑ above' : '↓ below';
   showToast('Alert set: notify when ' + ticker + ' goes ' + dir + ' $' + parseFloat(price).toFixed(2));
   if (window.Notification && Notification.permission === 'default') {
     Notification.requestPermission();
   }
   renderWatchlist();
+  // Also refresh portfolio rows if the alert was set from a portfolio stock
+  if (portfolioStockData && portfolioStockData.length) renderPortfolioRows(portfolioStockData);
 }
 
 function removeAlert(ticker) {
@@ -2784,6 +2786,14 @@ function removeAlert(ticker) {
   localStorage.setItem('price-alerts', JSON.stringify(alerts));
   replaceInFirestore({ priceAlerts: alerts });
   renderWatchlist();
+}
+
+function removePortAlert(ticker) {
+  let alerts = JSON.parse(localStorage.getItem('price-alerts') || '{}');
+  delete alerts[ticker];
+  localStorage.setItem('price-alerts', JSON.stringify(alerts));
+  replaceInFirestore({ priceAlerts: alerts });
+  if (portfolioStockData && portfolioStockData.length) renderPortfolioRows(portfolioStockData);
 }
 
 function checkPriceAlerts(quoteMap) {
@@ -5052,6 +5062,10 @@ function renderPortfolio() {
       showToast('Prices unavailable for ' + failedTickers.join(', ') + ' — showing cost basis instead.');
     }
     portfolioStockData = stockData;
+    // Check price alerts for portfolio stocks
+    var portQuoteMap = {};
+    stockData.forEach(function(s) { portQuoteMap[s.ticker] = { price: s.currentPrice, changePct: s.dayChangePct || 0, prevClose: s.currentPrice - (s.dayChangeAmt || 0) }; });
+    checkPriceAlerts(portQuoteMap);
     renderPortfolioEarningsCalendar(portfolio.map(function(s) { return s.ticker; }));
     let searchWrap = document.getElementById('port-search-wrap');
     if (searchWrap) searchWrap.style.display = 'block';
@@ -5451,12 +5465,20 @@ function renderPortfolioRows(data) {
             (hasMultiple ? '<button onclick="event.stopPropagation();removeLotFromPortfolio(' + escHtml(JSON.stringify(s.ticker)) + ',' + i + ')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:13px;padding:2px 6px;flex-shrink:0;">✕</button>' : '') +
           '</div>';
         }).join('');
+        var portAlerts = JSON.parse(localStorage.getItem('price-alerts') || '{}');
+        var portAlertTarget = portAlerts[s.ticker];
+        var _bellSvgP = "<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' style='vertical-align:-2px;margin-right:3px'><path d='M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9'/><path d='M13.73 21a2 2 0 0 1-3.46 0'/></svg>";
+        var portAlertHtml = portAlertTarget
+          ? '<span class="wl-alert-tag" onclick="event.stopPropagation();removePortAlert(\'' + escHtml(s.ticker) + '\')" title="Remove alert">' + _bellSvgP + '$' + portAlertTarget.toFixed(2) + ' ✕</span>'
+          : '<button class="wl-alert-btn" onclick="event.stopPropagation();openAlertInput(\'' + escHtml(s.ticker) + '\',' + s.currentPrice + ')">' + _bellSvgP + 'Alert</button>';
         lotsHtml = '<div id="lots-' + s.ticker + '" class="port-lots-drawer" style="display:none;">' +
           lotsRowsHtml +
           '<div class="port-note-row">' +
             '<textarea id="note-input-' + s.ticker + '" class="port-note-input" placeholder="Why did you buy this? Notes…" oninput="saveStockNote(' + escHtml(JSON.stringify(s.ticker)) + ',this.value)">' + escHtml(note) + '</textarea>' +
           '</div>' +
-          '<div style="padding:8px 12px 4px;text-align:right;">' +
+          '<div id="alert-container-' + s.ticker + '"></div>' +
+          '<div style="padding:6px 12px 4px;display:flex;align-items:center;justify-content:space-between;">' +
+            portAlertHtml +
             '<button onclick="event.stopPropagation();removeFromPortfolio(' + escHtml(JSON.stringify(s.ticker)) + ')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:11px;padding:0;">Remove from portfolio</button>' +
           '</div>' +
         '</div>';
@@ -6446,22 +6468,56 @@ function exportPortfolioCSV() {
 // ── Remove account ───────────────────────────────────────────
 
 function removeAccount() {
-  if (!confirm('Delete your account and all data permanently? This cannot be undone.')) return;
-  let user = auth.currentUser;
-  if (!user) return;
-  // Delete Firestore document first, then delete auth account
-  userRef().delete().then(function() {
-    return user.delete();
-  }).then(function() {
-    localStorage.clear();
-    location.reload();
-  }).catch(function(err) {
-    if (err.code === 'auth/requires-recent-login') {
-      showToast('Please log out and log back in, then try again.');
-    } else {
-      showToast('Could not delete account: ' + err.message);
-    }
+  // iOS-safe modal — no confirm()
+  var overlay = document.createElement('div');
+  overlay.id = '_del-account-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.innerHTML =
+    '<div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;max-width:360px;width:100%;">' +
+      '<div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px;">Delete Account</div>' +
+      '<div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;line-height:1.5;">This will permanently delete your account, all portfolios, watchlist, and data. <strong style="color:#dc2626;">This cannot be undone.</strong></div>' +
+      '<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Type <strong>DELETE</strong> to confirm:</div>' +
+      '<input id="_del-account-input" type="text" placeholder="DELETE" autocomplete="off" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box;margin-bottom:14px;">' +
+      '<div style="display:flex;gap:10px;">' +
+        '<button id="_del-account-cancel" style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px;font-size:13px;font-weight:600;color:var(--text);cursor:pointer;">Cancel</button>' +
+        '<button id="_del-account-confirm" style="flex:1;background:#dc2626;border:none;border-radius:10px;padding:10px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;opacity:0.4;" disabled>Delete Forever</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(overlay);
+
+  var input   = document.getElementById('_del-account-input');
+  var confirm = document.getElementById('_del-account-confirm');
+  var cancel  = document.getElementById('_del-account-cancel');
+
+  function close() { overlay.remove(); }
+
+  input.addEventListener('input', function() {
+    var ok = input.value.trim() === 'DELETE';
+    confirm.disabled = !ok;
+    confirm.style.opacity = ok ? '1' : '0.4';
   });
+  cancel.addEventListener('click', close);
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) close(); });
+  confirm.addEventListener('click', function() {
+    if (input.value.trim() !== 'DELETE') return;
+    close();
+    var user = auth.currentUser;
+    if (!user) return;
+    userRef().delete().then(function() {
+      return user.delete();
+    }).then(function() {
+      localStorage.clear();
+      location.reload();
+    }).catch(function(err) {
+      if (err.code === 'auth/requires-recent-login') {
+        showToast('For security, please log out and log back in first, then try again.');
+      } else {
+        showToast('Could not delete account: ' + err.message);
+      }
+    });
+  });
+
+  setTimeout(function() { input.focus(); }, 50);
 }
 
 // ── Spend limits (Anthropic API rate limiting) ───────────────
