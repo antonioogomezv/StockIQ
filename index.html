@@ -831,15 +831,25 @@
           </div>
         </div>
         <div id="search-history" style="display:none;"></div>
-        <div id="screener-toggle-row">
-          <button id="screener-toggle-btn" onclick="toggleScreener()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" style="margin-right:6px;vertical-align:-2px;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Discover Stocks
-          </button>
-        </div>
-        <div id="screener-panel" style="display:none;">
+        <div id="screener-panel">
           <div id="screener-header">
-            <div id="screener-title">What are you looking for?</div>
-            <div id="screener-subtitle">Pick a goal — we'll find real stocks that match and explain why.</div>
+            <div id="screener-title">Discover Stocks</div>
+            <div id="screener-subtitle">Ask anything, or pick a goal below.</div>
+          </div>
+          <div id="screener-search-row">
+            <div id="screener-search-wrap">
+              <input type="text" id="screener-query-input"
+                placeholder="e.g. stocks under $50 with big potential"
+                onkeypress="if(event.key==='Enter')searchScreener()"
+                oninput="onScreenerQueryInput()">
+              <button type="button" id="screener-search-btn" onclick="searchScreener()">→</button>
+            </div>
+            <div id="screener-query-chips">
+              <button class="screener-query-chip" onclick="setScreenerQueryChip('under $50 with big potential')">Under $50 + potential</button>
+              <button class="screener-query-chip" onclick="setScreenerQueryChip('safe dividend stocks')">Safe dividends</button>
+              <button class="screener-query-chip" onclick="setScreenerQueryChip('fast growing tech stocks')">Fast growth</button>
+              <button class="screener-query-chip" onclick="setScreenerQueryChip('cheap undervalued stocks')">Undervalued</button>
+            </div>
           </div>
           <div id="screener-goals"></div>
           <div id="screener-learn-box" style="display:none;"></div>

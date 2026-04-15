@@ -319,6 +319,12 @@ function showTab(name) {
   if (name === 'portfolio') renderPortfolio();
   if (name === 'profile') renderProfile();
   if (name === 'watchlist') renderWatchlist();
+  if (name === 'analyze') {
+    // Restore screener whenever user returns to the analyze tab
+    var sp = document.getElementById('screener-panel');
+    var rs = document.getElementById('results-section');
+    if (sp && rs && rs.style.display === 'none') sp.style.display = 'block';
+  }
 }
 
 let _autocompleteTimer = null;
@@ -474,6 +480,8 @@ function searchStock() {
   let query = document.getElementById("stock-input").value.trim().toUpperCase();
   if (!query) { showToast("Please enter a company name or ticker!"); return; }
   hideQuickTickers();
+  var sp = document.getElementById('screener-panel');
+  if (sp) sp.style.display = 'none';
 
   document.getElementById("loading").style.display = "block";
   let loadingTickerEl = document.getElementById("loading-ticker");
@@ -804,6 +812,8 @@ function getScoreHistoryHtml(ticker, currentScore) {
 function displayData(data) {
   document.getElementById("loading").style.display = "none";
   document.getElementById("results-section").style.display = "flex";
+  var sp = document.getElementById('screener-panel');
+  if (sp) sp.style.display = 'none';
   hideQuickTickers();
   setTimeout(maybeShowCoachMark, 600);
 
@@ -1376,6 +1386,9 @@ function showQuickTickers() {
   if (loading && loading.style.display !== 'none') return;
   var el = document.getElementById('quick-tickers');
   if (el) el.style.display = 'flex';
+  // Restore screener if it was hidden (user tapped search to do a new lookup)
+  var sp = document.getElementById('screener-panel');
+  if (sp) sp.style.display = 'block';
 }
 
 function hideQuickTickers() {
@@ -2940,6 +2953,7 @@ var _screenerData = [];
 var _screenerLoaded = false;
 var _screenerGoal = null;
 var _screenerRenderToken = 0;
+var _screenerQuery = null; // active natural-language query filters
 
 
 var SCREENER_GOALS = [
@@ -3033,15 +3047,106 @@ var SCREENER_GOALS = [
   },
 ];
 
+function initScreener() {
+  renderScreenerGoals();
+  if (!_screenerLoaded) loadScreener();
+}
+
 function toggleScreener() {
-  _screenerOpen = !_screenerOpen;
-  var panel = document.getElementById('screener-panel');
-  var btn   = document.getElementById('screener-toggle-btn');
-  if (!panel) return;
-  panel.style.display = _screenerOpen ? 'block' : 'none';
-  btn.classList.toggle('active', _screenerOpen);
-  if (_screenerOpen) renderScreenerGoals();
-  if (_screenerOpen && !_screenerLoaded) loadScreener();
+  // kept for any legacy callers — no-op now that screener is always visible
+}
+
+function onScreenerQueryInput() {
+  var val = document.getElementById('screener-query-input').value.trim();
+  if (!val && _screenerQuery) {
+    clearScreenerQuery();
+  }
+}
+
+function setScreenerQueryChip(text) {
+  var input = document.getElementById('screener-query-input');
+  if (input) input.value = text;
+  searchScreener();
+}
+
+// Parse natural language query → filter spec
+function parseScreenerNL(text) {
+  var q = text.toLowerCase();
+  var f = {};
+
+  // Price ceiling
+  var m = q.match(/under\s*\$?\s*(\d+(?:\.\d+)?)|below\s*\$?\s*(\d+(?:\.\d+)?)|less than\s*\$?\s*(\d+(?:\.\d+)?)/);
+  if (m) f.maxPrice = parseFloat(m[1] || m[2] || m[3]);
+  // Price floor
+  m = q.match(/over\s*\$?\s*(\d+(?:\.\d+)?)|above\s*\$?\s*(\d+(?:\.\d+)?)|more than\s*\$?\s*(\d+(?:\.\d+)?)/);
+  if (m) f.minPrice = parseFloat(m[1] || m[2] || m[3]);
+  // "cheap" without explicit number
+  if (!f.maxPrice && /\bcheap\b/.test(q)) f.maxPrice = 30;
+
+  // Score / potential
+  if (/big potential|high potential|top rated|strong signal|best score/.test(q)) f.minScore = 65;
+  else if (/good potential|decent|moderate/.test(q)) f.minScore = 55;
+
+  // Growth
+  if (/fast.grow|high.grow|grow.fast|growth stock/.test(q)) f.minGrowth = 10;
+
+  // Dividend / income
+  if (/dividend|income|yield|pays/.test(q)) f.minDividend = 1.0;
+
+  // Safety
+  if (/\bsafe\b|low.risk|stable|conservative/.test(q)) f.maxBeta = 1.0;
+  if (/high.risk|aggressive|volatile|specul/.test(q)) f.minBeta = 1.3;
+
+  // Profitability
+  if (/profitable|profit|margin/.test(q)) f.minMargin = 10;
+
+  // Undervalued
+  if (/undervalued|value stock|low p[\/.e]|cheap pe/.test(q)) { f.maxPE = 20; f.minPE = 1; }
+
+  // Sector
+  var sectors = [
+    [/\btech\b|technology|software|semiconductor/, 'Technology'],
+    [/health|pharma|medical|biotech/, 'Healthcare'],
+    [/financ|bank|insur/, 'Financials'],
+    [/energy|oil\b|gas\b|petro/, 'Energy'],
+    [/consumer|retail/, 'Consumer'],
+    [/industri|manufactur/, 'Industrials'],
+    [/real estate|reit/, 'Real Estate'],
+    [/utilit/, 'Utilities'],
+  ];
+  sectors.forEach(function(pair) {
+    if (pair[0].test(q)) f.sector = pair[1];
+  });
+
+  return f;
+}
+
+function searchScreener() {
+  var input = document.getElementById('screener-query-input');
+  var text = input ? input.value.trim() : '';
+  if (!text) {
+    clearScreenerQuery();
+    return;
+  }
+  _screenerQuery = parseScreenerNL(text);
+  _screenerQuery._raw = text;
+  // Deactivate goal chips — query mode takes over
+  _screenerGoal = null;
+  renderScreenerGoals();
+  var learnEl = document.getElementById('screener-learn-box');
+  if (learnEl) learnEl.style.display = 'none';
+  if (!_screenerLoaded) {
+    // data still loading — it will call renderScreenerResults when ready
+    return;
+  }
+  renderScreenerResults();
+}
+
+function clearScreenerQuery() {
+  _screenerQuery = null;
+  var input = document.getElementById('screener-query-input');
+  if (input) input.value = '';
+  renderScreenerResults();
 }
 
 function renderScreenerGoals() {
@@ -3196,32 +3301,148 @@ function calcQuickScore(pe, beta, margin, growth, changePct, price, high52) {
   return Math.max(10, Math.min(100, Math.round(score)));
 }
 
+// Build a human-readable reason string for a query-mode result
+function _queryReason(s, f) {
+  var parts = [];
+  if (f.minScore >= 65) parts.push('Score ' + s.score + '/100 — ' + s.signal);
+  if (f.minGrowth > 0) parts.push('Revenue growing ' + s.growth.toFixed(1) + '%');
+  if (f.minDividend > 0) parts.push(s.dividend.toFixed(2) + '% dividend yield');
+  if (f.maxBeta <= 1.0) parts.push('Beta ' + s.beta.toFixed(2) + ' — low volatility');
+  if (f.minMargin > 0) parts.push(s.margin.toFixed(1) + '% profit margin');
+  if (f.maxPE > 0) parts.push('P/E ' + (s.pe > 0 ? s.pe.toFixed(1) : 'n/a') + ' — value priced');
+  if (f.sector) parts.push(s.sector + ' sector');
+  if (parts.length === 0) parts.push('Score ' + s.score + '/100 · ' + s.signal);
+  return parts.join(' · ');
+}
+
 function renderScreenerResults() {
   var el = document.getElementById('screener-results');
   if (!el) return;
   if (!_screenerLoaded) return; // still loading
+
+  // ── Query mode ────────────────────────────────────────────────────────────
+  if (_screenerQuery) {
+    var f = _screenerQuery;
+    // Show active query badge above results
+    var activeEl = document.getElementById('screener-query-active');
+    if (!activeEl) {
+      activeEl = document.createElement('div');
+      activeEl.id = 'screener-query-active';
+      el.parentNode.insertBefore(activeEl, el);
+    }
+    activeEl.style.display = 'flex';
+    activeEl.innerHTML =
+      '<span class="sq-label">Search:</span> ' + escHtml(f._raw) +
+      '<button class="sq-clear" onclick="clearScreenerQuery()" title="Clear search">✕</button>';
+
+    var data = _screenerData.filter(function(s) {
+      if (f.maxPrice > 0 && s.price > 0 && s.price > f.maxPrice) return false;
+      if (f.minPrice > 0 && s.price > 0 && s.price < f.minPrice) return false;
+      if (f.minScore > 0 && s.score < f.minScore) return false;
+      if (f.minGrowth > 0 && s.growth < f.minGrowth) return false;
+      if (f.minDividend > 0 && s.dividend < f.minDividend) return false;
+      if (f.maxBeta > 0 && s.beta > 0 && s.beta > f.maxBeta) return false;
+      if (f.minBeta > 0 && s.beta > 0 && s.beta < f.minBeta) return false;
+      if (f.minMargin > 0 && s.margin < f.minMargin) return false;
+      if (f.maxPE > 0 && s.pe > 0 && s.pe > f.maxPE) return false;
+      if (f.minPE > 0 && s.pe > 0 && s.pe < f.minPE) return false;
+      if (f.sector && s.sector.toLowerCase().indexOf(f.sector.toLowerCase()) === -1) return false;
+      return true;
+    }).sort(function(a, b) { return b.score - a.score; }).slice(0, 12);
+
+    // If price filter but prices not loaded yet, show a note
+    var priceFilterActive = (f.maxPrice > 0 || f.minPrice > 0);
+    var noPricesYet = priceFilterActive && _screenerData.every(function(s) { return s.price === 0; });
+
+    if (data.length === 0 && !noPricesYet) {
+      el.innerHTML = '<div class="screener-empty">No stocks matched "' + escHtml(f._raw) + '" — try adjusting your criteria or use a goal chip below.</div>';
+    } else {
+      var note = (noPricesYet) ? '<div class="screener-loading">Prices loading — results may update shortly.</div>' : '';
+      el.innerHTML = note +
+        '<div class="screener-count">Top ' + data.length + ' match' + (data.length === 1 ? '' : 'es') + ' for your search</div>' +
+        '<div class="screener-cards">' +
+        data.map(function(s) {
+          var up = s.changePct >= 0;
+          var scoreColor = s.score >= 65 ? 'var(--accent-green)' : s.score >= 50 ? 'var(--accent-gold)' : 'var(--loss)';
+          var changeColor = up ? 'var(--accent-green)' : 'var(--loss)';
+          return '<div class="screener-card" onclick="quickSearch(\'' + escHtml(s.symbol) + '\')">' +
+            '<div class="screener-card-top">' +
+              '<div class="screener-card-left">' +
+                '<div class="screener-card-ticker">' + escHtml(s.symbol) + '</div>' +
+                '<div class="screener-card-name">' + escHtml(s.name) + '</div>' +
+              '</div>' +
+              '<div class="screener-card-right">' +
+                '<div class="screener-card-price" id="sc-price-' + s.symbol + '">' + (s.price > 0 ? '$' + s.price.toFixed(2) : '<span style="color:#64748b">Loading…</span>') + '</div>' +
+                '<div class="screener-card-change" id="sc-change-' + s.symbol + '" style="color:' + changeColor + ';">' + (s.price > 0 ? (up ? '+' : '') + s.changePct.toFixed(2) + '%' : '') + '</div>' +
+              '</div>' +
+            '</div>' +
+            '<div class="screener-card-reason">' + _queryReason(s, f) + '</div>' +
+            '<div class="screener-card-bottom">' +
+              '<span class="screener-card-score" style="color:' + scoreColor + ';">' + s.score + '/100 · ' + s.signal + '</span>' +
+              '<span class="screener-card-sector">' + escHtml(s.sector) + '</span>' +
+            '</div>' +
+          '</div>';
+        }).join('') +
+        '</div>';
+    }
+
+    // Fetch prices for visible stocks
+    var token = ++_screenerRenderToken;
+    var syms = data.map(function(s) { return s.symbol; });
+    getSharedPrices(syms, 120000).then(function(priceMap) {
+      if (token !== _screenerRenderToken) return;
+      var needRerender = false;
+      syms.forEach(function(sym) {
+        var qr = priceMap[sym] || {};
+        if (!qr.price) return;
+        var idx = _screenerData.findIndex(function(s) { return s.symbol === sym; });
+        if (idx >= 0) {
+          var s = _screenerData[idx];
+          var wasZero = s.price === 0;
+          var score = calcQuickScore(s.pe, s.beta, s.margin, s.growth, qr.changePct || 0, qr.price, s.week52High);
+          _screenerData[idx] = Object.assign({}, s, { price: qr.price, changePct: qr.changePct || 0, score: score, signal: score >= 65 ? 'Strong' : score >= 50 ? 'Watch' : 'Risky' });
+          if (wasZero && priceFilterActive) needRerender = true;
+        }
+        var priceEl = document.getElementById('sc-price-' + sym);
+        var changeEl = document.getElementById('sc-change-' + sym);
+        if (priceEl) priceEl.textContent = '$' + qr.price.toFixed(2);
+        if (changeEl) {
+          var up2 = (qr.changePct || 0) >= 0;
+          changeEl.textContent = (up2 ? '+' : '') + (qr.changePct || 0).toFixed(2) + '%';
+          changeEl.style.color = up2 ? 'var(--accent-green)' : 'var(--loss)';
+        }
+      });
+      // If price filter was active and prices just loaded, re-render to apply it properly
+      if (needRerender && token === _screenerRenderToken) renderScreenerResults();
+    });
+    return;
+  }
+
+  // ── Goal mode ─────────────────────────────────────────────────────────────
+  var activeEl2 = document.getElementById('screener-query-active');
+  if (activeEl2) activeEl2.style.display = 'none';
 
   if (!_screenerGoal) { el.innerHTML = ''; return; }
 
   var goal = SCREENER_GOALS.find(function(g) { return g.id === _screenerGoal; });
   if (!goal) return;
 
-  var data = _screenerData.filter(function(s) {
+  var data2 = _screenerData.filter(function(s) {
     if (!goal.filter(s)) return false;
     if (!goal.skipScoreFilter && s.score < 45) return false;
     return true;
   }).sort(goal.sort).slice(0, 10);
 
-  if (data.length === 0) {
+  if (data2.length === 0) {
     var msg = 'No stocks matched right now — market conditions change daily. Try another goal.';
     el.innerHTML = '<div class="screener-empty">' + msg + '</div>';
     return;
   }
 
   el.innerHTML =
-    '<div class="screener-count">Top ' + data.length + ' match' + (data.length === 1 ? '' : 'es') + '</div>' +
+    '<div class="screener-count">Top ' + data2.length + ' match' + (data2.length === 1 ? '' : 'es') + '</div>' +
     '<div class="screener-cards">' +
-    data.map(function(s) {
+    data2.map(function(s) {
       var up = s.changePct >= 0;
       var scoreColor = s.score >= 65 ? 'var(--accent-green)' : s.score >= 50 ? 'var(--accent-gold)' : 'var(--loss)';
       var changeColor = up ? 'var(--accent-green)' : 'var(--loss)';
@@ -3247,27 +3468,25 @@ function renderScreenerResults() {
     '</div>';
 
   // Fetch prices for just the visible stocks, update in-place
-  var token = ++_screenerRenderToken;
-  var visibleSymbols = data.map(function(s) { return s.symbol; });
-  getSharedPrices(visibleSymbols, 120000).then(function(priceMap) {
-    if (token !== _screenerRenderToken) return; // user changed filter, discard
-    visibleSymbols.forEach(function(sym) {
-      var q = priceMap[sym] || {};
-      if (!q.price) return;
-      // Update _screenerData so re-renders have fresh prices
+  var token2 = ++_screenerRenderToken;
+  var visibleSymbols2 = data2.map(function(s) { return s.symbol; });
+  getSharedPrices(visibleSymbols2, 120000).then(function(priceMap) {
+    if (token2 !== _screenerRenderToken) return;
+    visibleSymbols2.forEach(function(sym) {
+      var qv = priceMap[sym] || {};
+      if (!qv.price) return;
       var idx = _screenerData.findIndex(function(s) { return s.symbol === sym; });
       if (idx >= 0) {
         var s = _screenerData[idx];
-        var score = calcQuickScore(s.pe, s.beta, s.margin, s.growth, q.changePct || 0, q.price, s.week52High);
-        _screenerData[idx] = Object.assign({}, s, { price: q.price, changePct: q.changePct || 0, score: score, signal: score >= 65 ? 'Strong' : score >= 50 ? 'Watch' : 'Risky' });
+        var score = calcQuickScore(s.pe, s.beta, s.margin, s.growth, qv.changePct || 0, qv.price, s.week52High);
+        _screenerData[idx] = Object.assign({}, s, { price: qv.price, changePct: qv.changePct || 0, score: score, signal: score >= 65 ? 'Strong' : score >= 50 ? 'Watch' : 'Risky' });
       }
-      // Update DOM in-place
       var priceEl = document.getElementById('sc-price-' + sym);
       var changeEl = document.getElementById('sc-change-' + sym);
-      if (priceEl) priceEl.textContent = '$' + q.price.toFixed(2);
+      if (priceEl) priceEl.textContent = '$' + qv.price.toFixed(2);
       if (changeEl) {
-        var up = (q.changePct || 0) >= 0;
-        changeEl.textContent = (up ? '+' : '') + (q.changePct || 0).toFixed(2) + '%';
+        var up = (qv.changePct || 0) >= 0;
+        changeEl.textContent = (up ? '+' : '') + (qv.changePct || 0).toFixed(2) + '%';
         changeEl.style.color = up ? 'var(--accent-green)' : 'var(--loss)';
       }
     });
@@ -5772,13 +5991,8 @@ function sendStockQuestion() {
   stockChatHistory.push({ role: 'user', content: question });
 
   if (!checkAnthropicRateLimit()) return;
-  let messagesPayload = [{ role: 'user', content: stockChatContext }].concat(
-    stockChatHistory.length === 1
-      ? stockChatHistory
-      : [{ role: 'assistant', content: 'Got it, I have the context.' }].concat(stockChatHistory)
-  );
 
-  anthropicFetch({ model: 'claude-haiku-4-5-20251001', max_tokens: 400, messages: messagesPayload })
+  anthropicFetch({ model: 'claude-haiku-4-5-20251001', max_tokens: 400, system: stockChatContext, messages: stockChatHistory })
   .then(function(r) { return r.json(); })
   .then(function(data) {
     let typing = document.getElementById(typingId);
@@ -6117,6 +6331,7 @@ auth.onAuthStateChanged(function(user) {
     initTheme();
     initCurrency();
     handleUrlParams();
+    initScreener();
     _appReady = true; // allow real-time Firestore updates to re-render
     hideAppLoading();
   });
