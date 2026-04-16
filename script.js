@@ -649,12 +649,13 @@ function calculateScore(changePct, week52High, price, pe, metrics, qualScore, rs
   let peScore = pe > 0 && pe < 10 ? 9 : pe > 0 && pe < 20 ? 8 : pe > 0 && pe < 30 ? 6 : pe > 0 && pe < 50 ? 4 : pe > 50 ? 2 : pe < 0 ? 1 : 5;
   let beta = metrics["beta"] || 1;
   let betaScore = beta < 0.5 ? 8 : beta < 1 ? 7 : beta < 1.5 ? 5 : beta < 2 ? 3 : 1;
-  let margin = metrics["netProfitMarginTTM"] || 0;
-  let marginScore = margin > 25 ? 10 : margin > 15 ? 8 : margin > 5 ? 6 : margin > 0 ? 4 : margin > -20 ? 2 : margin > -50 ? 1 : 0;
-  let growth = metrics["revenueGrowthTTMYoy"] || 0;
-  let growthScore = growth > 20 ? 10 : growth > 10 ? 8 : growth > 0 ? 6 : growth > -10 ? 3 : growth > -25 ? 2 : 1;
-  let dte = metrics["totalDebt/totalEquityAnnual"] || 0;
-  let debtScore = dte < 0.3 ? 10 : dte < 0.6 ? 8 : dte < 1 ? 6 : dte < 2 ? 3 : 1;
+  // Use null-check so missing metrics score neutral (5) instead of bottoming out at 0–2
+  let marginRaw = metrics["netProfitMarginTTM"];
+  let marginScore = marginRaw == null ? 5 : marginRaw > 25 ? 10 : marginRaw > 15 ? 8 : marginRaw > 5 ? 6 : marginRaw > 0 ? 4 : marginRaw > -20 ? 2 : marginRaw > -50 ? 1 : 0;
+  let growthRaw = metrics["revenueGrowthTTMYoy"];
+  let growthScore = growthRaw == null ? 5 : growthRaw > 20 ? 10 : growthRaw > 10 ? 8 : growthRaw > 0 ? 6 : growthRaw > -10 ? 3 : growthRaw > -25 ? 2 : 1;
+  let dteRaw = metrics["totalDebt/totalEquityAnnual"];
+  let debtScore = dteRaw == null ? 5 : dteRaw < 0.3 ? 10 : dteRaw < 0.6 ? 8 : dteRaw < 1 ? 6 : dteRaw < 2 ? 3 : 1;
   let rsiScore = rsi === null ? 5 : rsi < 30 ? 9 : rsi < 45 ? 7 : rsi < 55 ? 5 : rsi < 70 ? 4 : 1;
   let maScore = 5;
   if (ma50 !== null) {
@@ -662,14 +663,14 @@ function calculateScore(changePct, week52High, price, pe, metrics, qualScore, rs
     maScore = p > 5 ? 8 : p > 0 ? 7 : p > -5 ? 4 : 2;
   }
 
-  let roe = metrics["roeAnnual"] || metrics["roeTTM"] || 0;
-  let roeScore = roe > 20 ? 10 : roe > 15 ? 8 : roe > 10 ? 7 : roe > 5 ? 5 : roe > 0 ? 3 : 1;
+  let roeRaw = metrics["roeAnnual"] != null ? metrics["roeAnnual"] : metrics["roeTTM"];
+  let roeScore = roeRaw == null ? 5 : roeRaw > 20 ? 10 : roeRaw > 15 ? 8 : roeRaw > 10 ? 7 : roeRaw > 5 ? 5 : roeRaw > 0 ? 3 : 1;
 
-  let currentRatio = metrics["currentRatioAnnual"] || metrics["currentRatioQuarterly"] || 0;
-  let currentRatioScore = currentRatio > 3 ? 8 : currentRatio > 2 ? 9 : currentRatio > 1.5 ? 8 : currentRatio > 1 ? 6 : currentRatio > 0.5 ? 3 : 1;
+  let currentRatioRaw = metrics["currentRatioAnnual"] != null ? metrics["currentRatioAnnual"] : metrics["currentRatioQuarterly"];
+  let currentRatioScore = currentRatioRaw == null ? 5 : currentRatioRaw > 3 ? 8 : currentRatioRaw > 2 ? 9 : currentRatioRaw > 1.5 ? 8 : currentRatioRaw > 1 ? 6 : currentRatioRaw > 0.5 ? 3 : 1;
 
-  let interestCoverage = metrics["netInterestCoverageAnnual"] || 0;
-  let interestScore = interestCoverage > 10 ? 10 : interestCoverage > 5 ? 8 : interestCoverage > 3 ? 6 : interestCoverage > 1 ? 4 : interestCoverage > 0 ? 2 : 1;
+  let interestRaw = metrics["netInterestCoverageAnnual"];
+  let interestScore = interestRaw == null ? 5 : interestRaw > 10 ? 10 : interestRaw > 5 ? 8 : interestRaw > 3 ? 6 : interestRaw > 1 ? 4 : interestRaw > 0 ? 2 : 1;
 
   let total =
     priceScore        * 0.12 +
