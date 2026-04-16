@@ -3781,6 +3781,42 @@ function _rebuildTickerClone() {
   track.appendChild(clone);
 }
 
+function updateMarketStatus() {
+  var dot  = document.querySelector('.ms-dot');
+  var txt  = document.getElementById('market-status-text');
+  if (!dot || !txt) return;
+
+  // Get current time in US Eastern (handles EST/EDT automatically)
+  var now   = new Date();
+  var etStr = now.toLocaleString('en-US', { timeZone: 'America/New_York' });
+  var et    = new Date(etStr);
+  var day   = et.getDay();            // 0=Sun … 6=Sat
+  var mins  = et.getHours() * 60 + et.getMinutes();
+
+  var weekday   = day >= 1 && day <= 5;
+  var open      = weekday && mins >= 570  && mins < 960;   // 9:30–16:00
+  var preMarket = weekday && mins >= 240  && mins < 570;   // 4:00–9:30
+  var afterHrs  = weekday && mins >= 960  && mins < 1200;  // 16:00–20:00
+
+  if (open) {
+    dot.className = 'ms-dot open';
+    txt.className = 'open';
+    txt.textContent = 'Market Open';
+  } else if (preMarket) {
+    dot.className = 'ms-dot pre';
+    txt.className = 'pre';
+    txt.textContent = 'Pre-Market';
+  } else if (afterHrs) {
+    dot.className = 'ms-dot after';
+    txt.className = 'after';
+    txt.textContent = 'After Hours';
+  } else {
+    dot.className = 'ms-dot closed';
+    txt.className = '';
+    txt.textContent = 'Market Closed';
+  }
+}
+
 function loadMarketOverview() {
   let indices = [
     { ticker: "SPY", priceKey: "sp500-price", changeKey: "sp500-change" },
@@ -6715,6 +6751,7 @@ auth.onAuthStateChanged(function(user) {
     }
 
     updateStreak();
+    updateMarketStatus();
     loadMarketOverview();
     loadTrendingTickers();
     loadSectors();

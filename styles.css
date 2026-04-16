@@ -208,9 +208,59 @@ header p {
 
 #market-bar {
   width: 100%;
+  display: flex;
+  align-items: center;
   overflow: hidden;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
+}
+
+/* ── Market status pill ── */
+#market-status-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 14px 0 16px;
+  border-right: 1px solid var(--border);
+  flex-shrink: 0;
+  white-space: nowrap;
+  height: 100%;
+  align-self: stretch;
+}
+.ms-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  flex-shrink: 0;
+}
+.ms-dot.open {
+  background: var(--accent-green);
+  animation: ms-pulse 2s ease-in-out infinite;
+}
+.ms-dot.pre, .ms-dot.after {
+  background: var(--push);
+}
+@keyframes ms-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+#market-status-text {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+#market-status-text.open { color: var(--accent-green); }
+#market-status-text.pre,
+#market-status-text.after { color: var(--push); }
+
+/* ── Ticker scrolling wrapper ── */
+#ticker-wrap {
+  flex: 1;
+  overflow: hidden;
+  min-width: 0;
 }
 
 .ticker-track {
@@ -3461,17 +3511,16 @@ footer {
   header p { font-size: 13px; }
   #risk-badge { font-size: 11px; padding: 5px 10px; }
 
-  /* Market bar — single scrollable row, no wrapping */
-  #market-bar {
-    flex-wrap: nowrap;
+  /* Market bar — status pill stays, ticker scrolls */
+  #market-status-pill { padding: 0 10px 0 12px; }
+  #market-status-text { font-size: 9px; }
+  .ms-dot { width: 6px; height: 6px; }
+  #ticker-wrap {
     overflow-x: auto;
-    justify-content: flex-start;
-    gap: 0;
-    padding: 8px 16px;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
   }
-  #market-bar::-webkit-scrollbar { display: none; }
+  #ticker-wrap::-webkit-scrollbar { display: none; }
   .market-item { padding: 6px 14px; gap: 6px; flex-shrink: 0; }
   .market-name { font-size: 9px; }
   .market-price { font-size: 13px; }
