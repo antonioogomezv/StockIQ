@@ -757,6 +757,14 @@ function saveScoreHistory(ticker, score, breakdown, metrics) {
   }
   if (history.length > 10) history = history.slice(-10);
   localStorage.setItem(key, JSON.stringify(history));
+
+  // Sync to Firestore so other devices pick it up (omit raw metrics to keep payload small)
+  let firestoreEntry = {};
+  firestoreEntry['scoreHistory.' + ticker] = history.map(function(e) {
+    return e.bd ? { date: e.date, score: e.score, bd: e.bd } : { date: e.date, score: e.score };
+  });
+  replaceInFirestore(firestoreEntry);
+
   return history;
 }
 
@@ -6735,6 +6743,13 @@ auth.onAuthStateChanged(function(user) {
     // Restore price alerts and stock notes
     if (data.priceAlerts) localStorage.setItem('price-alerts', JSON.stringify(data.priceAlerts));
     if (data.stockNotes) localStorage.setItem('stock-notes', JSON.stringify(data.stockNotes));
+
+    // Restore score history from Firestore into localStorage (syncs across devices)
+    if (data.scoreHistory) {
+      Object.keys(data.scoreHistory).forEach(function(t) {
+        localStorage.setItem('history_score_' + t, JSON.stringify(data.scoreHistory[t]));
+      });
+    }
 
     // Restore stats
     if (data.stats) {
