@@ -5932,4 +5932,119 @@ footer {
 
   /* ── Footer ── */
   footer { padding: 20px 16px; font-size: 11px; margin-top: 16px; }
+
+  /* ── Portfolio tab bar: scroll horizontally, don't wrap ── */
+  #portfolio-tabs-bar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  #portfolio-tabs-bar::-webkit-scrollbar { display: none; }
+  .port-tab { font-size: 12px; padding: 5px 10px; flex-shrink: 0; }
+
+  /* ── Holdings summary: stack left info above chart ── */
+  .holdings-summary-card { padding: 16px 14px; }
+  .holdings-summary-body {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .holdings-big-value { font-size: 26px; }
+  .holdings-right { gap: 6px; }
+  #holdingsChart { max-height: 130px !important; }
+
+  /* ── Holdings chart header: compact on phone ── */
+  .holdings-chart-header-row {
+    gap: 6px;
+  }
+  .holdings-chart-ranges { gap: 3px; }
+  .hs-range-btn { padding: 2px 7px; font-size: 11px; }
+  .hs-view-btn { padding: 2px 8px; font-size: 10px; }
+
+  /* ── Portfolio rows: tighter columns ── */
+  .port-stock-row { grid-template-columns: 1fr 84px 84px; padding: 11px 12px; }
+  .port-stock-header { grid-template-columns: 1fr 84px 84px; padding: 7px 12px; }
+
+  /* ── Score tooltip: don't bleed off right edge ── */
+  .score-tooltip { width: min(240px, calc(100vw - 40px)); }
+
+  /* ── Action buttons: allow wrap on very small screens ── */
+  #action-btns { flex-wrap: wrap; gap: 8px; }
+  #action-btns button { flex: 1 1 calc(50% - 4px); min-width: 100px; font-size: 11px; padding: 9px 6px; }
+
+  /* ── Screener NL chips: horizontal scroll ── */
+  #screener-query-chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  #screener-query-chips::-webkit-scrollbar { display: none; }
+  .screener-query-chip { flex-shrink: 0; }
+
+  /* ── Sell modal: stack fields vertically ── */
+  .sell-modal-row { flex-direction: column; }
+  .sell-modal-field { min-width: unset; }
+
+  /* ── Port winners bar: tighter ── */
+  .port-winner { padding: 8px 10px; gap: 7px; }
+  .port-winner-ticker { font-size: 13px; }
+
+  /* ── Watchlist: allow action btns to wrap ── */
+  .wl-action-btns { flex-wrap: wrap; }
+
+  /* ── ETF holdings bar ── */
+  .etf-holding-bar-wrap { width: 80px; }
+
+  /* ── Score breakdown section ── */
+  #results-section { padding: 14px 12px; gap: 18px; }
+  .stock-hero { padding: 12px 14px; margin-bottom: 12px; }
+
+  /* ── Dividend card ── */
+  #dividend-card { padding: 14px 12px; }
+
+  /* ── ETF holdings card ── */
+  #etf-holdings-card { padding: 14px 12px; }
+
+  /* ── Profile: collapse stats to 2 cols (already handled, confirm) ── */
+  #profile-stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .profile-stat { padding: 12px 10px; }
+  .profile-stat-num { font-size: 20px; }
+}
+
+/* ════════════════════════════════════════
+   NARROW PHONE  (≤ 400 px)
+   ════════════════════════════════════════ */
+@media (max-width: 400px) {
+
+  /* header */
+  header h1 { font-size: 22px; }
+
+  /* Nav text even smaller */
+  .nav-tab { font-size: 9px; padding: 13px 8px; }
+
+  /* Stock hero: stack price below name */
+  .stock-hero { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .stock-hero-right { text-align: left; align-self: stretch; }
+  .stock-hero-change { justify-content: flex-start; }
+  .stock-header-price { font-size: 28px; }
+  .stock-header-fullname { font-size: 14px; white-space: normal; }
+
+  /* Chart stats: 2 columns */
+  #chart-stats { grid-template-columns: repeat(2, 1fr); }
+
+  /* Fundamentals / about: 2 cols (already at 768px) */
+  .fundamentals-grid { grid-template-columns: repeat(2, 1fr); }
+
+  /* Portfolio rows: relax signal column */
+  .port-stock-row { grid-template-columns: 1fr 76px 72px; }
+  .port-stock-header { grid-template-columns: 1fr 76px 72px; }
+
+  /* Holdings big value */
+  .holdings-big-value { font-size: 22px; }
+
+  /* Search input full width */
+  #stock-input { font-size: 15px; padding: 14px 12px; }
 }
