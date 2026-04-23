@@ -4475,7 +4475,7 @@ footer {
 /* Avatar picker */
 #avatar-picker {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(8, 1fr);
   gap: 8px;
 }
 .avatar-option {
@@ -4502,6 +4502,9 @@ footer {
 
 @media (max-width: 480px) {
   #avatar-picker { grid-template-columns: repeat(6, 1fr); gap: 6px; }
+}
+@media (max-width: 360px) {
+  #avatar-picker { grid-template-columns: repeat(5, 1fr); gap: 5px; }
 }
 
 .user-edit-actions {

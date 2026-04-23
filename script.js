@@ -6587,14 +6587,15 @@ function renderBadges(analyzed, watchlistLen, portfolioLen, streak) {
 }
 
 var AVATAR_SEEDS = [
-  'Felix','Mia','Liam','Sofia','Noah','Emma','Lucas','Olivia',
-  'Ethan','Aria','Mason','Luna','Aiden','Zoe','Leo','Chloe',
-  'Oscar','Nora','Hugo','Isla','Jack','Lily','Max','Stella'
+  'Aiden','Alba','Aria','Aurora','Avery','Blair','Brook','Cairo',
+  'Cleo','Dani','Eden','Ember','Finn','Harper','Iris','Jade',
+  'Jordan','Kai','Lena','Luna','Morgan','Nova','Quinn','Remi',
+  'River','Rowan','Sage','Sloane','Sol','Tatum','Vesper','Zara'
 ];
-var AVATAR_STYLE = 'avataaars';
+var AVATAR_STYLE = 'lorelei';
 
 function avatarUrl(seed) {
-  return 'https://api.dicebear.com/7.x/' + AVATAR_STYLE + '/svg?seed=' + encodeURIComponent(seed) + '&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf&backgroundType=solid';
+  return 'https://api.dicebear.com/7.x/' + AVATAR_STYLE + '/svg?seed=' + encodeURIComponent(seed) + '&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf,e8f5e9&backgroundType=solid';
 }
 
 function getAvatarInitials(name) {
