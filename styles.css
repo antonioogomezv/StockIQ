@@ -4088,6 +4088,69 @@ footer {
   margin-bottom: 28px;
 }
 
+/* ── Quiz budget input step ── */
+#quiz-budget-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin: 20px 0 8px;
+  transition: border-color 0.15s;
+}
+#quiz-budget-wrap:focus-within { border-color: var(--accent-green); }
+.quiz-budget-prefix {
+  padding: 14px 14px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--surface2);
+  border-right: 1px solid var(--border);
+  flex-shrink: 0;
+  font-family: var(--mono);
+}
+#quiz-budget-input {
+  flex: 1;
+  border: none;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 22px;
+  font-weight: 700;
+  font-family: var(--mono);
+  padding: 14px 16px;
+  outline: none;
+  width: 100%;
+  box-shadow: none;
+}
+#quiz-budget-input::placeholder { color: var(--border); font-weight: 400; }
+/* hide browser number spinners */
+#quiz-budget-input::-webkit-outer-spin-button,
+#quiz-budget-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+#quiz-budget-input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+.quiz-budget-hint {
+  font-size: 13px;
+  color: var(--accent-green);
+  font-weight: 600;
+  min-height: 18px;
+  margin-bottom: 16px;
+  font-family: var(--mono);
+}
+#quiz-budget-btn {
+  width: 100%;
+  padding: 14px;
+  background: var(--accent-green);
+  color: #fff;
+  border: none;
+  border-radius: calc(var(--radius) - 2px);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+#quiz-budget-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+#quiz-budget-btn:not(:disabled):hover { opacity: 0.88; }
+
 #quiz-finish-btn {
   background: linear-gradient(135deg, var(--accent-green), #15803d);
   color: white;

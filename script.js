@@ -2239,23 +2239,45 @@ function selectCurrency(currency, el) {
     document.getElementById('step-1').style.display = 'none';
     document.getElementById('step-2').style.display = 'block';
     document.getElementById('dot-2').classList.add('active');
-    _updateBudgetLabels(currency);
+    _updateBudgetLabels();
   }, 350);
 }
 
-function _updateBudgetLabels(currency) {
-  var c = currency || _currency || 'USD';
-  if (c === 'MXN') {
-    document.getElementById('q5-opt1').textContent = 'Menos de $20,000';
-    document.getElementById('q5-opt2').textContent = '$20,000 – $100,000';
-    document.getElementById('q5-opt3').textContent = '$100,000 – $400,000';
-    document.getElementById('q5-opt4').textContent = '$400,000+';
-  } else {
-    document.getElementById('q5-opt1').textContent = 'Under $1,000';
-    document.getElementById('q5-opt2').textContent = '$1,000 – $5,000';
-    document.getElementById('q5-opt3').textContent = '$5,000 – $20,000';
-    document.getElementById('q5-opt4').textContent = '$20,000+';
+function _updateBudgetLabels() {
+  // Update currency symbol shown next to input
+  var prefix = document.getElementById('quiz-budget-prefix');
+  if (prefix) prefix.textContent = _currency === 'MXN' ? 'MX$' : '$';
+  var input = document.getElementById('quiz-budget-input');
+  if (input) input.value = '';
+  var btn = document.getElementById('quiz-budget-btn');
+  if (btn) btn.disabled = true;
+  var hint = document.getElementById('quiz-budget-hint');
+  if (hint) hint.textContent = '';
+}
+
+function quizBudgetInput(input) {
+  var val = parseFloat(input.value);
+  var btn = document.getElementById('quiz-budget-btn');
+  var hint = document.getElementById('quiz-budget-hint');
+  if (!val || val <= 0) {
+    if (btn) btn.disabled = true;
+    if (hint) hint.textContent = '';
+    return;
   }
+  if (btn) btn.disabled = false;
+  // Show a friendly formatted hint
+  var formatted = (_currency === 'MXN' ? 'MX$' : '$') +
+    val.toLocaleString('en-US', { maximumFractionDigits: 0 });
+  if (hint) hint.textContent = formatted;
+}
+
+function submitBudget() {
+  var input = document.getElementById('quiz-budget-input');
+  var val = parseFloat(input ? input.value : 0);
+  if (!val || val <= 0) return;
+  quizAnswers.step5 = val;
+  document.getElementById('step-5').style.display = 'none';
+  showQuizResult();
 }
 
 function openRiskQuiz() {
@@ -2274,7 +2296,7 @@ function openRiskQuiz() {
   document.querySelectorAll('.ob-currency-btn').forEach(function(b) { b.classList.remove('active'); });
   var preselect = _currency === 'MXN' ? document.getElementById('quiz-mxn-btn') : document.getElementById('quiz-usd-btn');
   if (preselect) preselect.classList.add('active');
-  _updateBudgetLabels(_currency);
+  _updateBudgetLabels();
   document.getElementById('quiz-overlay').style.display = 'flex';
 }
 

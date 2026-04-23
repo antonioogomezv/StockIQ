@@ -144,13 +144,16 @@
       </div>
     </div>
     <div class="quiz-step" id="step-5" style="display:none;">
-      <div class="quiz-question" id="quiz-budget-question">How much are you looking to invest?</div>
-      <div class="quiz-options">
-        <div class="quiz-option" id="q5-opt1" onclick="selectOption(5, 500, this)"></div>
-        <div class="quiz-option" id="q5-opt2" onclick="selectOption(5, 2500, this)"></div>
-        <div class="quiz-option" id="q5-opt3" onclick="selectOption(5, 10000, this)"></div>
-        <div class="quiz-option" id="q5-opt4" onclick="selectOption(5, 50000, this)"></div>
+      <div class="quiz-question">How much are you looking to invest?</div>
+      <div id="quiz-budget-wrap">
+        <div id="quiz-budget-prefix" class="quiz-budget-prefix">$</div>
+        <input id="quiz-budget-input" type="number" min="0" inputmode="numeric"
+               placeholder="e.g. 5000"
+               oninput="quizBudgetInput(this)"
+               onkeydown="if(event.key==='Enter') submitBudget()">
       </div>
+      <div id="quiz-budget-hint" class="quiz-budget-hint"></div>
+      <button id="quiz-budget-btn" onclick="submitBudget()" disabled>Continue →</button>
     </div>
     <div class="quiz-step" id="step-result" style="display:none;">
       <div class="quiz-result-icon" id="quiz-icon"></div>
