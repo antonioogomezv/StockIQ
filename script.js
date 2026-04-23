@@ -6586,17 +6586,24 @@ function renderBadges(analyzed, watchlistLen, portfolioLen, streak) {
   }).join('');
 }
 
-var AVATAR_SEEDS = [
-  'Aiden','Alba','Aria','Aurora','Avery','Blair','Brook','Cairo',
-  'Cleo','Dani','Eden','Ember','Finn','Harper','Iris','Jade',
-  'Jordan','Kai','Lena','Luna','Morgan','Nova','Quinn','Remi',
-  'River','Rowan','Sage','Sloane','Sol','Tatum','Vesper','Zara'
+var AVATAR_GRADIENTS = [
+  { id: 'emerald',  label: 'Emerald',  g: 'linear-gradient(135deg,#059669,#10b981)' },
+  { id: 'ocean',    label: 'Ocean',    g: 'linear-gradient(135deg,#0284c7,#38bdf8)' },
+  { id: 'violet',   label: 'Violet',   g: 'linear-gradient(135deg,#7c3aed,#a78bfa)' },
+  { id: 'rose',     label: 'Rose',     g: 'linear-gradient(135deg,#e11d48,#fb7185)' },
+  { id: 'amber',    label: 'Amber',    g: 'linear-gradient(135deg,#d97706,#fbbf24)' },
+  { id: 'indigo',   label: 'Indigo',   g: 'linear-gradient(135deg,#4338ca,#818cf8)' },
+  { id: 'teal',     label: 'Teal',     g: 'linear-gradient(135deg,#0f766e,#2dd4bf)' },
+  { id: 'crimson',  label: 'Crimson',  g: 'linear-gradient(135deg,#b91c1c,#f87171)' },
+  { id: 'slate',    label: 'Slate',    g: 'linear-gradient(135deg,#334155,#64748b)' },
+  { id: 'fuchsia',  label: 'Fuchsia',  g: 'linear-gradient(135deg,#a21caf,#e879f9)' },
+  { id: 'lime',     label: 'Lime',     g: 'linear-gradient(135deg,#4d7c0f,#86efac)' },
+  { id: 'copper',   label: 'Copper',   g: 'linear-gradient(135deg,#92400e,#fbbf24)' },
+  { id: 'night',    label: 'Night',    g: 'linear-gradient(135deg,#1e1b4b,#4f46e5)' },
+  { id: 'coral',    label: 'Coral',    g: 'linear-gradient(135deg,#c2410c,#fb923c)' },
+  { id: 'pine',     label: 'Pine',     g: 'linear-gradient(135deg,#14532d,#4ade80)' },
+  { id: 'sky',      label: 'Sky',      g: 'linear-gradient(135deg,#075985,#7dd3fc)' }
 ];
-var AVATAR_STYLE = 'notionists';
-
-function avatarUrl(seed) {
-  return 'https://api.dicebear.com/7.x/' + AVATAR_STYLE + '/svg?seed=' + encodeURIComponent(seed) + '&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf,e8f5e9&backgroundType=solid';
-}
 
 function getAvatarInitials(name) {
   let parts = name.trim().split(/\s+/).filter(Boolean);
@@ -6605,24 +6612,29 @@ function getAvatarInitials(name) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
+function getGradientById(id) {
+  var g = AVATAR_GRADIENTS.find(function(x) { return x.id === id; });
+  return g ? g.g : AVATAR_GRADIENTS[0].g;
+}
+
 var _selectedAvatarSeed = null;
 
 function renderAvatarPicker(currentSeed) {
   var picker = document.getElementById('avatar-picker');
   if (!picker) return;
   _selectedAvatarSeed = currentSeed || null;
-  picker.innerHTML = AVATAR_SEEDS.map(function(seed) {
-    var selected = seed === _selectedAvatarSeed;
-    return '<button type="button" class="avatar-option' + (selected ? ' selected' : '') + '" onclick="selectAvatar(\'' + seed + '\')" title="' + seed + '">' +
-      '<img src="' + avatarUrl(seed) + '" alt="' + seed + '" width="48" height="48" loading="lazy">' +
-    '</button>';
+  picker.innerHTML = AVATAR_GRADIENTS.map(function(av) {
+    var selected = av.id === _selectedAvatarSeed;
+    return '<button type="button" class="avatar-option' + (selected ? ' selected' : '') +
+      '" onclick="selectAvatar(\'' + av.id + '\')" title="' + av.label +
+      '" style="background:' + av.g + ';"></button>';
   }).join('');
 }
 
-function selectAvatar(seed) {
-  _selectedAvatarSeed = seed;
+function selectAvatar(id) {
+  _selectedAvatarSeed = id;
   document.querySelectorAll('.avatar-option').forEach(function(btn) {
-    btn.classList.toggle('selected', btn.title === seed);
+    btn.classList.toggle('selected', btn.title === AVATAR_GRADIENTS.find(function(x){ return x.id === id; }).label);
   });
 }
 
@@ -6639,16 +6651,9 @@ function loadUserInfo() {
   let emailEl = document.getElementById('user-email-display');
 
   if (avatar) {
-    if (seed) {
-      avatar.innerHTML = '<img src="' + avatarUrl(seed) + '" alt="avatar" width="52" height="52" style="border-radius:50%;display:block;">';
-      avatar.style.background = 'none';
-      avatar.style.padding = '0';
-    } else {
-      avatar.innerHTML = '';
-      avatar.textContent = name ? getAvatarInitials(name) : '?';
-      avatar.style.background = '';
-      avatar.style.padding = '';
-    }
+    avatar.innerHTML = name ? getAvatarInitials(name) : '?';
+    avatar.style.background = seed ? getGradientById(seed) : 'linear-gradient(135deg,#059669,#10b981)';
+    avatar.style.padding = '';
   }
   if (nameEl) nameEl.textContent = name || 'Set your name';
   if (usernameEl) usernameEl.textContent = username ? '@' + username.replace(/^@/, '') : '@username';
