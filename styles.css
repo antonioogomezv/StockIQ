@@ -4472,6 +4472,38 @@ footer {
   border-radius: 10px;
 }
 
+/* Avatar picker */
+#avatar-picker {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+}
+.avatar-option {
+  background: var(--surface2);
+  border: 2px solid transparent;
+  border-radius: 50%;
+  padding: 3px;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.12s;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.avatar-option img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: block;
+}
+.avatar-option:hover { border-color: var(--accent-green); transform: scale(1.08); }
+.avatar-option.selected { border-color: #7c3aed; box-shadow: 0 0 0 2px rgba(124,58,237,0.25); }
+
+@media (max-width: 480px) {
+  #avatar-picker { grid-template-columns: repeat(6, 1fr); gap: 6px; }
+}
+
 .user-edit-actions {
   display: flex;
   gap: 10px;

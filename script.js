@@ -6586,6 +6586,17 @@ function renderBadges(analyzed, watchlistLen, portfolioLen, streak) {
   }).join('');
 }
 
+var AVATAR_SEEDS = [
+  'Felix','Mia','Liam','Sofia','Noah','Emma','Lucas','Olivia',
+  'Ethan','Aria','Mason','Luna','Aiden','Zoe','Leo','Chloe',
+  'Oscar','Nora','Hugo','Isla','Jack','Lily','Max','Stella'
+];
+var AVATAR_STYLE = 'avataaars';
+
+function avatarUrl(seed) {
+  return 'https://api.dicebear.com/7.x/' + AVATAR_STYLE + '/svg?seed=' + encodeURIComponent(seed) + '&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf&backgroundType=solid';
+}
+
 function getAvatarInitials(name) {
   let parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return '?';
@@ -6593,18 +6604,51 @@ function getAvatarInitials(name) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
+var _selectedAvatarSeed = null;
+
+function renderAvatarPicker(currentSeed) {
+  var picker = document.getElementById('avatar-picker');
+  if (!picker) return;
+  _selectedAvatarSeed = currentSeed || null;
+  picker.innerHTML = AVATAR_SEEDS.map(function(seed) {
+    var selected = seed === _selectedAvatarSeed;
+    return '<button type="button" class="avatar-option' + (selected ? ' selected' : '') + '" onclick="selectAvatar(\'' + seed + '\')" title="' + seed + '">' +
+      '<img src="' + avatarUrl(seed) + '" alt="' + seed + '" width="48" height="48" loading="lazy">' +
+    '</button>';
+  }).join('');
+}
+
+function selectAvatar(seed) {
+  _selectedAvatarSeed = seed;
+  document.querySelectorAll('.avatar-option').forEach(function(btn) {
+    btn.classList.toggle('selected', btn.title === seed);
+  });
+}
+
 function loadUserInfo() {
   let info = JSON.parse(localStorage.getItem('user-info') || '{}');
   let name     = info.name     || '';
   let username = info.username || '';
   let email    = info.email    || '';
+  let seed     = info.avatarSeed || '';
 
   let avatar = document.getElementById('user-avatar');
   let nameEl = document.getElementById('user-name-display');
   let usernameEl = document.getElementById('user-username-display');
   let emailEl = document.getElementById('user-email-display');
 
-  if (avatar) avatar.textContent = name ? getAvatarInitials(name) : '?';
+  if (avatar) {
+    if (seed) {
+      avatar.innerHTML = '<img src="' + avatarUrl(seed) + '" alt="avatar" width="52" height="52" style="border-radius:50%;display:block;">';
+      avatar.style.background = 'none';
+      avatar.style.padding = '0';
+    } else {
+      avatar.innerHTML = '';
+      avatar.textContent = name ? getAvatarInitials(name) : '?';
+      avatar.style.background = '';
+      avatar.style.padding = '';
+    }
+  }
   if (nameEl) nameEl.textContent = name || 'Set your name';
   if (usernameEl) usernameEl.textContent = username ? '@' + username.replace(/^@/, '') : '@username';
   if (emailEl) emailEl.textContent = email || 'Add your email';
@@ -6620,6 +6664,7 @@ function toggleEditProfile() {
     document.getElementById('input-name').value     = info.name     || '';
     document.getElementById('input-username').value = info.username || '';
     document.getElementById('input-email').value    = info.email    || '';
+    renderAvatarPicker(info.avatarSeed || null);
     card.style.display = 'none';
     form.style.display = 'block';
   } else {
@@ -6629,11 +6674,12 @@ function toggleEditProfile() {
 }
 
 function saveUserInfo() {
-  let name     = document.getElementById('input-name').value.trim();
-  let username = document.getElementById('input-username').value.trim().replace(/^@/, '');
-  let email    = document.getElementById('input-email').value.trim();
-  localStorage.setItem('user-info', JSON.stringify({ name, username, email }));
-  saveToFirestore({ name, username, email });
+  let name       = document.getElementById('input-name').value.trim();
+  let username   = document.getElementById('input-username').value.trim().replace(/^@/, '');
+  let email      = document.getElementById('input-email').value.trim();
+  let avatarSeed = _selectedAvatarSeed || (JSON.parse(localStorage.getItem('user-info') || '{}').avatarSeed) || '';
+  localStorage.setItem('user-info', JSON.stringify({ name, username, email, avatarSeed }));
+  saveToFirestore({ name, username, email, avatarSeed });
   loadUserInfo();
   toggleEditProfile();
   showToast('Profile saved');
@@ -7217,7 +7263,8 @@ auth.onAuthStateChanged(function(user) {
       localStorage.setItem('user-info', JSON.stringify({
         name: data.name,
         username: data.username || data.name.split(' ')[0].toLowerCase(),
-        email: data.email || user.email
+        email: data.email || user.email,
+        avatarSeed: data.avatarSeed || ''
       }));
     } else {
       // First time — set basics from auth
