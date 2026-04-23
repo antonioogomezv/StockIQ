@@ -259,6 +259,9 @@ function _updateCurrencyLabels() {
     btn.textContent = _currency === 'MXN' ? 'MX$' : 'USD';
     btn.classList.toggle('active', _currency === 'MXN');
   }
+  // Portfolio buy-price placeholder
+  var priceInput = document.getElementById('port-price');
+  if (priceInput) priceInput.placeholder = _currency === 'MXN' ? 'Buy price MX$' : 'Buy price $';
   // Quiz step 4 budget range labels
   var labels = _currency === 'MXN'
     ? ['Menos de MX$20,000', 'MX$20,000 – MX$100,000', 'MX$100,000 – MX$400,000', 'MX$400,000+']
@@ -5283,9 +5286,10 @@ function addToPortfolio() {
   if (!all[id]) return;
 
   // Paper trading: validate + deduct from virtual balance
+  // buyPrice is always stored in USD (auto-filled from Finnhub), so no FX conversion needed
   if (all[id].isPaper) {
     let rate = (typeof _fxRate !== 'undefined' ? _fxRate : 1);
-    let costUSD = (shares * buyPrice) / rate;
+    let costUSD = shares * buyPrice;
     let balUSD = all[id].paperBalance || 0;
     if (costUSD > balUSD + 0.01) {
       let balDisplay = _currency === 'MXN' ? 'MX$' + Math.round(balUSD * rate).toLocaleString('en-US') : '$' + Math.round(balUSD).toLocaleString('en-US');
@@ -5481,10 +5485,9 @@ function renderPortfolio() {
     if (active && active.isPaper) {
       let balUSD = active.paperBalance || 0;
       let startUSD = active.startingBalance || balUSD;
-      // portfolio totalValue is already in user-display currency; convert back to USD
+      // totalValue is in USD (raw Finnhub prices × shares) — no conversion needed
       let rate = (typeof _fxRate !== 'undefined' ? _fxRate : 1);
-      let totalValueUSD = totalValue / rate;
-      let netUSD = totalValueUSD + balUSD - startUSD;
+      let netUSD = totalValue + balUSD - startUSD;
       let netPct = startUSD > 0 ? (netUSD / startUSD) * 100 : 0;
       let netColor = netUSD >= 0 ? '#a855f7' : '#dc2626';
       let balDisplay = _currency === 'MXN' ? 'MX$' + Math.round(balUSD * rate).toLocaleString('en-US') : '$' + Math.round(balUSD).toLocaleString('en-US');
@@ -5705,9 +5708,9 @@ function confirmSell(ticker, totalShares) {
   all[id].closedPositions = closed;
 
   // Paper trading: return proceeds to virtual balance
+  // sp is stored in USD (Finnhub prices), so no FX conversion needed
   if (all[id].isPaper) {
-    let rate = (typeof _fxRate !== 'undefined' ? _fxRate : 1);
-    let proceedsUSD = (sh * sp) / rate;
+    let proceedsUSD = sh * sp;
     all[id].paperBalance = (all[id].paperBalance || 0) + proceedsUSD;
   }
 
