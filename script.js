@@ -6592,7 +6592,7 @@ var AVATAR_SEEDS = [
   'Jordan','Kai','Lena','Luna','Morgan','Nova','Quinn','Remi',
   'River','Rowan','Sage','Sloane','Sol','Tatum','Vesper','Zara'
 ];
-var AVATAR_STYLE = 'lorelei';
+var AVATAR_STYLE = 'personas';
 
 function avatarUrl(seed) {
   return 'https://api.dicebear.com/7.x/' + AVATAR_STYLE + '/svg?seed=' + encodeURIComponent(seed) + '&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf,e8f5e9&backgroundType=solid';
