@@ -5309,6 +5309,7 @@ function addToPortfolio() {
   }
   all[id].stocks = portfolio;
   savePortfolios(all);
+  _spyBenchmark = null; // recalculate benchmark from new earliest lot date
   document.getElementById('port-ticker').value = '';
   document.getElementById('port-shares').value = '';
   document.getElementById('port-price').value = '';
@@ -5534,25 +5535,34 @@ function renderPortfolio() {
   });
 }
 
+// Parse "Apr 22, 2026" or "Apr 22" style dates (toLocaleDateString output is not ISO-safe)
+function _parseLotDate(str) {
+  if (!str) return null;
+  // Replace "Apr 22, 2026" → use built-in parser with explicit comma handling
+  var d = new Date(str);
+  if (!isNaN(d)) return d;
+  // Try prefixing year if missing: "Apr 22" → "Apr 22, <current year>"
+  d = new Date(str + ', ' + new Date().getFullYear());
+  return isNaN(d) ? null : d;
+}
+
 function fetchSpyBenchmark(portfolio, callback) {
   if (_spyBenchmark !== null) { callback(_spyBenchmark || null); return; }
   // Find earliest lot date across all stocks
   let earliest = null;
   portfolio.forEach(function(item) {
     (item.lots || []).forEach(function(lot) {
-      if (lot.date) {
-        let d = new Date(lot.date);
-        if (!isNaN(d) && (!earliest || d < earliest)) earliest = d;
-      }
+      let d = _parseLotDate(lot.date);
+      if (d && (!earliest || d < earliest)) earliest = d;
     });
   });
   if (!earliest) { _spyBenchmark = false; callback(null); return; }
   let fromDate = earliest.toISOString().split('T')[0];
-  // Use a 7-day window to handle weekends/holidays
-  let toDate = new Date(earliest.getTime() + 7 * 86400000).toISOString().split('T')[0];
+  // Use a 14-day window to handle weekends/holidays/recent dates with no candle yet
+  let toDate = new Date(earliest.getTime() + 14 * 86400000).toISOString().split('T')[0];
   Promise.all([
     getSharedPrices(['SPY'], 300000).then(function(m) { return { c: (m['SPY']||{}).price || 0 }; }).catch(function() { return {}; }),
-    fetch(polygonUrl('/v2/aggs/ticker/SPY/range/1/day/' + fromDate + '/' + toDate, {})).then(function(r) { return r.json(); }).catch(function() { return {}; })
+    fetch(polygonUrl('/v2/aggs/ticker/SPY/range/1/day/' + fromDate + '/' + toDate, { adjusted: 'true', limit: '10' })).then(function(r) { return r.json(); }).catch(function() { return {}; })
   ]).then(function(results) {
     let currentSPY = results[0].c || 0;
     let hist = results[1];
@@ -6333,19 +6343,21 @@ function renderPortfolioLineChart() {
   }
 
   // Fetch SPY candles for the same time window as valueHistory
-  // Dates are stored as "Apr 14" (no year) — estimate from date using history length
-  var fromDate = new Date(Date.now() - (history.length + 5) * 86400000);
+  // Use extra buffer days so weekends/holidays don't leave us with empty results
+  var extraDays = Math.max(history.length + 10, 20);
+  var fromDate = new Date(Date.now() - extraDays * 86400000);
   var fromStr = fromDate.toISOString().split('T')[0];
   var toStr   = new Date().toISOString().split('T')[0];
-  fetch(polygonUrl('/v2/aggs/ticker/SPY/range/1/day/' + fromStr + '/' + toStr, { adjusted: 'true' }))
+  fetch(polygonUrl('/v2/aggs/ticker/SPY/range/1/day/' + fromStr + '/' + toStr, { adjusted: 'true', limit: '120' }))
     .then(function(r) { return r.json(); })
     .then(function(data) {
       if (!data.results || data.results.length < 2) { buildChart(null); return; }
-      var spyBase = data.results[0].c;
-      // Map SPY candles to same number of points as portfolio history using linear interpolation
       var spyResults = data.results;
+      var spyBase = spyResults[0].c;
+      // Map SPY trading days onto portfolio history points via linear interpolation
+      var n = history.length;
       var spyPcts = history.map(function(_, i) {
-        var idx = Math.round(i / (history.length - 1) * (spyResults.length - 1));
+        var idx = n > 1 ? Math.round(i / (n - 1) * (spyResults.length - 1)) : 0;
         var spyVal = spyResults[Math.min(idx, spyResults.length - 1)].c;
         return parseFloat(((spyVal - spyBase) / spyBase * 100).toFixed(2));
       });
