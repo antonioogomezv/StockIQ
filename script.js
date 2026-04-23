@@ -4589,7 +4589,6 @@ function setActivePortfolio(id) {
 }
 
 function promptNewPortfolio() {
-  // Show choice: blank or guided wizard
   let overlay = document.createElement('div');
   overlay.id = 'new-port-choice-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;';
@@ -4599,15 +4598,82 @@ function promptNewPortfolio() {
       '<div style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">How do you want to start?</div>' +
       '<button onclick="closeNewPortChoice();openPortfolioWizard();" style="width:100%;padding:14px 16px;border-radius:12px;border:none;background:var(--accent-blue);color:#fff;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:10px;text-align:left;">' +
         '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:6px;opacity:0.9"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Build with guidance' +
-        '<div style="font-size:11px;font-weight:400;opacity:0.85;margin-top:2px;">Answer 5 questions — we pick the stocks for you</div>' +
+        '<div style="font-size:11px;font-weight:400;opacity:0.85;margin-top:2px;">Answer 6 questions — we pick the stocks for you</div>' +
+      '</button>' +
+      '<button onclick="closeNewPortChoice();promptPaperPortfolio();" style="width:100%;padding:14px 16px;border-radius:12px;border:none;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:10px;text-align:left;">' +
+        '🎮 Paper Trading' +
+        '<div style="font-size:11px;font-weight:400;opacity:0.85;margin-top:2px;">Practice with virtual money — no real money at risk</div>' +
       '</button>' +
       '<button onclick="closeNewPortChoice();promptBlankPortfolio();" style="width:100%;padding:14px 16px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--text);font-size:14px;font-weight:600;cursor:pointer;text-align:left;">' +
         'Start blank' +
-        '<div style="font-size:11px;font-weight:400;color:var(--text-muted);margin-top:2px;">Add stocks manually yourself</div>' +
+        '<div style="font-size:11px;font-weight:400;color:var(--text-muted);margin-top:2px;">Add real stocks manually yourself</div>' +
       '</button>' +
     '</div>';
   overlay.addEventListener('click', function(e) { if (e.target === overlay) closeNewPortChoice(); });
   document.body.appendChild(overlay);
+}
+
+function promptPaperPortfolio() {
+  let overlay = document.createElement('div');
+  overlay.id = 'paper-setup-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;';
+  overlay.innerHTML =
+    '<div style="background:var(--surface);border-radius:16px;padding:28px 24px;max-width:360px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.4);">' +
+      '<div style="font-size:11px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;">🎮 Paper Trading</div>' +
+      '<div style="font-size:18px;font-weight:700;margin-bottom:6px;">Set up your virtual account</div>' +
+      '<div style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">Choose a starting balance. All trades use virtual money — nothing real is at risk.</div>' +
+      '<div style="display:flex;align-items:center;border:2px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:8px;" id="paper-amount-wrap">' +
+        '<span style="padding:12px 14px;font-size:16px;font-weight:700;color:var(--text-muted);background:var(--surface2);border-right:1px solid var(--border);font-family:var(--mono);flex-shrink:0;" id="paper-prefix">' + (_currency === 'MXN' ? 'MX$' : '$') + '</span>' +
+        '<input id="paper-balance-input" type="number" inputmode="numeric" placeholder="' + (_currency === 'MXN' ? '100,000' : '10,000') + '" style="flex:1;border:none;background:none;outline:none;font-size:22px;font-weight:700;color:var(--text);padding:12px 14px;font-family:var(--mono);" oninput="paperBalanceInput(this)">' +
+      '</div>' +
+      '<div id="paper-balance-hint" style="font-size:12px;color:var(--text-muted);min-height:18px;margin-bottom:16px;"></div>' +
+      '<input id="paper-name-input" placeholder="Portfolio name (e.g. My Practice)" style="width:100%;margin-bottom:14px;padding:11px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px;outline:none;">' +
+      '<button id="paper-create-btn" onclick="createPaperPortfolio()" disabled style="width:100%;padding:13px;border-radius:10px;border:none;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-size:14px;font-weight:700;cursor:pointer;opacity:0.4;">Start Paper Trading →</button>' +
+      '<button onclick="document.getElementById(\'paper-setup-overlay\').remove();" style="width:100%;padding:8px;margin-top:8px;border:none;background:none;color:var(--text-muted);font-size:13px;cursor:pointer;">Cancel</button>' +
+    '</div>';
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+  // Pre-fill a sensible default name
+  document.getElementById('paper-name-input').value = 'Paper Trading';
+}
+
+function paperBalanceInput(input) {
+  var val = parseFloat(input.value);
+  var minAmt = _currency === 'MXN' ? 1000 : 100;
+  var wrap = document.getElementById('paper-amount-wrap');
+  var hint = document.getElementById('paper-balance-hint');
+  var btn  = document.getElementById('paper-create-btn');
+  if (!val || val < minAmt) {
+    if (wrap) wrap.style.borderColor = val > 0 ? '#ef4444' : 'var(--border)';
+    if (hint) { hint.textContent = val > 0 ? 'Minimum ' + (_currency === 'MXN' ? 'MX$1,000' : '$100') : ''; hint.style.color = '#ef4444'; }
+    if (btn)  btn.style.opacity = '0.4', btn.disabled = true;
+  } else {
+    if (wrap) wrap.style.borderColor = '#7c3aed';
+    var fmt = (_currency === 'MXN' ? 'MX$' : '$') + val.toLocaleString('en-US', { maximumFractionDigits: 0 });
+    if (hint) { hint.textContent = fmt + ' virtual starting balance'; hint.style.color = '#7c3aed'; }
+    if (btn)  btn.style.opacity = '1', btn.disabled = false;
+  }
+}
+
+function createPaperPortfolio() {
+  var balanceRaw = parseFloat(document.getElementById('paper-balance-input').value);
+  var minAmt = _currency === 'MXN' ? 1000 : 100;
+  if (!balanceRaw || balanceRaw < minAmt) { showToast('Enter a valid balance'); return; }
+  // Store in USD internally
+  var balanceUSD = (_currency === 'MXN' && _fxRate > 1) ? balanceRaw / _fxRate : balanceRaw;
+  var name = (document.getElementById('paper-name-input').value || '').trim() || 'Paper Trading';
+  var overlay = document.getElementById('paper-setup-overlay');
+  if (overlay) overlay.remove();
+
+  var all = getAllPortfolios();
+  var id = 'port_' + Date.now();
+  all[id] = { name: name, isPaper: true, isDemo: false, paperBalance: balanceUSD, startingBalance: balanceUSD, stocks: [], closedPositions: [], valueHistory: [] };
+  localStorage.setItem('portfolios', JSON.stringify(all));
+  localStorage.setItem('activePortfolioId', id);
+  saveToFirestore({ portfolios: all, activePortfolioId: id });
+  renderPortfolioTabs();
+  renderPortfolio();
+  showToast('🎮 Paper portfolio created with ' + (_currency === 'MXN' ? 'MX$' : '$') + Math.round(balanceRaw).toLocaleString('en-US') + ' virtual balance');
 }
 
 function closeNewPortChoice() {
@@ -5104,8 +5170,9 @@ function renderPortfolioTabs() {
     let p = all[id];
     let isActive = id === activeId;
     let demoTag = p.isDemo ? '<span class="port-tab-demo-tag">&#9679;</span>' : '';
+    let paperTag = p.isPaper ? '<span class="port-tab-paper-tag">&#127918;</span>' : '';
     return '<button class="port-tab' + (isActive ? ' active' : '') + '" onclick="setActivePortfolio(\'' + id + '\')">' +
-      demoTag + escHtml(p.name) +
+      demoTag + paperTag + escHtml(p.name) +
       (isActive ? '<span class="port-tab-menu-btn" id="port-menu-btn-' + id + '" onclick="event.stopPropagation();openPortfolioMenu(\'' + id + '\')">···</span>' : '') +
     '</button>';
   }).join('');
@@ -5214,6 +5281,20 @@ function addToPortfolio() {
   let all = getAllPortfolios();
   let id = getActiveId();
   if (!all[id]) return;
+
+  // Paper trading: validate + deduct from virtual balance
+  if (all[id].isPaper) {
+    let rate = (typeof _fxRate !== 'undefined' ? _fxRate : 1);
+    let costUSD = (shares * buyPrice) / rate;
+    let balUSD = all[id].paperBalance || 0;
+    if (costUSD > balUSD + 0.01) {
+      let balDisplay = _currency === 'MXN' ? 'MX$' + Math.round(balUSD * rate).toLocaleString('en-US') : '$' + Math.round(balUSD).toLocaleString('en-US');
+      showToast('Insufficient virtual balance (' + balDisplay + ' remaining)');
+      return;
+    }
+    all[id].paperBalance = Math.max(0, balUSD - costUSD);
+  }
+
   let portfolio = migratePortfolio(all[id].stocks || []);
   let existing = portfolio.find(function(i) { return i.ticker === ticker; });
   if (existing) {
@@ -5393,6 +5474,40 @@ function renderPortfolio() {
       demoNote.style.display = 'block';
     } else if (demoNote) {
       demoNote.style.display = 'none';
+    }
+
+    // Paper trading banner
+    let paperBanner = document.getElementById('port-paper-banner');
+    if (active && active.isPaper) {
+      let balUSD = active.paperBalance || 0;
+      let startUSD = active.startingBalance || balUSD;
+      // portfolio totalValue is already in user-display currency; convert back to USD
+      let rate = (typeof _fxRate !== 'undefined' ? _fxRate : 1);
+      let totalValueUSD = totalValue / rate;
+      let netUSD = totalValueUSD + balUSD - startUSD;
+      let netPct = startUSD > 0 ? (netUSD / startUSD) * 100 : 0;
+      let netColor = netUSD >= 0 ? '#a855f7' : '#dc2626';
+      let balDisplay = _currency === 'MXN' ? 'MX$' + Math.round(balUSD * rate).toLocaleString('en-US') : '$' + Math.round(balUSD).toLocaleString('en-US');
+      let startDisplay = _currency === 'MXN' ? 'MX$' + Math.round(startUSD * rate).toLocaleString('en-US') : '$' + Math.round(startUSD).toLocaleString('en-US');
+      if (!paperBanner) {
+        paperBanner = document.createElement('div');
+        paperBanner.id = 'port-paper-banner';
+        paperBanner.className = 'port-paper-banner';
+        let listEl = document.getElementById('portfolio-list');
+        if (listEl) listEl.parentNode.insertBefore(paperBanner, listEl);
+      }
+      paperBanner.innerHTML =
+        '<span class="paper-banner-icon">&#127918;</span>' +
+        '<span class="paper-banner-label">Paper Trading</span>' +
+        '<span class="paper-banner-sep">·</span>' +
+        '<span class="paper-banner-stat">Cash <strong>' + balDisplay + '</strong></span>' +
+        '<span class="paper-banner-sep">·</span>' +
+        '<span class="paper-banner-stat">Started with <strong>' + startDisplay + '</strong></span>' +
+        '<span class="paper-banner-sep">·</span>' +
+        '<span class="paper-banner-net" style="color:' + netColor + ';">' + (netUSD >= 0 ? '+' : '') + netPct.toFixed(2) + '% overall</span>';
+      paperBanner.style.display = 'flex';
+    } else if (paperBanner) {
+      paperBanner.style.display = 'none';
     }
 
     // S&P 500 benchmark
@@ -5588,6 +5703,13 @@ function confirmSell(ticker, totalShares) {
     date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
   });
   all[id].closedPositions = closed;
+
+  // Paper trading: return proceeds to virtual balance
+  if (all[id].isPaper) {
+    let rate = (typeof _fxRate !== 'undefined' ? _fxRate : 1);
+    let proceedsUSD = (sh * sp) / rate;
+    all[id].paperBalance = (all[id].paperBalance || 0) + proceedsUSD;
+  }
 
   if (item.lots.length === 0) {
     portfolio = portfolio.filter(function(i) { return i.ticker !== ticker; });
