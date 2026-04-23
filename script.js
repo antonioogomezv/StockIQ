@@ -4666,14 +4666,16 @@ var WIZARD_QUESTIONS = [
   },
   {
     id: 'sector',
-    q: 'Any sector you\'re excited about?',
-    sub: 'Optional — we\'ll prioritize stocks from here.',
+    q: 'Which sectors excite you?',
+    sub: 'Pick one or more — we\'ll include stocks from each. Skip to let us decide.',
+    type: 'multi',
     options: [
-      { value: 'Technology',  label: 'Technology',   desc: 'Software, chips, AI, cloud' },
-      { value: 'Healthcare',  label: 'Healthcare',   desc: 'Pharma, biotech, medical devices' },
-      { value: 'Consumer',    label: 'Consumer',     desc: 'Retail, food, travel, entertainment' },
-      { value: 'Financials',  label: 'Financials',   desc: 'Banks, insurance, payments' },
-      { value: 'none',        label: 'No preference',   desc: 'Just pick the best ones' }
+      { value: 'Technology',  label: '💻 Technology',  desc: 'Software, chips, AI, cloud' },
+      { value: 'Healthcare',  label: '🏥 Healthcare',  desc: 'Pharma, biotech, medical devices' },
+      { value: 'Consumer',    label: '🛍️ Consumer',    desc: 'Retail, food, travel, entertainment' },
+      { value: 'Financials',  label: '🏦 Financials',  desc: 'Banks, insurance, payments' },
+      { value: 'Energy',      label: '⚡ Energy',       desc: 'Oil, gas, renewables' },
+      { value: 'Industrials', label: '🏭 Industrials', desc: 'Aerospace, defense, manufacturing' },
     ]
   },
   {
@@ -4730,6 +4732,26 @@ function _renderWizardStep(step) {
         '</div>' +
         '<div id="wizard-budget-hint" style="font-size:12px;margin-top:8px;min-height:18px;color:var(--text-muted);">' + minLabel + ' · We use fractional shares so any amount works</div>' +
       '</div>';
+  } else if (q.type === 'multi') {
+    var selected = _wizardAnswers[q.id] || [];
+    optionsHtml =
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 16px;">' +
+      q.options.map(function(opt) {
+        var isOn = selected.indexOf(opt.value) !== -1;
+        return '<button onclick="_wizardToggleMulti(\'' + q.id + '\',\'' + opt.value + '\',' + step + ')" ' +
+          'style="padding:10px 12px;border-radius:10px;border:2px solid ' + (isOn ? 'var(--accent-blue)' : 'var(--border)') + ';' +
+          'background:' + (isOn ? 'rgba(59,130,246,0.1)' : 'transparent') + ';' +
+          'color:var(--text);cursor:pointer;text-align:left;position:relative;">' +
+          (isOn ? '<span style="position:absolute;top:7px;right:9px;font-size:11px;color:var(--accent-blue);">✓</span>' : '') +
+          '<div style="font-size:13px;font-weight:600;">' + opt.label + '</div>' +
+          '<div style="font-size:10px;color:var(--text-muted);margin-top:2px;">' + opt.desc + '</div>' +
+        '</button>';
+      }).join('') +
+      '</div>' +
+      '<div style="font-size:11px;color:var(--text-muted);margin-bottom:16px;">' +
+        (selected.length === 0 ? 'Nothing selected — we\'ll pick the best stocks across all sectors.' :
+         selected.length + ' sector' + (selected.length > 1 ? 's' : '') + ' selected') +
+      '</div>';
   } else {
     optionsHtml = '<div style="display:flex;flex-direction:column;gap:8px;margin:8px 0 24px;">' +
       q.options.map(function(opt) {
@@ -4751,6 +4773,7 @@ function _renderWizardStep(step) {
   let canProceed = q.type === 'number'
     ? (!!_wizardAnswers.budget && _wizardAnswers.budget >= ((_currency === 'MXN' ? 1000 : 100) / (_fxRate || 1)))
     : q.type === 'currency' ? !!_wizardAnswers.currency
+    : q.type === 'multi' ? true   // sector is optional
     : !!_wizardAnswers[q.id];
 
   overlay.innerHTML =
@@ -4778,6 +4801,14 @@ function _renderWizardStep(step) {
   if (q.type === 'number' && _wizardAnswers.budget) {
     document.getElementById('wizard-budget').value = _wizardAnswers.budget;
   }
+}
+
+function _wizardToggleMulti(qid, value, step) {
+  var arr = _wizardAnswers[qid] ? _wizardAnswers[qid].slice() : [];
+  var idx = arr.indexOf(value);
+  if (idx === -1) { arr.push(value); } else { arr.splice(idx, 1); }
+  _wizardAnswers[qid] = arr;
+  _renderWizardStep(step);
 }
 
 function _wizardPickCurrency(currency, step) {
@@ -4824,8 +4855,10 @@ function _wizardNext(step) {
     if (!_wizardAnswers.currency) { showToast('Please pick a currency'); return; }
     _renderWizardStep(step + 1); return;
   }
+  if (q.type === 'multi') {
+    _renderWizardStep(step + 1); return;
+  }
   if (q.type === 'number') {
-    // handled by _wizardFinish
     _wizardFinish(); return;
   }
   if (!_wizardAnswers[q.id]) { showToast('Please pick an option'); return; }
@@ -4884,10 +4917,17 @@ function _buildWizardPortfolio(profile, budget, preferredSector) {
   };
 
   let basePool = poolByProfile[profile] || poolByProfile['Balanced'];
-  // If sector preference, put those stocks first
+  // If sector preferences, interleave stocks from each selected sector at the front
   let pool = basePool.slice();
-  if (preferredSector && preferredSector !== 'none' && sectorMap[preferredSector]) {
-    let sectorStocks = sectorMap[preferredSector].filter(function(t) { return !pool.includes(t); });
+  var sectors = Array.isArray(preferredSector) ? preferredSector : (preferredSector && preferredSector !== 'none' ? [preferredSector] : []);
+  if (sectors.length > 0) {
+    var sectorStocks = [];
+    sectors.forEach(function(s) {
+      if (sectorMap[s]) {
+        sectorMap[s].forEach(function(t) { if (sectorStocks.indexOf(t) === -1) sectorStocks.push(t); });
+      }
+    });
+    sectorStocks = sectorStocks.filter(function(t) { return pool.indexOf(t) === -1; });
     pool = sectorStocks.concat(pool);
   }
   pool = pool.slice(0, 25); // cap at 25 to keep fetch time reasonable
