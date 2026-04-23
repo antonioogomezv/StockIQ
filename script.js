@@ -5457,6 +5457,8 @@ function renderPortfolio() {
     fetchMissingPortfolioScores(stockData);
 
     if (totalValue > 0) savePortfolioValueHistory(totalValue);
+    // Update weekly challenge leaderboard entry (throttled — only if portfolio has challenge)
+    if (active && active.challengeId) updateChallengeEntry(totalValue, totalCost, avgScore);
     renderPortfolioChart(stockData, totalValue);
     renderHoldingsChart();
     renderSectorAllocation(stockData, totalValue);
@@ -6637,6 +6639,191 @@ function saveUserInfo() {
   showToast('Profile saved');
 }
 
+// ── WEEKLY CHALLENGE + LEADERBOARD ───────────────────────────────────────────
+
+var WEEKLY_CHALLENGES = [
+  { title: 'Best Overall Return', description: 'Build the highest-returning portfolio. Any stocks, any strategy — best % wins.', emoji: '📈' },
+  { title: 'Quality Beats Quantity', description: 'Max 3 stocks. Highest score-weighted return wins. Pick wisely.', emoji: '🎯' },
+  { title: 'Tech Sector Sprint', description: 'Only Tech stocks allowed. Who can ride the sector best this week?', emoji: '💻' },
+  { title: 'Dividend Defender', description: 'Build a portfolio that would pay the most in dividends. Income investing 101.', emoji: '💰' },
+  { title: 'Market Beater', description: 'Simple goal: beat the S&P 500 this week. Most outperformance wins.', emoji: '🏆' },
+  { title: 'Conservative Champion', description: 'All holdings must have StockIQ score above 60. Best return with quality stocks wins.', emoji: '🛡️' },
+  { title: 'Big vs Safe', description: 'No stock over $200/share. Find the hidden gems. Best return wins.', emoji: '💎' }
+];
+
+function getWeekId() {
+  var d = new Date();
+  var day = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - day);
+  var yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  var week = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  return d.getUTCFullYear() + '-W' + String(week).padStart(2, '0');
+}
+
+function getWeekDates() {
+  var now = new Date();
+  var day = now.getDay() || 7;
+  var mon = new Date(now); mon.setDate(now.getDate() - day + 1); mon.setHours(0,0,0,0);
+  var sun = new Date(mon); sun.setDate(mon.getDate() + 6); sun.setHours(23,59,59,0);
+  return { start: mon, end: sun };
+}
+
+function getChallengeForWeek(weekId) {
+  // Deterministic challenge selection based on week number
+  var weekNum = parseInt(weekId.split('-W')[1]) || 1;
+  return WEEKLY_CHALLENGES[(weekNum - 1) % WEEKLY_CHALLENGES.length];
+}
+
+function getDisplayName() {
+  var info = JSON.parse(localStorage.getItem('user-info') || '{}');
+  if (info.name) return info.name;
+  var u = auth.currentUser;
+  return u ? (u.displayName || u.email.split('@')[0]) : 'Investor';
+}
+
+function joinChallenge() {
+  var weekId = getWeekId();
+  var all = getAllPortfolios();
+  var existing = Object.entries(all).find(function(e) { return e[1].challengeId === weekId; });
+  if (existing) {
+    // Already joined — switch to that portfolio
+    setActivePortfolio(existing[0]);
+    showTab('portfolio');
+    showToast('Switching to your challenge portfolio!');
+    return;
+  }
+  var challenge = getChallengeForWeek(weekId);
+  var id = 'port_' + Date.now();
+  all[id] = {
+    name: challenge.emoji + ' ' + challenge.title,
+    isPaper: true, isDemo: false,
+    challengeId: weekId,
+    paperBalance: 10000, startingBalance: 10000,
+    stocks: [], closedPositions: [], valueHistory: []
+  };
+  localStorage.setItem('portfolios', JSON.stringify(all));
+  localStorage.setItem('activePortfolioId', id);
+  saveToFirestore({ portfolios: all, activePortfolioId: id });
+  _spyBenchmark = null;
+  renderPortfolioTabs();
+  showTab('portfolio');
+  showToast(challenge.emoji + ' Challenge joined! Start with $10,000 virtual cash.');
+}
+
+function updateChallengeEntry(totalValueUSD, totalCostUSD, avgScore) {
+  var uid = currentUid();
+  if (!uid) return;
+  var all = getAllPortfolios();
+  var id = getActiveId();
+  var p = all[id];
+  if (!p || !p.challengeId) return;
+  var weekId = p.challengeId;
+  var returnPct = totalCostUSD > 0 ? ((totalValueUSD - totalCostUSD) / totalCostUSD * 100) : 0;
+  var scoreWeight = avgScore || 0;
+  // Rank score: return weighted by quality (avg StockIQ score / 100)
+  var rankScore = returnPct * ((scoreWeight > 0 ? scoreWeight : 50) / 100);
+  var displayName = getDisplayName();
+  db.collection('challenges').doc(weekId).collection('entries').doc(uid).set({
+    displayName: displayName,
+    returnPct: parseFloat(returnPct.toFixed(3)),
+    avgScore: scoreWeight,
+    rankScore: parseFloat(rankScore.toFixed(4)),
+    portfolioValue: parseFloat(totalValueUSD.toFixed(2)),
+    cashBalance: parseFloat((p.paperBalance || 0).toFixed(2)),
+    startingBalance: parseFloat((p.startingBalance || 10000).toFixed(2)),
+    updatedAt: Date.now()
+  }, { merge: true }).catch(function() {});
+}
+
+function loadLeaderboard(weekId) {
+  var el = document.getElementById('leaderboard-body');
+  if (!el) return;
+  el.innerHTML = '<div class="lb-loading">Loading…</div>';
+  db.collection('challenges').doc(weekId).collection('entries')
+    .orderBy('rankScore', 'desc')
+    .limit(50)
+    .get()
+    .then(function(snap) {
+      var entries = [];
+      snap.forEach(function(doc) { entries.push(Object.assign({ uid: doc.id }, doc.data())); });
+      renderLeaderboardEntries(entries);
+    })
+    .catch(function() {
+      el.innerHTML = '<div class="lb-loading">Could not load leaderboard.</div>';
+    });
+}
+
+function renderLeaderboardEntries(entries) {
+  var el = document.getElementById('leaderboard-body');
+  var myRankEl = document.getElementById('leaderboard-my-rank');
+  var uid = currentUid();
+  if (!el) return;
+  if (entries.length === 0) {
+    el.innerHTML = '<div class="lb-empty">No entries yet this week — be the first to join!</div>';
+    if (myRankEl) myRankEl.style.display = 'none';
+    return;
+  }
+  var medals = ['🥇', '🥈', '🥉'];
+  var top10 = entries.slice(0, 10);
+  var myIdx = entries.findIndex(function(e) { return e.uid === uid; });
+  el.innerHTML = top10.map(function(e, i) {
+    var isMe = e.uid === uid;
+    var rank = medals[i] || ('#' + (i + 1));
+    var sign = e.returnPct >= 0 ? '+' : '';
+    var retColor = e.returnPct >= 0 ? '#16a34a' : '#dc2626';
+    return '<div class="lb-row' + (isMe ? ' lb-row-me' : '') + '">' +
+      '<span class="lb-rank">' + rank + '</span>' +
+      '<span class="lb-name">' + escHtml(e.displayName || 'Investor') + (isMe ? ' <span class="lb-you-badge">You</span>' : '') + '</span>' +
+      '<span class="lb-score">' + (e.avgScore || '—') + '<span class="lb-score-label">/100</span></span>' +
+      '<span class="lb-return" style="color:' + retColor + ';">' + sign + (e.returnPct || 0).toFixed(2) + '%</span>' +
+    '</div>';
+  }).join('');
+  // Show "your rank" below top 10 if not in top 10
+  if (myRankEl) {
+    if (myIdx >= 10) {
+      var me = entries[myIdx];
+      var sign = me.returnPct >= 0 ? '+' : '';
+      myRankEl.style.display = 'flex';
+      myRankEl.innerHTML = '<span class="lb-rank">#' + (myIdx + 1) + '</span>' +
+        '<span class="lb-name">' + escHtml(me.displayName || 'You') + ' <span class="lb-you-badge">You</span></span>' +
+        '<span class="lb-score">' + (me.avgScore || '—') + '<span class="lb-score-label">/100</span></span>' +
+        '<span class="lb-return">' + sign + (me.returnPct || 0).toFixed(2) + '%</span>';
+    } else {
+      myRankEl.style.display = 'none';
+    }
+  }
+}
+
+function renderChallengeSection() {
+  var weekId = getWeekId();
+  var challenge = getChallengeForWeek(weekId);
+  var dates = getWeekDates();
+  var now = new Date();
+  var msLeft = dates.end - now;
+  var daysLeft = Math.max(0, Math.ceil(msLeft / 86400000));
+  var daysLeftText = daysLeft === 0 ? 'Ends today' : daysLeft === 1 ? '1 day left' : daysLeft + ' days left';
+  var all = getAllPortfolios();
+  var hasJoined = Object.values(all).some(function(p) { return p.challengeId === weekId; });
+  var headerEl = document.getElementById('challenge-header');
+  if (headerEl) {
+    headerEl.innerHTML =
+      '<div class="challenge-emoji">' + challenge.emoji + '</div>' +
+      '<div class="challenge-meta">' +
+        '<div class="challenge-title">' + escHtml(challenge.title) + '</div>' +
+        '<div class="challenge-desc">' + escHtml(challenge.description) + '</div>' +
+        '<div class="challenge-footer">' +
+          '<span class="challenge-week">' + weekId + '</span>' +
+          '<span class="challenge-timer">' + daysLeftText + '</span>' +
+          '<span class="challenge-prize">🎁 Future prizes coming</span>' +
+        '</div>' +
+      '</div>' +
+      '<button class="challenge-join-btn' + (hasJoined ? ' joined' : '') + '" onclick="joinChallenge()">' +
+        (hasJoined ? '▶ View Portfolio' : 'Join Challenge') +
+      '</button>';
+  }
+  loadLeaderboard(weekId);
+}
+
 function renderProfile() {
   loadUserInfo();
   if (userProfile) {
@@ -6657,6 +6844,7 @@ function renderProfile() {
   document.getElementById('stat-portfolio').textContent = portCount;
   document.getElementById('stat-streak').textContent    = streak;
   renderBadges(analyzed, watchlist.length, portCount, streak);
+  renderChallengeSection();
 }
 
 let stockChatHistory = [];
