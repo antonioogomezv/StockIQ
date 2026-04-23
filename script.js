@@ -2252,23 +2252,28 @@ function _updateBudgetLabels() {
   var btn = document.getElementById('quiz-budget-btn');
   if (btn) btn.disabled = true;
   var hint = document.getElementById('quiz-budget-hint');
-  if (hint) hint.textContent = '';
+  if (hint) { hint.textContent = 'Minimum ' + (_currency === 'MXN' ? 'MX$1,000' : '$100'); hint.style.color = 'var(--text-muted)'; }
 }
 
 function quizBudgetInput(input) {
   var val = parseFloat(input.value);
+  var minAmt = _currency === 'MXN' ? 1000 : 100;
   var btn = document.getElementById('quiz-budget-btn');
   var hint = document.getElementById('quiz-budget-hint');
   if (!val || val <= 0) {
     if (btn) btn.disabled = true;
-    if (hint) hint.textContent = '';
+    if (hint) { hint.textContent = 'Minimum ' + (_currency === 'MXN' ? 'MX$1,000' : '$100'); hint.style.color = 'var(--text-muted)'; }
+    return;
+  }
+  if (val < minAmt) {
+    if (btn) btn.disabled = true;
+    if (hint) { hint.textContent = 'Minimum is ' + (_currency === 'MXN' ? 'MX$1,000' : '$100'); hint.style.color = '#ef4444'; }
     return;
   }
   if (btn) btn.disabled = false;
-  // Show a friendly formatted hint
   var formatted = (_currency === 'MXN' ? 'MX$' : '$') +
     val.toLocaleString('en-US', { maximumFractionDigits: 0 });
-  if (hint) hint.textContent = formatted;
+  if (hint) { hint.textContent = formatted; hint.style.color = 'var(--accent-green)'; }
 }
 
 function submitBudget() {
@@ -4624,6 +4629,12 @@ var _wizardAnswers = {};
 
 var WIZARD_QUESTIONS = [
   {
+    id: 'currency',
+    q: 'Which currency do you invest in?',
+    sub: 'This sets how prices and amounts are shown throughout the app.',
+    type: 'currency'
+  },
+  {
     id: 'goal',
     q: "What's your main goal?",
     sub: 'Pick the one that fits best.',
@@ -4691,17 +4702,33 @@ function _renderWizardStep(step) {
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;';
 
   let optionsHtml = '';
-  if (q.type === 'number') {
-    var minAmt = 1;
-    var placeholder = _currency === 'MXN' ? 'ej. 20000' : 'e.g. 1000';
-    var minLabel = _currency === 'MXN' ? 'Cualquier monto' : 'Any amount';
+  if (q.type === 'currency') {
+    var usdActive = (_wizardAnswers.currency || _currency) !== 'MXN';
+    var mxnActive = !usdActive;
+    optionsHtml =
+      '<div style="display:flex;gap:10px;margin:8px 0 24px;">' +
+        '<button id="wiz-usd-btn" onclick="_wizardPickCurrency(\'USD\',' + step + ')" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:16px 10px;border-radius:12px;border:2px solid ' + (usdActive ? 'var(--accent-blue)' : 'var(--border)') + ';background:' + (usdActive ? 'rgba(59,130,246,0.08)' : 'var(--surface)') + ';cursor:pointer;">' +
+          '<span style="font-size:22px;font-weight:700;color:var(--text);font-family:var(--mono);">$</span>' +
+          '<span style="font-size:12px;color:var(--text-muted);">US Dollar</span>' +
+          '<span style="font-size:11px;font-weight:700;color:var(--accent-blue);letter-spacing:0.05em;">USD</span>' +
+        '</button>' +
+        '<button id="wiz-mxn-btn" onclick="_wizardPickCurrency(\'MXN\',' + step + ')" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:16px 10px;border-radius:12px;border:2px solid ' + (mxnActive ? 'var(--accent-blue)' : 'var(--border)') + ';background:' + (mxnActive ? 'rgba(59,130,246,0.08)' : 'var(--surface)') + ';cursor:pointer;">' +
+          '<span style="font-size:22px;font-weight:700;color:var(--text);font-family:var(--mono);">$</span>' +
+          '<span style="font-size:12px;color:var(--text-muted);">Mexican Peso</span>' +
+          '<span style="font-size:11px;font-weight:700;color:var(--accent-blue);letter-spacing:0.05em;">MXN</span>' +
+        '</button>' +
+      '</div>';
+  } else if (q.type === 'number') {
+    var minAmt = _currency === 'MXN' ? 1000 : 100;
+    var placeholder = _currency === 'MXN' ? 'ej. 20,000' : 'e.g. 1,000';
+    var minLabel = _currency === 'MXN' ? 'Mínimo MX$1,000' : 'Minimum $100';
     optionsHtml =
       '<div style="margin:8px 0 24px;">' +
-        '<div style="display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;">' +
-          '<span style="font-size:18px;color:var(--text-muted);">' + _fxSym + '</span>' +
-          '<input id="wizard-budget" type="number" min="' + minAmt + '" placeholder="' + placeholder + '" style="background:none;border:none;outline:none;font-size:20px;font-weight:600;color:var(--text);width:100%;">' +
+        '<div style="display:flex;align-items:center;border:2px solid var(--border);border-radius:10px;overflow:hidden;transition:border-color 0.15s;" id="wizard-budget-wrap">' +
+          '<span style="padding:12px 14px;font-size:16px;font-weight:700;color:var(--text-muted);background:var(--surface2);border-right:1px solid var(--border);font-family:var(--mono);flex-shrink:0;">' + (_currency === 'MXN' ? 'MX$' : '$') + '</span>' +
+          '<input id="wizard-budget" type="number" min="' + minAmt + '" inputmode="numeric" placeholder="' + placeholder + '" oninput="_wizardBudgetInput(this)" style="background:none;border:none;outline:none;font-size:22px;font-weight:700;color:var(--text);width:100%;padding:12px 14px;font-family:var(--mono);">' +
         '</div>' +
-        '<div style="font-size:11px;color:var(--text-muted);margin-top:8px;">' + minLabel + ' · We use fractional shares so any amount works</div>' +
+        '<div id="wizard-budget-hint" style="font-size:12px;margin-top:8px;min-height:18px;color:var(--text-muted);">' + minLabel + ' · We use fractional shares so any amount works</div>' +
       '</div>';
   } else {
     optionsHtml = '<div style="display:flex;flex-direction:column;gap:8px;margin:8px 0 24px;">' +
@@ -4719,7 +4746,12 @@ function _renderWizardStep(step) {
   }
 
   let isLast = step === total - 1;
-  let canProceed = q.type === 'number' ? true : !!_wizardAnswers[q.id];
+  // Currency step auto-advances on click — no Next button needed
+  let hideProceed = q.type === 'currency';
+  let canProceed = q.type === 'number'
+    ? (!!_wizardAnswers.budget && _wizardAnswers.budget >= ((_currency === 'MXN' ? 1000 : 100) / (_fxRate || 1)))
+    : q.type === 'currency' ? !!_wizardAnswers.currency
+    : !!_wizardAnswers[q.id];
 
   overlay.innerHTML =
     '<div style="background:var(--surface);border-radius:16px;padding:28px 24px;max-width:400px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.4);">' +
@@ -4735,16 +4767,45 @@ function _renderWizardStep(step) {
       optionsHtml +
       '<div style="display:flex;gap:10px;">' +
         (step > 0 ? '<button onclick="_wizardStep(' + (step-1) + ')" style="flex:1;padding:12px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--text);font-size:14px;font-weight:600;cursor:pointer;">← Back</button>' : '') +
-        '<button id="wizard-next-btn" onclick="' + (isLast ? '_wizardFinish()' : '_wizardNext(' + step + ')') + '" ' +
+        (!hideProceed ? '<button id="wizard-next-btn" onclick="' + (isLast ? '_wizardFinish()' : '_wizardNext(' + step + ')') + '" ' +
           'style="flex:2;padding:12px;border-radius:10px;border:none;background:var(--accent-blue);color:#fff;font-size:14px;font-weight:600;cursor:pointer;' + (canProceed ? '' : 'opacity:0.4;') + '">' +
           (isLast ? 'Build my portfolio →' : 'Next →') +
-        '</button>' +
+        '</button>' : '') +
       '</div>' +
     '</div>';
 
   document.body.appendChild(overlay);
   if (q.type === 'number' && _wizardAnswers.budget) {
     document.getElementById('wizard-budget').value = _wizardAnswers.budget;
+  }
+}
+
+function _wizardPickCurrency(currency, step) {
+  _wizardAnswers.currency = currency;
+  setCurrency(currency);
+  // Re-render with selection highlighted, then auto-advance after brief delay
+  _renderWizardStep(step);
+  setTimeout(function() { _renderWizardStep(step + 1); }, 350);
+}
+
+function _wizardBudgetInput(input) {
+  var val = parseFloat(input.value);
+  var minAmt = _currency === 'MXN' ? 1000 : 100;
+  var wrap = document.getElementById('wizard-budget-wrap');
+  var hint = document.getElementById('wizard-budget-hint');
+  var nextBtn = document.getElementById('wizard-next-btn');
+  if (!val || val < minAmt) {
+    if (wrap) wrap.style.borderColor = val > 0 ? '#ef4444' : 'var(--border)';
+    if (hint) hint.innerHTML = val > 0
+      ? '<span style="color:#ef4444;">Minimum is ' + (_currency === 'MXN' ? 'MX$1,000' : '$100') + '</span>'
+      : (_currency === 'MXN' ? 'Mínimo MX$1,000' : 'Minimum $100') + ' · We use fractional shares so any amount works';
+    if (nextBtn) nextBtn.style.opacity = '0.4';
+  } else {
+    if (wrap) wrap.style.borderColor = 'var(--accent-green)';
+    var formatted = (_currency === 'MXN' ? 'MX$' : '$') +
+      val.toLocaleString('en-US', { maximumFractionDigits: 0 });
+    if (hint) hint.innerHTML = '<span style="color:var(--accent-green);font-weight:600;">' + formatted + '</span> · We use fractional shares so any amount works';
+    if (nextBtn) nextBtn.style.opacity = '1';
   }
 }
 
@@ -4759,13 +4820,25 @@ function _wizardStep(step) {
 
 function _wizardNext(step) {
   let q = WIZARD_QUESTIONS[step];
-  if (q.type !== 'number' && !_wizardAnswers[q.id]) { showToast('Please pick an option'); return; }
+  if (q.type === 'currency') {
+    if (!_wizardAnswers.currency) { showToast('Please pick a currency'); return; }
+    _renderWizardStep(step + 1); return;
+  }
+  if (q.type === 'number') {
+    // handled by _wizardFinish
+    _wizardFinish(); return;
+  }
+  if (!_wizardAnswers[q.id]) { showToast('Please pick an option'); return; }
   _renderWizardStep(step + 1);
 }
 
 function _wizardFinish() {
   let budget = parseFloat(document.getElementById('wizard-budget').value);
-  if (!budget || budget <= 0) { showToast('Please enter a valid amount'); return; }
+  let minAmt = _currency === 'MXN' ? 1000 : 100;
+  if (!budget || budget < minAmt) {
+    showToast('Minimum is ' + (_currency === 'MXN' ? 'MX$1,000' : '$100'));
+    return;
+  }
   // Always store budget in USD for stock allocation calculations
   var budgetUSD = _currency === 'MXN' && _fxRate > 1 ? budget / _fxRate : budget;
   _wizardAnswers.budget = budgetUSD;
