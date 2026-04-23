@@ -105,36 +105,51 @@
     <div id="quiz-logo">Stock<span>IQ</span></div>
     <div id="quiz-subtitle">Let's personalize your experience</div>
     <div class="quiz-step" id="step-1">
-      <div class="quiz-question">How long do you plan to invest?</div>
-      <div class="quiz-options">
-        <div class="quiz-option" onclick="selectOption(1, 'short', this)">Less than 1 year</div>
-        <div class="quiz-option" onclick="selectOption(1, 'medium', this)">1 to 5 years</div>
-        <div class="quiz-option" onclick="selectOption(1, 'long', this)">5+ years</div>
+      <div class="quiz-question">Which currency do you invest in?</div>
+      <div id="ob-currency-btns" style="margin-top:8px;">
+        <button class="ob-currency-btn" id="quiz-usd-btn" onclick="selectCurrency('USD', this)">
+          <span class="ob-currency-symbol">$</span>
+          <span class="ob-currency-name">US Dollar</span>
+          <span class="ob-currency-code">USD</span>
+        </button>
+        <button class="ob-currency-btn" id="quiz-mxn-btn" onclick="selectCurrency('MXN', this)">
+          <span class="ob-currency-symbol">$</span>
+          <span class="ob-currency-name">Mexican Peso</span>
+          <span class="ob-currency-code">MXN</span>
+        </button>
       </div>
     </div>
     <div class="quiz-step" id="step-2" style="display:none;">
-      <div class="quiz-question">How do you feel about risk?</div>
+      <div class="quiz-question">How long do you plan to invest?</div>
       <div class="quiz-options">
-        <div class="quiz-option" onclick="selectOption(2, 'low', this)">I want to play it safe</div>
-        <div class="quiz-option" onclick="selectOption(2, 'medium', this)">Some risk is okay</div>
-        <div class="quiz-option" onclick="selectOption(2, 'high', this)">I can handle big swings</div>
+        <div class="quiz-option" onclick="selectOption(2, 'short', this)">Less than 1 year</div>
+        <div class="quiz-option" onclick="selectOption(2, 'medium', this)">1 to 5 years</div>
+        <div class="quiz-option" onclick="selectOption(2, 'long', this)">5+ years</div>
       </div>
     </div>
     <div class="quiz-step" id="step-3" style="display:none;">
-      <div class="quiz-question">What is your main goal?</div>
+      <div class="quiz-question">How do you feel about risk?</div>
       <div class="quiz-options">
-        <div class="quiz-option" onclick="selectOption(3, 'preserve', this)">Protect my money</div>
-        <div class="quiz-option" onclick="selectOption(3, 'grow', this)">Grow my wealth</div>
-        <div class="quiz-option" onclick="selectOption(3, 'learn', this)">Learn how to invest</div>
+        <div class="quiz-option" onclick="selectOption(3, 'low', this)">I want to play it safe</div>
+        <div class="quiz-option" onclick="selectOption(3, 'medium', this)">Some risk is okay</div>
+        <div class="quiz-option" onclick="selectOption(3, 'high', this)">I can handle big swings</div>
       </div>
     </div>
     <div class="quiz-step" id="step-4" style="display:none;">
-      <div class="quiz-question">How much are you looking to invest?</div>
+      <div class="quiz-question">What is your main goal?</div>
       <div class="quiz-options">
-        <div class="quiz-option" id="q4-opt1" onclick="selectOption(4, 500, this)">Under $1,000</div>
-        <div class="quiz-option" id="q4-opt2" onclick="selectOption(4, 2500, this)">$1,000 – $5,000</div>
-        <div class="quiz-option" id="q4-opt3" onclick="selectOption(4, 10000, this)">$5,000 – $20,000</div>
-        <div class="quiz-option" id="q4-opt4" onclick="selectOption(4, 50000, this)">$20,000+</div>
+        <div class="quiz-option" onclick="selectOption(4, 'preserve', this)">Protect my money</div>
+        <div class="quiz-option" onclick="selectOption(4, 'grow', this)">Grow my wealth</div>
+        <div class="quiz-option" onclick="selectOption(4, 'learn', this)">Learn how to invest</div>
+      </div>
+    </div>
+    <div class="quiz-step" id="step-5" style="display:none;">
+      <div class="quiz-question" id="quiz-budget-question">How much are you looking to invest?</div>
+      <div class="quiz-options">
+        <div class="quiz-option" id="q5-opt1" onclick="selectOption(5, 500, this)"></div>
+        <div class="quiz-option" id="q5-opt2" onclick="selectOption(5, 2500, this)"></div>
+        <div class="quiz-option" id="q5-opt3" onclick="selectOption(5, 10000, this)"></div>
+        <div class="quiz-option" id="q5-opt4" onclick="selectOption(5, 50000, this)"></div>
       </div>
     </div>
     <div class="quiz-step" id="step-result" style="display:none;">
@@ -148,6 +163,7 @@
       <div class="quiz-dot" id="dot-2"></div>
       <div class="quiz-dot" id="dot-3"></div>
       <div class="quiz-dot" id="dot-4"></div>
+      <div class="quiz-dot" id="dot-5"></div>
     </div>
   </div>
 </div>
@@ -1236,7 +1252,7 @@
             <div id="profile-card-right">
               <div id="profile-type-display">No profile set</div>
               <div id="profile-desc-display">Complete the quiz to personalize your experience.</div>
-              <button type="button" onclick="document.getElementById('quiz-overlay').style.display='flex'" id="profile-quiz-btn">Take Risk Quiz</button>
+              <button type="button" onclick="openRiskQuiz()" id="profile-quiz-btn">Take Risk Quiz</button>
             </div>
           </div>
         </div>

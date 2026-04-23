@@ -2228,17 +2228,63 @@ function toggleDetails() {
   }
 }
 
+function selectCurrency(currency, el) {
+  // Highlight selected button
+  document.querySelectorAll('.ob-currency-btn').forEach(function(b) { b.classList.remove('active'); });
+  el.classList.add('active');
+  quizAnswers.step1 = currency;
+  // Apply immediately so budget labels update
+  setCurrency(currency);
+  setTimeout(function() {
+    document.getElementById('step-1').style.display = 'none';
+    document.getElementById('step-2').style.display = 'block';
+    document.getElementById('dot-2').classList.add('active');
+    _updateBudgetLabels(currency);
+  }, 350);
+}
+
+function _updateBudgetLabels(currency) {
+  var c = currency || _currency || 'USD';
+  if (c === 'MXN') {
+    document.getElementById('q5-opt1').textContent = 'Menos de $20,000';
+    document.getElementById('q5-opt2').textContent = '$20,000 – $100,000';
+    document.getElementById('q5-opt3').textContent = '$100,000 – $400,000';
+    document.getElementById('q5-opt4').textContent = '$400,000+';
+  } else {
+    document.getElementById('q5-opt1').textContent = 'Under $1,000';
+    document.getElementById('q5-opt2').textContent = '$1,000 – $5,000';
+    document.getElementById('q5-opt3').textContent = '$5,000 – $20,000';
+    document.getElementById('q5-opt4').textContent = '$20,000+';
+  }
+}
+
+function openRiskQuiz() {
+  // Reset quiz state
+  quizAnswers = {};
+  ['step-1','step-2','step-3','step-4','step-5'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) { el.style.display = id === 'step-1' ? 'block' : 'none'; }
+  });
+  var resultEl = document.getElementById('step-result');
+  if (resultEl) resultEl.style.display = 'none';
+  ['dot-1','dot-2','dot-3','dot-4','dot-5'].forEach(function(id, i) {
+    var el = document.getElementById(id);
+    if (el) { el.classList[i === 0 ? 'add' : 'remove']('active'); }
+  });
+  document.querySelectorAll('.ob-currency-btn').forEach(function(b) { b.classList.remove('active'); });
+  var preselect = _currency === 'MXN' ? document.getElementById('quiz-mxn-btn') : document.getElementById('quiz-usd-btn');
+  if (preselect) preselect.classList.add('active');
+  _updateBudgetLabels(_currency);
+  document.getElementById('quiz-overlay').style.display = 'flex';
+}
+
 function selectOption(step, value, el) {
   let options = el.parentElement.querySelectorAll(".quiz-option");
   options.forEach(function(o) { o.classList.remove("selected"); });
   el.classList.add("selected");
   quizAnswers["step" + step] = value;
   setTimeout(function() {
-    if (step === 1) {
-      document.getElementById("step-1").style.display = "none";
-      document.getElementById("step-2").style.display = "block";
-      document.getElementById("dot-2").classList.add("active");
-    } else if (step === 2) {
+    if (step === 2) {
       document.getElementById("step-2").style.display = "none";
       document.getElementById("step-3").style.display = "block";
       document.getElementById("dot-3").classList.add("active");
@@ -2246,19 +2292,23 @@ function selectOption(step, value, el) {
       document.getElementById("step-3").style.display = "none";
       document.getElementById("step-4").style.display = "block";
       document.getElementById("dot-4").classList.add("active");
-    } else {
+    } else if (step === 4) {
       document.getElementById("step-4").style.display = "none";
+      document.getElementById("step-5").style.display = "block";
+      document.getElementById("dot-5").classList.add("active");
+    } else {
+      document.getElementById("step-5").style.display = "none";
       showQuizResult();
     }
   }, 400);
 }
 
 function showQuizResult() {
-  let risk = quizAnswers.step2;
-  let horizon = quizAnswers.step1;
-  let goal = quizAnswers.step3;
-  // step4 value is in user's currency — convert to USD for portfolio math
-  let budgetRaw = quizAnswers.step4 || (_currency === 'MXN' ? 50000 : 2500);
+  let risk = quizAnswers.step3;
+  let horizon = quizAnswers.step2;
+  let goal = quizAnswers.step4;
+  // step5 value is in user's currency — convert to USD for portfolio math
+  let budgetRaw = quizAnswers.step5 || (_currency === 'MXN' ? 50000 : 2500);
   let budget = (_currency === 'MXN' && _fxRate > 1) ? budgetRaw / _fxRate : budgetRaw;
   let profile = {};
   if (risk === "low" || goal === "preserve") {
@@ -6470,7 +6520,7 @@ function submitSignUp() {
     .then(function() {
       document.getElementById('auth-overlay').style.display = 'none';
       if (!userProfile) {
-        document.getElementById('quiz-overlay').style.display = 'flex';
+        openRiskQuiz();
       }
     })
     .catch(function(err) {
@@ -6760,7 +6810,7 @@ auth.onAuthStateChanged(function(user) {
     document.getElementById('auth-overlay').style.display = 'none';
 
     if (!userProfile) {
-      document.getElementById('quiz-overlay').style.display = 'flex';
+      openRiskQuiz();
     } else {
       document.getElementById('quiz-overlay').style.display = 'none';
       updateRiskBadge();
