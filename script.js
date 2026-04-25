@@ -6860,6 +6860,7 @@ function joinChallenge(challengeId) {
     isPaper: true, isDemo: false,
     challengeId: challengeId,
     challengeTier: challenge.tier || 'intermediate',
+    balanceCurrency: challenge.balanceCurrency || 'USD',
     paperBalance: balance, startingBalance: balance,
     stocks: [], closedPositions: [], valueHistory: []
   };
@@ -6981,9 +6982,10 @@ function renderChallengeSection() {
       var hasJoined = Object.values(all).some(function(p) { return p.challengeId === c.id; });
       var tier = c.tier || 'intermediate';
       var color = TIER_COLORS[tier] || '#0284c7';
-      var sym = _currency === 'MXN' ? 'MX$' : '$';
+      var balCur = c.balanceCurrency || 'USD';
+      var sym = balCur === 'MXN' ? 'MX$' : '$';
       var balance = c.startingBalance || 10000;
-      var balDisplay = sym + balance.toLocaleString('en-US');
+      var balDisplay = sym + balance.toLocaleString('en-US') + ' ' + balCur;
       var prizeHtml = c.prizeDescription
         ? '<span class="challenge-prize-pill">Prize: ' + escHtml(c.prizeDescription) + '</span>'
         : '';
@@ -7099,6 +7101,7 @@ function adminCreateChallenge() {
   var description = (document.getElementById('admin-new-desc') || {}).value || '';
   var tier        = (document.getElementById('admin-new-tier') || {}).value || 'intermediate';
   var balance     = parseFloat((document.getElementById('admin-new-balance') || {}).value) || 10000;
+  var balCurrency = (document.getElementById('admin-new-balance-currency') || {}).value || 'USD';
   var startStr    = (document.getElementById('admin-new-start') || {}).value || '';
   var endStr      = (document.getElementById('admin-new-end') || {}).value || '';
   var prizeType   = (document.getElementById('admin-new-prize-type') || {}).value || '';
@@ -7112,6 +7115,7 @@ function adminCreateChallenge() {
     description: description.trim(),
     tier: tier,
     startingBalance: balance,
+    balanceCurrency: balCurrency,
     startDate: firebase.firestore.Timestamp.fromDate(new Date(startStr)),
     endDate: firebase.firestore.Timestamp.fromDate(new Date(endStr)),
     status: 'draft',

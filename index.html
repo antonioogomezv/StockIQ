@@ -1326,18 +1326,27 @@
               <div class="admin-field">
                 <label>Tier *</label>
                 <select id="admin-new-tier">
-                  <option value="beginner">Beginner ($5,000)</option>
-                  <option value="intermediate" selected>Intermediate ($10,000)</option>
-                  <option value="advanced">Advanced ($25,000)</option>
+                  <option value="beginner">Beginner</option>
+                  <option value="intermediate" selected>Intermediate</option>
+                  <option value="advanced">Advanced</option>
                 </select>
               </div>
               <div class="admin-field admin-field-full">
                 <label>Description *</label>
                 <textarea id="admin-new-desc" rows="2" placeholder="What's the challenge objective?"></textarea>
               </div>
-              <div class="admin-field">
-                <label>Starting Balance ($)</label>
-                <input id="admin-new-balance" type="number" placeholder="10000">
+              <div class="admin-field" style="display:flex;gap:8px;align-items:flex-end;">
+                <div style="flex:1;">
+                  <label>Starting Balance *</label>
+                  <input id="admin-new-balance" type="number" placeholder="10000">
+                </div>
+                <div>
+                  <label>Currency</label>
+                  <select id="admin-new-balance-currency">
+                    <option value="USD">USD $</option>
+                    <option value="MXN">MXN $</option>
+                  </select>
+                </div>
               </div>
               <div class="admin-field">
                 <label>Start Date *</label>
