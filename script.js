@@ -6831,14 +6831,14 @@ function daysLeftText(endTs) {
 function loadActiveChallenges(callback) {
   db.collection('challenges')
     .where('status', '==', 'active')
-    .orderBy('startDate', 'desc')
     .get()
     .then(function(snap) {
       _activeChallenges = [];
       snap.forEach(function(doc) { _activeChallenges.push(Object.assign({ id: doc.id }, doc.data())); });
+      _activeChallenges.sort(function(a, b) { return (b.startDate && b.startDate.seconds || 0) - (a.startDate && a.startDate.seconds || 0); });
       if (callback) callback(_activeChallenges);
     })
-    .catch(function() { if (callback) callback([]); });
+    .catch(function(e) { console.error('loadActiveChallenges error:', e); if (callback) callback([]); });
 }
 
 // ── Join a challenge (creates paper portfolio) ────────────────────────────
@@ -7025,12 +7025,13 @@ function renderAdminPanel() {
   el.style.display = 'block';
 
   // Load all challenges (including drafts/ended) for admin
-  db.collection('challenges').orderBy('startDate', 'desc').limit(20).get()
+  db.collection('challenges').limit(20).get()
     .then(function(snap) {
       var all = [];
       snap.forEach(function(doc) { all.push(Object.assign({ id: doc.id }, doc.data())); });
+      all.sort(function(a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
       renderAdminChallengeList(all);
-    }).catch(function() {});
+    }).catch(function(e) { console.error('renderAdminPanel error:', e); });
 }
 
 function renderAdminChallengeList(challenges) {
