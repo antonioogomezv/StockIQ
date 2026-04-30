@@ -1322,7 +1322,7 @@ button:active { transform: translateY(0); }
 /* ANALYZE LAYOUT */
 #analyze-layout {
   display: grid;
-  grid-template-columns: 220px 1fr 260px;
+  grid-template-columns: 220px 1fr 240px;
   gap: 32px;
   max-width: 1400px;
   margin: 0 auto;
@@ -4819,7 +4819,12 @@ footer {
 .challenge-premium-pill { font-size:10px; font-weight:800; background:linear-gradient(135deg,#d97706,#f59e0b); color:#fff; padding:2px 7px; border-radius:5px; letter-spacing:0.05em; text-transform:uppercase; }
 .challenge-mini-lb-header { font-size:10px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-muted); margin-bottom:8px; padding:0 2px; }
 .challenge-mini-lb-loading { padding:12px 0; color:var(--text-muted); font-size:13px; text-align:center; }
-#analyze-challenge-leaderboard { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; }
+#analyze-challenge-leaderboard { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; overflow:hidden; }
+#analyze-challenge-leaderboard .lb-cols-header,
+#analyze-challenge-leaderboard .lb-row { grid-template-columns: 32px 1fr 56px; gap:6px; padding:8px 6px; font-size:12px; }
+#analyze-challenge-leaderboard .lb-col-score,
+#analyze-challenge-leaderboard .lb-score { display:none; }
+#analyze-challenge-leaderboard .lb-return { font-size:12px; }
 
 /* ── PUBLIC PROFILE MODAL ────────────────────────────────────────────────── */
 .public-profile-modal { background:var(--surface); border-radius:16px; padding:32px 24px 24px; max-width:360px; width:100%; position:relative; box-shadow:0 8px 32px rgba(0,0,0,0.4); text-align:center; }
