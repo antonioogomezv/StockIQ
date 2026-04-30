@@ -4821,10 +4821,10 @@ footer {
 .challenge-mini-lb-loading { padding:12px 0; color:var(--text-muted); font-size:13px; text-align:center; }
 #analyze-challenge-leaderboard { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; overflow:hidden; }
 #analyze-challenge-leaderboard .lb-cols-header,
-#analyze-challenge-leaderboard .lb-row { grid-template-columns: 32px 1fr 56px; gap:6px; padding:8px 6px; font-size:12px; }
+#analyze-challenge-leaderboard .lb-row { grid-template-columns: 32px 1fr 56px !important; gap:6px !important; padding:8px 6px !important; font-size:12px; }
 #analyze-challenge-leaderboard .lb-col-score,
-#analyze-challenge-leaderboard .lb-score { display:none; }
-#analyze-challenge-leaderboard .lb-return { font-size:12px; }
+#analyze-challenge-leaderboard .lb-score { display:none !important; }
+#analyze-challenge-leaderboard .lb-return { font-size:12px; text-align:right; }
 
 /* ── PUBLIC PROFILE MODAL ────────────────────────────────────────────────── */
 .public-profile-modal { background:var(--surface); border-radius:16px; padding:32px 24px 24px; max-width:360px; width:100%; position:relative; box-shadow:0 8px 32px rgba(0,0,0,0.4); text-align:center; }
