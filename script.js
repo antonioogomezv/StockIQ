@@ -7043,19 +7043,135 @@ function renderAdminChallengeList(challenges) {
   var STATUS_COLOR = { draft: '#64748b', active: '#16a34a', ended: '#dc2626' };
   listEl.innerHTML = challenges.map(function(c) {
     var color = STATUS_COLOR[c.status] || '#64748b';
-    return '<div class="admin-challenge-row">' +
+    var startStr = c.startDate ? new Date(c.startDate.seconds * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+    var endStr   = c.endDate   ? new Date(c.endDate.seconds   * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+    var balCur   = c.balanceCurrency || 'USD';
+    var balSym   = balCur === 'MXN' ? 'MX$' : '$';
+    return '<div class="admin-challenge-row" id="admin-row-' + c.id + '">' +
       '<div class="admin-challenge-info">' +
         '<span class="admin-challenge-title">' + escHtml(c.title) + '</span>' +
         '<span class="admin-status-pill" style="color:' + color + ';border-color:' + color + '33;">' + (c.status || 'draft') + '</span>' +
         (c.tier ? '<span class="admin-tier-label">' + c.tier + '</span>' : '') +
+        (startStr ? '<span class="admin-date-label">' + startStr + ' → ' + endStr + '</span>' : '') +
+        '<span class="admin-date-label">' + balSym + (c.startingBalance || 0).toLocaleString('en-US') + ' ' + balCur + '</span>' +
       '</div>' +
       '<div class="admin-challenge-actions">' +
+        (c.status === 'draft' ? '<button class="admin-btn admin-btn-edit" onclick="adminEditChallenge(\'' + c.id + '\')">Edit</button>' : '') +
         (c.status === 'draft' ? '<button class="admin-btn admin-btn-publish" onclick="adminPublishChallenge(\'' + c.id + '\')">Publish</button>' : '') +
-        (c.status === 'active' ? '<button class="admin-btn admin-btn-end" onclick="adminEndChallenge(\'' + c.id + '\')">End & Crown Winner</button>' : '') +
-        (c.status === 'ended' ? '<span class="admin-ended-label">Ended · ' + (c.winnerName ? 'Winner: ' + escHtml(c.winnerName) : 'No winner') + '</span>' : '') +
+        (c.status === 'active' ? '<button class="admin-btn admin-btn-results" onclick="adminToggleResults(\'' + c.id + '\')">Results</button>' : '') +
+        (c.status === 'active' ? '<button class="admin-btn admin-btn-end" onclick="adminEndChallenge(\'' + c.id + '\')">End & Crown</button>' : '') +
+        (c.status === 'ended' ? '<button class="admin-btn admin-btn-results" onclick="adminToggleResults(\'' + c.id + '\')">Results</button>' : '') +
+        (c.status === 'ended' ? '<span class="admin-ended-label">' + (c.winnerName ? 'Winner: ' + escHtml(c.winnerName) : 'No winner') + '</span>' : '') +
+        '<button class="admin-btn admin-btn-delete" onclick="adminDeleteChallenge(\'' + c.id + '\')">Delete</button>' +
       '</div>' +
+      '<div class="admin-results-panel" id="admin-results-' + c.id + '" style="display:none;"></div>' +
     '</div>';
   }).join('');
+}
+
+function adminDeleteChallenge(id) {
+  if (!isAdmin()) return;
+  if (!confirm('Delete this challenge? This cannot be undone.')) return;
+  db.collection('challenges').doc(id).delete()
+    .then(function() { showToast('Challenge deleted.'); renderChallengeSection(); })
+    .catch(function() { showToast('Error deleting challenge'); });
+}
+
+function adminToggleResults(id) {
+  var panel = document.getElementById('admin-results-' + id);
+  if (!panel) return;
+  if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+  panel.innerHTML = '<div class="lb-loading">Loading results…</div>';
+  db.collection('challenges').doc(id).collection('entries')
+    .orderBy('rankScore', 'desc').limit(50).get()
+    .then(function(snap) {
+      var entries = [];
+      snap.forEach(function(doc) { entries.push(Object.assign({ uid: doc.id }, doc.data())); });
+      if (entries.length === 0) { panel.innerHTML = '<div class="lb-empty">No entries yet.</div>'; return; }
+      var medals = ['🥇', '🥈', '🥉'];
+      panel.innerHTML =
+        '<div class="admin-results-header">Results (' + entries.length + ' participants)</div>' +
+        '<div class="lb-cols-header" style="margin-top:8px;">' +
+          '<span class="lb-col-rank">Rank</span>' +
+          '<span class="lb-col-name">Player</span>' +
+          '<span class="lb-col-score">Score</span>' +
+          '<span class="lb-col-return">Return</span>' +
+        '</div>' +
+        entries.map(function(e, i) {
+          var sign = e.returnPct >= 0 ? '+' : '';
+          var retColor = e.returnPct >= 0 ? '#16a34a' : '#dc2626';
+          var rank = medals[i] || ('#' + (i + 1));
+          return '<div class="lb-row">' +
+            '<span class="lb-rank">' + rank + '</span>' +
+            '<span class="lb-name">' + escHtml(e.displayName || 'Investor') + '</span>' +
+            '<span class="lb-score">' + (e.avgScore || '—') + '<span class="lb-score-label">/100</span></span>' +
+            '<span class="lb-return" style="color:' + retColor + ';">' + sign + (e.returnPct || 0).toFixed(2) + '%</span>' +
+          '</div>';
+        }).join('');
+    })
+    .catch(function() { panel.innerHTML = '<div class="lb-empty">Could not load results.</div>'; });
+}
+
+function adminEditChallenge(id) {
+  if (!isAdmin()) return;
+  db.collection('challenges').doc(id).get().then(function(doc) {
+    if (!doc.exists) return;
+    var c = doc.data();
+    // Open the form and pre-fill
+    var form = document.getElementById('admin-create-form');
+    if (form) form.style.display = 'block';
+    var set = function(elId, val) { var el = document.getElementById(elId); if (el) el.value = val || ''; };
+    set('admin-new-title', c.title);
+    set('admin-new-desc', c.description);
+    set('admin-new-tier', c.tier || 'intermediate');
+    set('admin-new-balance', c.startingBalance || 10000);
+    set('admin-new-balance-currency', c.balanceCurrency || 'USD');
+    set('admin-new-start', c.startDate ? new Date(c.startDate.seconds * 1000).toISOString().split('T')[0] : '');
+    set('admin-new-end',   c.endDate   ? new Date(c.endDate.seconds   * 1000).toISOString().split('T')[0] : '');
+    set('admin-new-prize-type', c.prizeType || '');
+    set('admin-new-prize-value', c.prizeValue || '');
+    set('admin-new-prize-desc', c.prizeDescription || '');
+    // Change Save button to update instead of create
+    var saveBtn = document.querySelector('#admin-create-form .admin-btn-save');
+    if (saveBtn) {
+      saveBtn.textContent = 'Save Changes';
+      saveBtn.onclick = function() { adminUpdateChallenge(id); };
+    }
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }).catch(function() { showToast('Could not load challenge'); });
+}
+
+function adminUpdateChallenge(id) {
+  if (!isAdmin()) return;
+  var title       = (document.getElementById('admin-new-title') || {}).value || '';
+  var description = (document.getElementById('admin-new-desc') || {}).value || '';
+  var tier        = (document.getElementById('admin-new-tier') || {}).value || 'intermediate';
+  var balance     = parseFloat((document.getElementById('admin-new-balance') || {}).value) || 10000;
+  var balCurrency = (document.getElementById('admin-new-balance-currency') || {}).value || 'USD';
+  var startStr    = (document.getElementById('admin-new-start') || {}).value || '';
+  var endStr      = (document.getElementById('admin-new-end') || {}).value || '';
+  var prizeType   = (document.getElementById('admin-new-prize-type') || {}).value || '';
+  var prizeDesc   = (document.getElementById('admin-new-prize-desc') || {}).value || '';
+  var prizeValue  = parseFloat((document.getElementById('admin-new-prize-value') || {}).value) || 0;
+  if (!title || !description || !startStr || !endStr) { showToast('Fill in all required fields'); return; }
+  var update = {
+    title: title.trim(), description: description.trim(), tier: tier,
+    startingBalance: balance, balanceCurrency: balCurrency,
+    startDate: firebase.firestore.Timestamp.fromDate(new Date(startStr)),
+    endDate:   firebase.firestore.Timestamp.fromDate(new Date(endStr)),
+    prizeType: prizeType, prizeDescription: prizeDesc, prizeValue: prizeValue
+  };
+  db.collection('challenges').doc(id).update(update)
+    .then(function() {
+      showToast('Challenge updated!');
+      toggleAdminForm();
+      // Reset save button back to create mode
+      var saveBtn = document.querySelector('#admin-create-form .admin-btn-save');
+      if (saveBtn) { saveBtn.textContent = 'Save as Draft'; saveBtn.onclick = adminCreateChallenge; }
+      renderChallengeSection();
+    })
+    .catch(function(e) { showToast('Error: ' + e.message); });
 }
 
 function adminPublishChallenge(id) {

@@ -4762,6 +4762,13 @@ footer {
 .admin-btn-publish { background: #16a34a; color: #fff; border-color: transparent; }
 .admin-btn-end { background: #dc2626; color: #fff; border-color: transparent; }
 .admin-btn-save { background: #7c3aed; color: #fff; border-color: transparent; }
+.admin-btn-delete { background: transparent; color: #ef4444; border-color: #ef444433; }
+.admin-btn-delete:hover { background: #ef444415; opacity: 1; }
+.admin-btn-results { background: #0ea5e9; color: #fff; border-color: transparent; }
+.admin-btn-edit { background: #d97706; color: #fff; border-color: transparent; }
+.admin-date-label { font-size: 11px; color: var(--text-muted); }
+.admin-results-panel { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+.admin-results-header { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
 #admin-create-form { background: var(--surface2); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
 .admin-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
 .admin-field { display: flex; flex-direction: column; gap: 4px; }
