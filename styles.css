@@ -1334,7 +1334,6 @@ button:active { transform: translateY(0); }
   top: 90px;
   max-height: calc(100vh - 120px);
   overflow-y: auto;
-  display: flex;
   flex-direction: column;
   gap: 12px;
 }

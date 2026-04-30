@@ -7338,9 +7338,12 @@ function renderAnalyzeChallengeBanner() {
 }
 
 function _renderAnalyzeChallengeBannerUI(bannerEl, lbEl, all) {
+  var sidebar = document.getElementById('analyze-challenge-sidebar');
   if (!_activeChallenges || _activeChallenges.length === 0) {
-    bannerEl.style.display = 'none'; lbEl.style.display = 'none'; return;
+    if (sidebar) sidebar.style.display = 'none';
+    return;
   }
+  if (sidebar) sidebar.style.display = 'flex';
   var c = _activeChallenges[0];
   var hasJoined = Object.values(all).some(function(p) { return p.challengeId === c.id; });
   var daysLeft = daysLeftText(c.endDate);
@@ -7350,7 +7353,6 @@ function _renderAnalyzeChallengeBannerUI(bannerEl, lbEl, all) {
   var actionHtml = hasJoined
     ? '<span id="analyze-banner-rank" class="challenge-banner-rank"></span><button class="challenge-banner-btn challenge-banner-btn-view" onclick="showTab(\'profile\')">View Rank</button>'
     : '<button class="challenge-banner-btn" onclick="joinChallenge(\'' + c.id + '\')">Join Challenge</button>';
-  bannerEl.style.display = 'block';
   bannerEl.innerHTML =
     '<div class="challenge-banner">' +
       '<div class="challenge-banner-left">' +
@@ -7364,7 +7366,6 @@ function _renderAnalyzeChallengeBannerUI(bannerEl, lbEl, all) {
       '</div>' +
       '<div class="challenge-banner-right">' + actionHtml + '</div>' +
     '</div>';
-  lbEl.style.display = 'block';
   lbEl.innerHTML = '<div class="challenge-mini-lb-loading">Loading leaderboard…</div>';
   _renderMiniLeaderboard(c.id, lbEl);
 }
