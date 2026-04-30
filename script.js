@@ -327,6 +327,7 @@ function showTab(name) {
     var sp = document.getElementById('screener-panel');
     var rs = document.getElementById('results-section');
     if (sp && rs && rs.style.display === 'none') sp.style.display = 'block';
+    renderAnalyzeChallengeBanner();
   }
 }
 
@@ -5458,7 +5459,7 @@ function renderPortfolio() {
 
     if (totalValue > 0) savePortfolioValueHistory(totalValue);
     // Update weekly challenge leaderboard entry (throttled — only if portfolio has challenge)
-    if (active && active.challengeId) updateChallengeEntry(totalValue, totalCost, avgScore);
+    if (active && active.challengeId) updateChallengeEntry(totalValue, totalCost, avgScore, stockData);
     renderPortfolioChart(stockData, totalValue);
     renderHoldingsChart();
     renderSectorAllocation(stockData, totalValue);
@@ -6845,6 +6846,21 @@ function loadActiveChallenges(callback) {
 function joinChallenge(challengeId) {
   var challenge = _activeChallenges.find(function(c) { return c.id === challengeId; });
   if (!challenge) return;
+  // Premium gate
+  if (challenge.isPremium) {
+    var uid = currentUid();
+    if (!uid) { showToast('Sign in to join premium challenges.'); return; }
+    db.collection('users').doc(uid).get().then(function(doc) {
+      var data = doc.exists ? doc.data() : {};
+      if (!data.isPremium) { showToast('This is a Premium challenge. Contact us to upgrade.'); return; }
+      _doJoinChallenge(challengeId, challenge);
+    }).catch(function() { showToast('Could not verify premium status. Try again.'); });
+    return;
+  }
+  _doJoinChallenge(challengeId, challenge);
+}
+
+function _doJoinChallenge(challengeId, challenge) {
   var all = getAllPortfolios();
   var existing = Object.entries(all).find(function(e) { return e[1].challengeId === challengeId; });
   if (existing) {
@@ -6875,7 +6891,7 @@ function joinChallenge(challengeId) {
 }
 
 // ── Update leaderboard entry in Firestore ─────────────────────────────────
-function updateChallengeEntry(totalValueUSD, totalCostUSD, avgScore) {
+function updateChallengeEntry(totalValueUSD, totalCostUSD, avgScore, stockData) {
   var uid = currentUid();
   if (!uid) return;
   var all = getAllPortfolios();
@@ -6886,6 +6902,9 @@ function updateChallengeEntry(totalValueUSD, totalCostUSD, avgScore) {
   var returnPct = totalCostUSD > 0 ? ((totalValueUSD - totalCostUSD) / totalCostUSD * 100) : 0;
   var scoreWeight = avgScore || 0;
   var rankScore = returnPct * ((scoreWeight > 0 ? scoreWeight : 50) / 100);
+  var holdings = (stockData || []).map(function(s) {
+    return { ticker: s.ticker, shares: parseFloat((s.shares || 0).toFixed(4)), currentValue: parseFloat((s.value || 0).toFixed(2)) };
+  });
   db.collection('challenges').doc(challengeId).collection('entries').doc(uid).set({
     displayName: getDisplayName(),
     tier: p.challengeTier || 'intermediate',
@@ -6895,6 +6914,7 @@ function updateChallengeEntry(totalValueUSD, totalCostUSD, avgScore) {
     portfolioValue: parseFloat(totalValueUSD.toFixed(2)),
     cashBalance: parseFloat((p.paperBalance || 0).toFixed(2)),
     startingBalance: parseFloat((p.startingBalance || 10000).toFixed(2)),
+    holdings: holdings,
     updatedAt: Date.now()
   }, { merge: true }).catch(function() {});
 }
@@ -6928,6 +6948,7 @@ function renderLeaderboardEntries(entries, bodyId, myRankId) {
     if (myRankEl) myRankEl.style.display = 'none';
     return;
   }
+  _profileLbEntries = entries;
   var medals = ['🥇', '🥈', '🥉'];
   var top10 = entries.slice(0, 10);
   var myIdx = entries.findIndex(function(e) { return e.uid === uid; });
@@ -6936,7 +6957,7 @@ function renderLeaderboardEntries(entries, bodyId, myRankId) {
     var rank = medals[i] || ('#' + (i + 1));
     var sign = e.returnPct >= 0 ? '+' : '';
     var retColor = e.returnPct >= 0 ? '#16a34a' : '#dc2626';
-    return '<div class="lb-row' + (isMe ? ' lb-row-me' : '') + '">' +
+    return '<div class="lb-row' + (isMe ? ' lb-row-me' : '') + '" data-idx="' + i + '" onclick="openPublicProfileModal(\'profile\',' + i + ')" style="cursor:pointer;">' +
       '<span class="lb-rank">' + rank + '</span>' +
       '<span class="lb-name">' + escHtml(e.displayName || 'Investor') + (isMe ? ' <span class="lb-you-badge">You</span>' : '') + '</span>' +
       '<span class="lb-score">' + (e.avgScore || '—') + '<span class="lb-score-label">/100</span></span>' +
@@ -7103,15 +7124,29 @@ function adminToggleResults(id) {
           var sign = e.returnPct >= 0 ? '+' : '';
           var retColor = e.returnPct >= 0 ? '#16a34a' : '#dc2626';
           var rank = medals[i] || ('#' + (i + 1));
-          return '<div class="lb-row">' +
+          var holdingsHtml = '';
+          if (e.holdings && e.holdings.length > 0) {
+            holdingsHtml = '<div class="admin-holdings-panel" id="admin-h-' + id + '-' + i + '" style="display:none;">' +
+              '<div class="admin-holdings-row" style="font-weight:700;color:var(--text-muted);font-size:11px;"><span>Ticker</span><span>Shares</span><span>Value</span></div>' +
+              e.holdings.map(function(h) {
+                return '<div class="admin-holdings-row"><span>' + escHtml(h.ticker) + '</span><span>' + h.shares + '</span><span>$' + (h.currentValue || 0).toLocaleString('en-US') + '</span></div>';
+              }).join('') +
+            '</div>';
+          }
+          return '<div class="lb-row admin-result-row" onclick="adminToggleHoldings(\'admin-h-' + id + '-' + i + '\')" style="cursor:pointer;">' +
             '<span class="lb-rank">' + rank + '</span>' +
-            '<span class="lb-name">' + escHtml(e.displayName || 'Investor') + '</span>' +
+            '<span class="lb-name">' + escHtml(e.displayName || 'Investor') + (e.holdings && e.holdings.length ? ' <span class="admin-holdings-toggle">▾</span>' : '') + '</span>' +
             '<span class="lb-score">' + (e.avgScore || '—') + '<span class="lb-score-label">/100</span></span>' +
             '<span class="lb-return" style="color:' + retColor + ';">' + sign + (e.returnPct || 0).toFixed(2) + '%</span>' +
-          '</div>';
+          '</div>' + holdingsHtml;
         }).join('');
     })
     .catch(function() { panel.innerHTML = '<div class="lb-empty">Could not load results.</div>'; });
+}
+
+function adminToggleHoldings(panelId) {
+  var el = document.getElementById(panelId);
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 
 function adminEditChallenge(id) {
@@ -7133,6 +7168,10 @@ function adminEditChallenge(id) {
     set('admin-new-prize-type', c.prizeType || '');
     set('admin-new-prize-value', c.prizeValue || '');
     set('admin-new-prize-desc', c.prizeDescription || '');
+    set('admin-new-challenge-type', c.challengeType || 'Best Return');
+    set('admin-new-win-factor', c.winFactor || 'return_pct');
+    set('admin-new-rules', c.rules || '');
+    var premEl = document.getElementById('admin-new-is-premium'); if (premEl) premEl.checked = !!(c.isPremium);
     // Change Save button to update instead of create
     var saveBtn = document.querySelector('#admin-create-form .admin-btn-save');
     if (saveBtn) {
@@ -7152,16 +7191,21 @@ function adminUpdateChallenge(id) {
   var balCurrency = (document.getElementById('admin-new-balance-currency') || {}).value || 'USD';
   var startStr    = (document.getElementById('admin-new-start') || {}).value || '';
   var endStr      = (document.getElementById('admin-new-end') || {}).value || '';
-  var prizeType   = (document.getElementById('admin-new-prize-type') || {}).value || '';
-  var prizeDesc   = (document.getElementById('admin-new-prize-desc') || {}).value || '';
-  var prizeValue  = parseFloat((document.getElementById('admin-new-prize-value') || {}).value) || 0;
+  var prizeType     = (document.getElementById('admin-new-prize-type') || {}).value || '';
+  var prizeDesc     = (document.getElementById('admin-new-prize-desc') || {}).value || '';
+  var prizeValue    = parseFloat((document.getElementById('admin-new-prize-value') || {}).value) || 0;
+  var challengeType = (document.getElementById('admin-new-challenge-type') || {}).value || 'Best Return';
+  var winFactor     = (document.getElementById('admin-new-win-factor') || {}).value || 'return_pct';
+  var isPremium     = !!(document.getElementById('admin-new-is-premium') || {}).checked;
+  var rules         = (document.getElementById('admin-new-rules') || {}).value || '';
   if (!title || !description || !startStr || !endStr) { showToast('Fill in all required fields'); return; }
   var update = {
     title: title.trim(), description: description.trim(), tier: tier,
     startingBalance: balance, balanceCurrency: balCurrency,
     startDate: firebase.firestore.Timestamp.fromDate(new Date(startStr)),
     endDate:   firebase.firestore.Timestamp.fromDate(new Date(endStr)),
-    prizeType: prizeType, prizeDescription: prizeDesc, prizeValue: prizeValue
+    prizeType: prizeType, prizeDescription: prizeDesc, prizeValue: prizeValue,
+    challengeType: challengeType, winFactor: winFactor, isPremium: isPremium, rules: rules.trim()
   };
   db.collection('challenges').doc(id).update(update)
     .then(function() {
@@ -7221,9 +7265,13 @@ function adminCreateChallenge() {
   var balCurrency = (document.getElementById('admin-new-balance-currency') || {}).value || 'USD';
   var startStr    = (document.getElementById('admin-new-start') || {}).value || '';
   var endStr      = (document.getElementById('admin-new-end') || {}).value || '';
-  var prizeType   = (document.getElementById('admin-new-prize-type') || {}).value || '';
-  var prizeDesc   = (document.getElementById('admin-new-prize-desc') || {}).value || '';
-  var prizeValue  = parseFloat((document.getElementById('admin-new-prize-value') || {}).value) || 0;
+  var prizeType      = (document.getElementById('admin-new-prize-type') || {}).value || '';
+  var prizeDesc      = (document.getElementById('admin-new-prize-desc') || {}).value || '';
+  var prizeValue     = parseFloat((document.getElementById('admin-new-prize-value') || {}).value) || 0;
+  var challengeType  = (document.getElementById('admin-new-challenge-type') || {}).value || 'Best Return';
+  var winFactor      = (document.getElementById('admin-new-win-factor') || {}).value || 'return_pct';
+  var isPremium      = !!(document.getElementById('admin-new-is-premium') || {}).checked;
+  var rules          = (document.getElementById('admin-new-rules') || {}).value || '';
 
   if (!title || !description || !startStr || !endStr) { showToast('Fill in all required fields'); return; }
 
@@ -7235,6 +7283,10 @@ function adminCreateChallenge() {
     balanceCurrency: balCurrency,
     startDate: firebase.firestore.Timestamp.fromDate(new Date(startStr)),
     endDate: firebase.firestore.Timestamp.fromDate(new Date(endStr)),
+    challengeType: challengeType,
+    winFactor: winFactor,
+    isPremium: isPremium,
+    rules: rules.trim(),
     status: 'draft',
     createdAt: Date.now()
   };
@@ -7249,9 +7301,10 @@ function adminCreateChallenge() {
     .then(function() {
       showToast('Challenge saved as draft!');
       // Clear form
-      ['admin-new-title','admin-new-desc','admin-new-start','admin-new-end','admin-new-prize-desc','admin-new-prize-value'].forEach(function(id) {
+      ['admin-new-title','admin-new-desc','admin-new-start','admin-new-end','admin-new-prize-desc','admin-new-prize-value','admin-new-rules'].forEach(function(id) {
         var el = document.getElementById(id); if (el) el.value = '';
       });
+      var premEl = document.getElementById('admin-new-is-premium'); if (premEl) premEl.checked = false;
       renderChallengeSection();
     })
     .catch(function(e) { showToast('Error: ' + e.message); });
@@ -7259,7 +7312,153 @@ function adminCreateChallenge() {
 
 function toggleAdminForm() {
   var form = document.getElementById('admin-create-form');
-  if (form) form.style.display = form.style.display === 'none' ? 'block' : 'none';
+  if (!form) return;
+  var isHiding = form.style.display !== 'none';
+  form.style.display = isHiding ? 'none' : 'block';
+  if (isHiding) {
+    // Reset save button back to create mode when closing
+    var saveBtn = document.querySelector('#admin-create-form .admin-btn-save');
+    if (saveBtn) { saveBtn.textContent = 'Save as Draft'; saveBtn.onclick = adminCreateChallenge; }
+  }
+}
+
+// ── Analyze tab challenge banner ───────────────────────────────────────────
+var _miniLbEntries = [];
+
+function renderAnalyzeChallengeBanner() {
+  var bannerEl = document.getElementById('analyze-challenge-banner');
+  var lbEl = document.getElementById('analyze-challenge-leaderboard');
+  if (!bannerEl || !lbEl) return;
+  var all = getAllPortfolios();
+  if (_activeChallenges && _activeChallenges.length > 0) {
+    _renderAnalyzeChallengeBannerUI(bannerEl, lbEl, all);
+  } else {
+    loadActiveChallenges(function() { _renderAnalyzeChallengeBannerUI(bannerEl, lbEl, all); });
+  }
+}
+
+function _renderAnalyzeChallengeBannerUI(bannerEl, lbEl, all) {
+  if (!_activeChallenges || _activeChallenges.length === 0) {
+    bannerEl.style.display = 'none'; lbEl.style.display = 'none'; return;
+  }
+  var c = _activeChallenges[0];
+  var hasJoined = Object.values(all).some(function(p) { return p.challengeId === c.id; });
+  var daysLeft = daysLeftText(c.endDate);
+  var typeText = c.challengeType ? escHtml(c.challengeType) : '';
+  var prizeText = c.prizeDescription ? 'Prize: ' + escHtml(c.prizeDescription) : '';
+  var premiumBadge = c.isPremium ? '<span class="challenge-premium-pill">Premium</span>' : '';
+  var actionHtml = hasJoined
+    ? '<span id="analyze-banner-rank" class="challenge-banner-rank"></span><button class="challenge-banner-btn challenge-banner-btn-view" onclick="showTab(\'profile\')">View Rank</button>'
+    : '<button class="challenge-banner-btn" onclick="joinChallenge(\'' + c.id + '\')">Join Challenge</button>';
+  bannerEl.style.display = 'block';
+  bannerEl.innerHTML =
+    '<div class="challenge-banner">' +
+      '<div class="challenge-banner-left">' +
+        '<div class="challenge-banner-title">' + escHtml(c.title) + premiumBadge + '</div>' +
+        '<div class="challenge-banner-meta">' +
+          (typeText ? '<span class="challenge-banner-type">' + typeText + '</span>' : '') +
+          (prizeText ? '<span class="challenge-banner-prize">' + prizeText + '</span>' : '') +
+          (daysLeft ? '<span class="challenge-banner-timer">' + daysLeft + '</span>' : '') +
+          (c.rules ? '<span class="challenge-banner-timer">' + escHtml(c.rules) + '</span>' : '') +
+        '</div>' +
+      '</div>' +
+      '<div class="challenge-banner-right">' + actionHtml + '</div>' +
+    '</div>';
+  lbEl.style.display = 'block';
+  lbEl.innerHTML = '<div class="challenge-mini-lb-loading">Loading leaderboard…</div>';
+  _renderMiniLeaderboard(c.id, lbEl);
+}
+
+function _renderMiniLeaderboard(challengeId, containerEl) {
+  var uid = currentUid();
+  db.collection('challenges').doc(challengeId).collection('entries')
+    .orderBy('rankScore', 'desc').limit(50).get()
+    .then(function(snap) {
+      _miniLbEntries = [];
+      snap.forEach(function(doc) { _miniLbEntries.push(Object.assign({ uid: doc.id }, doc.data())); });
+      if (_miniLbEntries.length === 0) { containerEl.innerHTML = '<div class="lb-empty" style="padding:12px 0;">No entries yet — be the first to join!</div>'; return; }
+      var top3 = _miniLbEntries.slice(0, 3);
+      var medals = ['🥇','🥈','🥉'];
+      var myIdx = _miniLbEntries.findIndex(function(e) { return e.uid === uid; });
+      var rowsHtml = top3.map(function(e, i) {
+        var isMe = e.uid === uid;
+        var sign = e.returnPct >= 0 ? '+' : '';
+        var retColor = e.returnPct >= 0 ? '#16a34a' : '#dc2626';
+        return '<div class="lb-row' + (isMe ? ' lb-row-me' : '') + '" data-source="mini" data-idx="' + i + '" onclick="openPublicProfileModal(\'mini\',' + i + ')" style="cursor:pointer;">' +
+          '<span class="lb-rank">' + medals[i] + '</span>' +
+          '<span class="lb-name">' + escHtml(e.displayName || 'Investor') + (isMe ? ' <span class="lb-you-badge">You</span>' : '') + '</span>' +
+          '<span class="lb-score">' + (e.avgScore || '—') + '<span class="lb-score-label">/100</span></span>' +
+          '<span class="lb-return" style="color:' + retColor + ';">' + sign + (e.returnPct || 0).toFixed(2) + '%</span>' +
+        '</div>';
+      }).join('');
+      var myRowHtml = '';
+      if (myIdx >= 3) {
+        var me = _miniLbEntries[myIdx];
+        var sign = me.returnPct >= 0 ? '+' : '';
+        myRowHtml = '<div class="lb-row lb-row-me">' +
+          '<span class="lb-rank">#' + (myIdx + 1) + '</span>' +
+          '<span class="lb-name">' + escHtml(me.displayName || 'You') + ' <span class="lb-you-badge">You</span></span>' +
+          '<span class="lb-score">' + (me.avgScore || '—') + '<span class="lb-score-label">/100</span></span>' +
+          '<span class="lb-return">' + sign + (me.returnPct || 0).toFixed(2) + '%</span>' +
+        '</div>';
+      }
+      containerEl.innerHTML =
+        '<div class="challenge-mini-lb-header">Top Performers</div>' +
+        '<div class="lb-cols-header"><span class="lb-col-rank">Rank</span><span class="lb-col-name">Player</span><span class="lb-col-score">Avg Score</span><span class="lb-col-return">Return</span></div>' +
+        rowsHtml + myRowHtml;
+      // Update banner rank if joined
+      if (myIdx >= 0) {
+        var rankEl = document.getElementById('analyze-banner-rank');
+        if (rankEl) rankEl.textContent = '#' + (myIdx + 1) + ' · ';
+      }
+    })
+    .catch(function() { containerEl.innerHTML = '<div class="lb-empty">Could not load leaderboard.</div>'; });
+}
+
+// ── Public profile modal ───────────────────────────────────────────────────
+var _profileLbEntries = [];
+
+function openPublicProfileModal(source, idx) {
+  var entry = source === 'mini' ? _miniLbEntries[idx] : _profileLbEntries[idx];
+  if (!entry) return;
+  var existing = document.getElementById('public-profile-overlay');
+  if (existing) existing.remove();
+  var name = entry.displayName || 'Investor';
+  var initials = name.split(' ').map(function(w) { return w[0] || ''; }).join('').toUpperCase().slice(0, 2) || '?';
+  var hue = (name.charCodeAt(0) * 37 + ((name.charCodeAt(1) || 0) * 13)) % 360;
+  var avatarStyle = 'background:linear-gradient(135deg,hsl(' + hue + ',65%,55%),hsl(' + ((hue + 40) % 360) + ',75%,45%));';
+  var sign = entry.returnPct >= 0 ? '+' : '';
+  var retColor = entry.returnPct >= 0 ? '#16a34a' : '#dc2626';
+  var overlay = document.createElement('div');
+  overlay.id = 'public-profile-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:3000;display:flex;align-items:center;justify-content:center;padding:24px;';
+  overlay.innerHTML =
+    '<div class="public-profile-modal">' +
+      '<button class="public-profile-close" onclick="document.getElementById(\'public-profile-overlay\').remove()">✕</button>' +
+      '<div class="public-profile-avatar" style="' + avatarStyle + '">' + escHtml(initials) + '</div>' +
+      '<div class="public-profile-name">' + escHtml(name) + '</div>' +
+      '<div class="public-profile-stats">' +
+        '<div class="public-profile-stat"><span class="public-profile-stat-val" style="color:' + retColor + ';">' + sign + (entry.returnPct || 0).toFixed(2) + '%</span><span class="public-profile-stat-label">Return</span></div>' +
+        '<div class="public-profile-stat"><span class="public-profile-stat-val">' + (entry.avgScore || '—') + '</span><span class="public-profile-stat-label">Avg Score</span></div>' +
+        '<div class="public-profile-stat"><span class="public-profile-stat-val">' + (entry.portfolioValue ? '$' + parseFloat(entry.portfolioValue).toLocaleString('en-US', {maximumFractionDigits:0}) : '—') + '</span><span class="public-profile-stat-label">Portfolio</span></div>' +
+      '</div>' +
+      '<div id="public-profile-badges-' + entry.uid + '" class="public-profile-badges"></div>' +
+    '</div>';
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+  // Async load badges
+  if (entry.uid) {
+    db.collection('users').doc(entry.uid).get().then(function(doc) {
+      var badgesEl = document.getElementById('public-profile-badges-' + entry.uid);
+      if (!badgesEl || !doc.exists) return;
+      var data = doc.data();
+      var badges = data.badges || [];
+      if (badges.length === 0) return;
+      badgesEl.innerHTML = badges.slice(0, 8).map(function(b) {
+        return '<span class="public-profile-badge" title="' + escHtml(b.name || '') + '">' + (b.icon || '🏅') + '</span>';
+      }).join('');
+    }).catch(function() {});
+  }
 }
 
 // ── PRIZE CLAIM ───────────────────────────────────────────────────────────

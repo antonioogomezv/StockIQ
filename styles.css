@@ -4791,6 +4791,42 @@ footer {
 .badge-icon-locked { opacity: 0.4; }
 .badge-item.locked { opacity: 0.35; filter: grayscale(0.5); }
 
+/* ── ANALYZE TAB CHALLENGE BANNER ───────────────────────────────────────── */
+.challenge-banner { display:flex; align-items:center; justify-content:space-between; gap:12px; background:var(--surface); border:1px solid var(--border); border-left:3px solid #7c3aed; border-radius:14px; padding:16px 20px; margin-bottom:14px; flex-wrap:wrap; }
+.challenge-banner-left { display:flex; flex-direction:column; gap:6px; flex:1; min-width:0; }
+.challenge-banner-title { font-size:15px; font-weight:700; color:var(--text); display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.challenge-banner-meta { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.challenge-banner-type { font-size:11px; font-weight:600; background:rgba(2,132,199,0.12); color:#0284c7; padding:3px 8px; border-radius:6px; }
+.challenge-banner-prize { font-size:11px; font-weight:600; background:rgba(217,119,6,0.12); color:#d97706; padding:3px 8px; border-radius:6px; }
+.challenge-banner-timer { font-size:11px; color:var(--text-muted); }
+.challenge-banner-right { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+.challenge-banner-rank { font-size:13px; font-weight:700; color:#7c3aed; }
+.challenge-banner-btn { padding:9px 18px; border-radius:9px; border:none; background:#7c3aed; color:#fff; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap; transition:opacity 0.15s; }
+.challenge-banner-btn:hover { opacity:0.85; }
+.challenge-banner-btn-view { background:#0284c7; }
+.challenge-premium-pill { font-size:10px; font-weight:800; background:linear-gradient(135deg,#d97706,#f59e0b); color:#fff; padding:2px 7px; border-radius:5px; letter-spacing:0.05em; text-transform:uppercase; }
+.challenge-mini-lb-header { font-size:10px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-muted); margin-bottom:8px; padding:0 2px; }
+.challenge-mini-lb-loading { padding:12px 0; color:var(--text-muted); font-size:13px; text-align:center; }
+#analyze-challenge-leaderboard { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:14px; }
+
+/* ── PUBLIC PROFILE MODAL ────────────────────────────────────────────────── */
+.public-profile-modal { background:var(--surface); border-radius:16px; padding:32px 24px 24px; max-width:360px; width:100%; position:relative; box-shadow:0 8px 32px rgba(0,0,0,0.4); text-align:center; }
+.public-profile-close { position:absolute; top:12px; right:14px; background:none; border:none; font-size:18px; cursor:pointer; color:var(--text-muted); padding:4px 8px; }
+.public-profile-avatar { width:72px; height:72px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:26px; font-weight:800; color:#fff; margin:0 auto 12px; }
+.public-profile-name { font-size:18px; font-weight:700; color:var(--text); margin-bottom:16px; }
+.public-profile-stats { display:flex; gap:24px; justify-content:center; flex-wrap:wrap; margin-bottom:16px; }
+.public-profile-stat { display:flex; flex-direction:column; align-items:center; gap:3px; }
+.public-profile-stat-val { font-size:18px; font-weight:700; color:var(--text); }
+.public-profile-stat-label { font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; }
+.public-profile-badges { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-top:8px; }
+.public-profile-badge { font-size:22px; cursor:default; }
+
+/* ── ADMIN HOLDINGS PANEL ────────────────────────────────────────────────── */
+.admin-holdings-panel { padding:10px 14px; background:var(--surface2); border-radius:8px; margin:4px 0 8px; font-size:12px; }
+.admin-holdings-row { display:grid; grid-template-columns:80px 1fr 1fr; gap:8px; padding:5px 0; border-bottom:1px solid var(--border); color:var(--text); }
+.admin-holdings-row:last-child { border-bottom:none; }
+.admin-holdings-toggle { font-size:11px; color:var(--text-muted); margin-left:4px; }
+
 /* ── PRIZE CLAIM MODAL ───────────────────────────────────────────────────── */
 .claim-modal { background: var(--surface); border-radius: 16px; padding: 28px 24px; max-width: 400px; width: 100%; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
 .claim-modal-title { font-size: 18px; font-weight: 700; margin-bottom: 6px; }

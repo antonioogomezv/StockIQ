@@ -833,6 +833,8 @@
 
       <!-- RIGHT: Main content -->
       <main>
+      <div id="analyze-challenge-banner" style="display:none;"></div>
+      <div id="analyze-challenge-leaderboard" style="display:none;"></div>
       <div id="search-section">
         <div id="search-input-row">
           <div id="search-input-wrap">
@@ -1372,6 +1374,35 @@
               <div class="admin-field admin-field-full">
                 <label>Prize Description</label>
                 <input id="admin-new-prize-desc" placeholder="e.g. $50 Amazon Gift Card">
+              </div>
+              <div class="admin-field">
+                <label>Challenge Type</label>
+                <select id="admin-new-challenge-type">
+                  <option value="Best Return">Best Return</option>
+                  <option value="Tech Stocks Only">Tech Stocks Only</option>
+                  <option value="No Loss Challenge">No Loss Challenge</option>
+                  <option value="Most Diversified">Most Diversified</option>
+                  <option value="Dividend Hunter">Dividend Hunter</option>
+                  <option value="Custom">Custom</option>
+                </select>
+              </div>
+              <div class="admin-field">
+                <label>Win Condition</label>
+                <select id="admin-new-win-factor">
+                  <option value="return_pct">Best Return %</option>
+                  <option value="score_weighted">Score-Weighted Return</option>
+                  <option value="lowest_drawdown">Lowest Drawdown</option>
+                  <option value="most_sectors">Most Sectors</option>
+                  <option value="dividend_yield">Best Dividend Yield</option>
+                </select>
+              </div>
+              <div class="admin-field" style="flex-direction:row;align-items:center;gap:10px;">
+                <input type="checkbox" id="admin-new-is-premium" style="width:auto;margin:0;">
+                <label style="text-transform:none;font-size:13px;font-weight:600;color:var(--text);">Premium only</label>
+              </div>
+              <div class="admin-field admin-field-full">
+                <label>Rules / Restrictions</label>
+                <textarea id="admin-new-rules" rows="2" placeholder="e.g. Only tech stocks allowed, max 5 positions"></textarea>
               </div>
             </div>
             <div class="admin-form-actions">
