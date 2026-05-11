@@ -293,6 +293,9 @@ let portfolioLineChartInstance = null;
 let allChartPrices = [];
 let allChartDates = [];
 let allChartVolumes = [];
+let allChartOHLC = [];
+let _chartMode = 'line'; // 'line' | 'candle'
+let _chartOHLCSlice = [];
 let chartPrevClose = 0;
 let chartDayHigh = 0;
 let chartDayLow = 0;
@@ -575,26 +578,28 @@ function searchStock() {
           return;
         }
 
-        let data = { ticker, quote, profile, news, metrics, prices: [], dates: [], volumes: [], earningsData, pastEarnings, isEtf, etfProfile, etfHoldings };
+        let data = { ticker, quote, profile, news, metrics, prices: [], dates: [], volumes: [], ohlc: [], earningsData, pastEarnings, isEtf, etfProfile, etfHoldings };
         cache[query] = data;
         displayData(data);
 
         // Load chart separately — doesn't block the main results
         historyPromise.then(function(history) {
-          let prices = [], dates = [], volumes = [];
+          let prices = [], dates = [], volumes = [], ohlc = [];
           if (history.results && history.results.length > 0) {
             localStorage.setItem("poly_" + ticker, JSON.stringify({ ts: Date.now(), data: history }));
             history.results.forEach(function(bar) {
               dates.push(new Date(bar.t).toISOString().split("T")[0]);
               prices.push(bar.c);
               volumes.push(bar.v || 0);
+              ohlc.push({ o: bar.o || bar.c, h: bar.h || bar.c, l: bar.l || bar.c, c: bar.c });
             });
           }
           cache[query].prices  = prices;
           cache[query].dates   = dates;
           cache[query].volumes = volumes;
+          cache[query].ohlc    = ohlc;
           let q = cache[query].quote || {};
-          loadChart(prices, dates, volumes, q.pc || 0, q.h || 0, q.l || 0, metrics['52WeekHigh'] || 0);
+          loadChart(prices, dates, volumes, ohlc, q.pc || 0, q.h || 0, q.l || 0, metrics['52WeekHigh'] || 0);
           updateTechnicalFactors(prices, q.c || 0);
         }).catch(function() {});
       });
@@ -1038,7 +1043,7 @@ function displayData(data) {
   let chatEl = document.getElementById('ai-chat');
   if (chatEl) { chatEl.style.display = 'none'; document.getElementById('ai-chat-messages').innerHTML = ''; document.getElementById('ai-chat-suggestions').style.display = 'flex'; }
   getAIExplanation(ticker, companyName, totalScore, changePct, pe, margin, growth, beta, rsi, ma50, price, topHeadline, roe, currentRatio, interestCoverage);
-  loadChart(prices, dates, volumes || [], prevClose, dayHigh, dayLow, week52High);
+  loadChart(prices, dates, volumes || [], data.ohlc || [], prevClose, dayHigh, dayLow, week52High);
 
   if (isEtf) {
     renderEtfAbout(profile, etfProfile);
@@ -1888,16 +1893,19 @@ function updateTechnicalFactors(prices, price) {
   }
 }
 
-function loadChart(prices, dates, volumes, prevClose, dayHigh, dayLow, week52High) {
+function loadChart(prices, dates, volumes, ohlc, prevClose, dayHigh, dayLow, week52High) {
   if (!prices || prices.length === 0) {
     document.getElementById("chart-section").style.display = "none";
     return;
   }
   document.getElementById("chart-section").style.display = "block";
+  _chartMode = 'line'; // reset to line on new stock
+  document.querySelectorAll('.chart-type-btn').forEach(function(b) { b.classList.toggle('active', b.dataset.mode === 'line'); });
 
   allChartPrices   = prices;
   allChartDates    = dates;
   allChartVolumes  = volumes || [];
+  allChartOHLC     = ohlc || [];
   chartPrevClose   = prevClose || 0;
   chartDayHigh     = dayHigh || 0;
   chartDayLow      = dayLow || 0;
@@ -1918,13 +1926,22 @@ function setChartRange(range) {
   document.querySelectorAll('.range-btn').forEach(function(b) { b.classList.remove('active'); });
   let btn = document.querySelector('.range-btn[data-range="' + range + '"]');
   if (btn) btn.classList.add('active');
-
-  let count = range === '1W' ? 7 : range === '1M' ? 30 : allChartPrices.length;
+  let countMap = { '1W': 7, '1M': 30, '3M': 90, '6M': 180, '1Y': 365 };
+  let count = countMap[range] || allChartPrices.length;
   let prices  = allChartPrices.slice(-count);
   let dates   = allChartDates.slice(-count);
   let volumes = allChartVolumes.slice(-count);
-  renderPriceChart(prices, dates, volumes);
+  let ohlc    = allChartOHLC.slice(-count);
+  _chartOHLCSlice = ohlc;
+  renderPriceChart(prices, dates, volumes, ohlc);
   renderChartInsight(prices, range);
+}
+
+function toggleChartMode(mode) {
+  _chartMode = mode;
+  document.querySelectorAll('.chart-type-btn').forEach(function(b) { b.classList.toggle('active', b.dataset.mode === mode); });
+  let active = document.querySelector('.range-btn.active');
+  setChartRange(active ? active.dataset.range : '1M');
 }
 
 function renderChartInsight(prices, range) {
@@ -1977,7 +1994,11 @@ function renderChartInsight(prices, range) {
   el.innerHTML = '<div class="chart-insight-box">' + items + '</div>';
 }
 
-function renderPriceChart(prices, dates, volumes) {
+function renderPriceChart(prices, dates, volumes, ohlc) {
+  if (_chartMode === 'candle' && ohlc && ohlc.length > 0) {
+    renderCandlestickChart(ohlc, dates, volumes);
+    return;
+  }
   if (chartInstance) chartInstance.destroy();
 
   let labels = dates.map(function(d) {
@@ -2041,17 +2062,17 @@ function renderPriceChart(prices, dates, volumes) {
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: "#ffffff",
-          borderColor: "#e2e8f0",
+          backgroundColor: "#1e293b",
+          borderColor: "#334155",
           borderWidth: 1,
-          titleColor: "#1a202c",
-          bodyColor: "#64748b",
+          titleColor: "#f1f5f9",
+          bodyColor: "#94a3b8",
           padding: 12,
           callbacks: {
             title: function(items) { return items[0].label; },
             label: function(ctx) {
               if (ctx.dataset.label === "Price")  return "  Price: $" + ctx.parsed.y.toFixed(2);
-              if (ctx.dataset.label === "Volume") return "  Volume: " + (ctx.parsed.y >= 1e6 ? (ctx.parsed.y / 1e6).toFixed(1) + "M" : (ctx.parsed.y / 1e3).toFixed(0) + "K");
+              if (ctx.dataset.label === "Volume") return "  Vol: " + (ctx.parsed.y >= 1e6 ? (ctx.parsed.y / 1e6).toFixed(1) + "M" : (ctx.parsed.y / 1e3).toFixed(0) + "K");
               return null;
             }
           }
@@ -2074,6 +2095,102 @@ function renderPriceChart(prices, dates, volumes) {
           ticks: { color: "#64748b", maxTicksLimit: 8 },
           grid: { display: false }
         }
+      }
+    }
+  });
+}
+
+function renderCandlestickChart(ohlcData, dates, volumes) {
+  if (chartInstance) chartInstance.destroy();
+  _chartOHLCSlice = ohlcData;
+
+  var labels = dates.map(function(d) {
+    var dt = new Date(d + "T12:00:00");
+    return (dt.getMonth() + 1) + "/" + dt.getDate();
+  });
+
+  var bodyData = ohlcData.map(function(d) {
+    return [Math.min(d.o, d.c), Math.max(d.o, d.c)];
+  });
+  var colors = ohlcData.map(function(d) {
+    return d.c >= d.o ? 'rgba(22,163,74,0.85)' : 'rgba(220,38,38,0.85)';
+  });
+  var maxVol = volumes.length > 0 ? Math.max.apply(null, volumes) : 1;
+
+  var wickPlugin = {
+    id: 'wickPlugin',
+    afterDatasetsDraw: function(chart) {
+      var ctx = chart.ctx;
+      var meta = chart.getDatasetMeta(0);
+      if (!meta || !meta.data) return;
+      ctx.save();
+      meta.data.forEach(function(bar, i) {
+        var d = ohlcData[i];
+        if (!d) return;
+        var x = bar.x;
+        var yHigh = chart.scales.yPrice.getPixelForValue(d.h);
+        var yLow  = chart.scales.yPrice.getPixelForValue(d.l);
+        var yBodyTop    = Math.min(bar.y, bar.base);
+        var yBodyBottom = Math.max(bar.y, bar.base);
+        ctx.strokeStyle = d.c >= d.o ? '#16a34a' : '#dc2626';
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(x, yHigh); ctx.lineTo(x, yBodyTop); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x, yBodyBottom); ctx.lineTo(x, yLow); ctx.stroke();
+      });
+      ctx.restore();
+    }
+  };
+
+  chartInstance = new Chart(document.getElementById("priceChart").getContext("2d"), {
+    plugins: [wickPlugin],
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          type: 'bar', label: 'OHLC',
+          data: bodyData,
+          backgroundColor: colors, borderColor: colors,
+          borderWidth: 1, borderSkipped: false,
+          yAxisID: 'yPrice', barPercentage: 0.5, order: 1
+        },
+        {
+          type: 'bar', label: 'Volume',
+          data: volumes,
+          backgroundColor: 'rgba(14,165,233,0.10)',
+          borderWidth: 0, yAxisID: 'yVolume', order: 2
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1e293b', borderColor: '#334155', borderWidth: 1,
+          titleColor: '#f1f5f9', bodyColor: '#94a3b8', padding: 12,
+          callbacks: {
+            title: function(items) { return items[0].label; },
+            label: function(ctx) {
+              if (ctx.dataset.label === 'Volume') {
+                var v = ctx.parsed.y;
+                return '  Vol: ' + (v >= 1e6 ? (v/1e6).toFixed(1)+'M' : (v/1e3).toFixed(0)+'K');
+              }
+              var d = ohlcData[ctx.dataIndex];
+              if (!d) return null;
+              return ['  O: $'+d.o.toFixed(2),'  H: $'+d.h.toFixed(2),'  L: $'+d.l.toFixed(2),'  C: $'+d.c.toFixed(2)];
+            }
+          }
+        }
+      },
+      scales: {
+        yPrice: {
+          type: 'linear', position: 'left',
+          ticks: { color: '#64748b', callback: function(v) { return '$' + v.toLocaleString(); } },
+          grid: { color: 'rgba(100,116,139,0.1)' }
+        },
+        yVolume: { type: 'linear', position: 'right', display: false, max: maxVol * 6 },
+        x: { ticks: { color: '#64748b', maxTicksLimit: 8 }, grid: { display: false } }
       }
     }
   });

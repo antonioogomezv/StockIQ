@@ -988,11 +988,29 @@ button:active { transform: translateY(0); }
   align-items: center;
   justify-content: space-between;
   margin-bottom: 16px;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
-#chart-header h2 { margin-bottom: 0; }
+#chart-range-btns { display: flex; gap: 4px; flex-wrap: wrap; }
 
-#chart-range-btns { display: flex; gap: 4px; }
+#chart-type-btns { display: flex; gap: 0; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.chart-type-btn {
+  background: none;
+  border: none;
+  border-left: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  font-family: var(--sans);
+  padding: 5px 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.3px;
+}
+.chart-type-btn:first-child { border-left: none; }
+.chart-type-btn:hover { color: var(--text); background: var(--surface2); }
+.chart-type-btn.active { background: var(--surface2); color: var(--text); }
 
 .range-btn {
   background: none;
