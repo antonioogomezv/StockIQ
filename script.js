@@ -1054,7 +1054,8 @@ function displayData(data) {
     document.getElementById('quiz-cta') && (document.getElementById('quiz-cta').style.display = 'none');
   } else {
     renderCompanyAbout(profile, _divYield);
-    renderFundamentals({ price, changePct, prevClose, dayHigh, dayLow, week52High, week52Low, pe, beta, margin, growth, roe, marketCap: profile.marketCapitalization, dividend: _divYield, nextEarningsDate, lastEarnings });
+    var zScore = calcAltmanZ(metrics);
+  renderFundamentals({ price, changePct, prevClose, dayHigh, dayLow, week52High, week52Low, pe, beta, margin, growth, roe, marketCap: profile.marketCapitalization, dividend: _divYield, nextEarningsDate, lastEarnings, zScore });
     renderEarningsCard(nextEarningsDate, lastEarnings, companyName);
     document.getElementById('etf-holdings-card').style.display = 'none';
     renderQuizCTA(ticker, companyName, pe, beta, margin, growth, rsi, totalScore, currentRatio);
@@ -1220,6 +1221,35 @@ function renderEtfHoldings(etfHoldings) {
   el.style.display = 'block';
 }
 
+function calcAltmanZ(m) {
+  // Altman Z-Score (public company model): Z = 1.2*X1 + 1.4*X2 + 3.3*X3 + 0.6*X4 + 1.0*X5
+  // Using per-share ratios from Finnhub to approximate the balance sheet ratios
+  var bvps  = m['bookValuePerShareAnnual'] || 0;   // proxy for total assets per share
+  var rev   = m['revenuePerShareAnnual']   || 0;
+  var eps   = m['epsAnnual'] || m['epsTTM'] || 0;
+  var cr    = m['currentRatioAnnual'] || m['currentRatioQuarterly'] || 0;
+  var dte   = m['totalDebt/totalEquityAnnual'] || 0; // D/E ratio
+  if (bvps <= 0) return null; // can't compute
+
+  // X1: Working Capital / Total Assets ≈ (CR-1)/(CR + dte) where dte proxies liabilities share
+  var x1 = cr > 0 ? Math.max(-1, Math.min(1, (cr - 1) / (cr + Math.max(dte, 0.01)))) : 0;
+  // X2: Retained Earnings / Total Assets ≈ (bvps - equity paid in) / bvps — use roe×bvps/earnings as proxy
+  //     Simplified: use cumulative ROE proxy = eps / bvps (earnings yield on book)
+  var x2 = bvps > 0 ? Math.max(-1, Math.min(2, eps / bvps)) : 0;
+  // X3: EBIT / Total Assets ≈ (netMargin × revenuePerShare) / bvps
+  var netMargin = m['netProfitMarginTTM'] || 0;
+  var ebitProxy = rev * (netMargin / 100) / bvps;
+  var x3 = Math.max(-2, Math.min(3, ebitProxy));
+  // X4: Market Cap / Total Liabilities ≈ marketCap / (marketCap × dte/(1+dte))
+  //     = (1+dte)/dte when dte>0
+  var x4 = dte > 0 ? Math.min(10, (1 + dte) / dte) : 5;
+  // X5: Revenue / Total Assets ≈ revenuePerShare / bookValuePerShare
+  var x5 = Math.max(0, Math.min(5, rev / bvps));
+
+  var z = 1.2*x1 + 1.4*x2 + 3.3*x3 + 0.6*x4 + 1.0*x5;
+  return parseFloat(z.toFixed(2));
+}
+
 function renderFundamentals(f) {
   let el = document.getElementById('fundamentals-card');
   if (!el) return;
@@ -1244,6 +1274,16 @@ function renderFundamentals(f) {
       (beat ? " <span style='color:" + beatColor + ";font-weight:700;font-size:11px;'>" + beat + "</span>" : "");
   }
 
+  // Altman Z-Score display
+  var zVal = '—', zColor = 'var(--text)', zLabel = '';
+  if (f.zScore !== null && f.zScore !== undefined) {
+    zVal = f.zScore.toFixed(2);
+    if (f.zScore >= 3)      { zColor = '#16a34a'; zLabel = 'Safe'; }
+    else if (f.zScore >= 1.81) { zColor = '#d97706'; zLabel = 'Grey Zone'; }
+    else                    { zColor = '#dc2626'; zLabel = 'Distress'; }
+    zVal = '<span style="color:' + zColor + ';font-weight:700;">' + zVal + '</span><span style="font-size:11px;color:' + zColor + ';margin-left:4px;">(' + zLabel + ')</span>';
+  }
+
   let items = [
     { label: 'Market Cap',     value: mktCap },
     { label: 'P/E Ratio',      value: f.pe > 0 ? f.pe.toFixed(1) : '—' },
@@ -1251,6 +1291,7 @@ function renderFundamentals(f) {
     { label: 'Beta',           value: f.beta > 0 ? f.beta.toFixed(2) : '—' },
     { label: 'Profit Margin',  value: f.margin !== 0 ? f.margin.toFixed(1) + '%' : '—' },
     { label: 'Rev. Growth',    value: f.growth !== 0 ? (f.growth > 0 ? '+' : '') + f.growth.toFixed(1) + '%' : '—' },
+    { label: 'Altman Z-Score', value: zVal },
     { label: 'Next Earnings',  value: nextEarningsVal },
     { label: 'Last EPS',       value: lastEarningsVal },
   ];
@@ -2632,6 +2673,43 @@ function closeCompare() {
   document.getElementById('compare-result').style.display = 'none';
   document.getElementById('compare-result').innerHTML = '';
   document.getElementById('compare-input').value = '';
+  hideCompareDropdown();
+}
+
+var _compareTimer = null;
+function onCompareInput() {
+  var q = (document.getElementById('compare-input').value || '').trim();
+  var dd = document.getElementById('compare-dropdown');
+  clearTimeout(_compareTimer);
+  if (q.length < 2) { if (dd) dd.style.display = 'none'; return; }
+  _compareTimer = setTimeout(function() {
+    fetch(finnhubUrl('/api/v1/search', { q: q }))
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var items = (data.result || []).filter(function(i) { return i.type === 'Common Stock' || i.type === 'ETP'; }).slice(0, 6);
+        if (!dd) return;
+        if (items.length === 0) { dd.style.display = 'none'; return; }
+        dd.innerHTML = items.map(function(item) {
+          return '<div class="autocomplete-item" onmousedown="selectCompareAutocomplete(\'' + escHtml(item.symbol) + '\')">' +
+            '<span class="autocomplete-ticker">' + escHtml(item.symbol) + '</span>' +
+            '<span class="autocomplete-name">' + escHtml(item.description) + '</span>' +
+          '</div>';
+        }).join('');
+        dd.style.display = 'block';
+      }).catch(function() { if (dd) dd.style.display = 'none'; });
+  }, 220);
+}
+
+function selectCompareAutocomplete(symbol) {
+  var input = document.getElementById('compare-input');
+  if (input) input.value = symbol;
+  hideCompareDropdown();
+  runCompare();
+}
+
+function hideCompareDropdown() {
+  var dd = document.getElementById('compare-dropdown');
+  if (dd) dd.style.display = 'none';
 }
 
 function runCompare() {

@@ -912,7 +912,13 @@
             <button id="compare-close" onclick="closeCompare()">✕</button>
           </div>
           <div id="compare-search-row">
-            <input type="text" id="compare-input" placeholder="Enter ticker to compare (e.g. MSFT)" onkeypress="if(event.key==='Enter')runCompare()">
+            <div style="position:relative;flex:1;">
+              <input type="text" id="compare-input" placeholder="Search company or ticker…"
+                oninput="onCompareInput()"
+                onkeypress="if(event.key==='Enter'){hideCompareDropdown();runCompare();}"
+                onblur="setTimeout(hideCompareDropdown,150)">
+              <div id="compare-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,0.15);max-height:200px;overflow-y:auto;margin-top:4px;"></div>
+            </div>
             <button onclick="runCompare()">Compare →</button>
           </div>
           <div id="compare-loading" style="display:none;">Loading…</div>
