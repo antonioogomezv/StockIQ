@@ -598,17 +598,18 @@ function searchStock() {
 
       let today = new Date();
       let toDate = today.toISOString().split("T")[0];
-      let fromDate90 = new Date(today); fromDate90.setDate(today.getDate() - 90);
-      let fromDate90Str = fromDate90.toISOString().split("T")[0];
+      let fromDate2Y = new Date(today); fromDate2Y.setFullYear(today.getFullYear() - 2);
+      let fromDate2YStr = fromDate2Y.toISOString().split("T")[0];
       let fromDate30 = new Date(today); fromDate30.setDate(today.getDate() - 30);
       let fromDate30Str = fromDate30.toISOString().split("T")[0];
 
-      let _cachedRaw = localStorage.getItem("poly_" + ticker);
+      // Cache key "poly2_" busts old 90-day caches
+      let _cachedRaw = localStorage.getItem("poly2_" + ticker);
       let _cachedEntry = _cachedRaw ? JSON.parse(_cachedRaw) : null;
       let _cacheValid = _cachedEntry && _cachedEntry.ts && (Date.now() - _cachedEntry.ts < 86400000);
       let historyPromise = _cacheValid
         ? Promise.resolve(_cachedEntry.data)
-        : fetch(polygonUrl("/v2/aggs/ticker/" + ticker + "/range/1/day/" + fromDate90Str + "/" + toDate, {})).then(function(r) { return r.json(); });
+        : fetch(polygonUrl("/v2/aggs/ticker/" + ticker + "/range/1/day/" + fromDate2YStr + "/" + toDate, { limit: '730', sort: 'asc' })).then(function(r) { return r.json(); });
 
       let earningsFrom = toDate;
       let earningsTo = new Date(today); earningsTo.setDate(today.getDate() + 90);
@@ -655,7 +656,7 @@ function searchStock() {
         historyPromise.then(function(history) {
           let prices = [], dates = [], volumes = [], ohlc = [];
           if (history.results && history.results.length > 0) {
-            localStorage.setItem("poly_" + ticker, JSON.stringify({ ts: Date.now(), data: history }));
+            localStorage.setItem("poly2_" + ticker, JSON.stringify({ ts: Date.now(), data: history }));
             history.results.forEach(function(bar) {
               dates.push(new Date(bar.t).toISOString().split("T")[0]);
               prices.push(bar.c);
@@ -2187,7 +2188,8 @@ function setChartRange(range) {
   document.querySelectorAll('.range-btn').forEach(function(b) { b.classList.remove('active'); });
   let btn = document.querySelector('.range-btn[data-range="' + range + '"]');
   if (btn) btn.classList.add('active');
-  let countMap = { '1W': 7, '1M': 30, '3M': 90, '6M': 180, '1Y': 365 };
+  // Trading-day counts (≈ 5/wk): 1W=5, 1M=21, 3M=63, 6M=126, 1Y=252
+  let countMap = { '1W': 5, '1M': 21, '3M': 63, '6M': 126, '1Y': 252 };
   let count = countMap[range] || allChartPrices.length;
   let prices  = allChartPrices.slice(-count);
   let dates   = allChartDates.slice(-count);
