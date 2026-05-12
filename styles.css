@@ -6934,7 +6934,9 @@ header p {
 /* ── Compare section ── */
 #compare-section {
   border-radius: calc(var(--radius) - 2px);
-  overflow: hidden;
+  overflow: visible;
+  position: relative;
+  z-index: 10;
 }
 #compare-input { border-radius: 10px; }
 #compare-search-row button { border-radius: 10px; }
