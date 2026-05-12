@@ -5778,6 +5778,9 @@ footer {
   border: 1px solid var(--border);
   border-radius: calc(var(--radius) - 2px);
   padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 #add-stock-form button {
@@ -7299,7 +7302,6 @@ h2 {
   color: var(--text-muted);
   cursor: pointer;
   text-align: center;
-  margin-bottom: 4px;
   transition: background 0.12s, color 0.12s;
 }
 .add-stock-toggle-btn:hover { background: var(--surface); color: var(--text); }
