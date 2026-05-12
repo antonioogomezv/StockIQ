@@ -681,6 +681,19 @@ function calculateScore(changePct, week52High, price, pe, metrics, qualScore, rs
   let interestRaw = metrics["netInterestCoverageAnnual"];
   let interestScore = interestRaw == null ? 5 : interestRaw > 10 ? 10 : interestRaw > 5 ? 8 : interestRaw > 3 ? 6 : interestRaw > 1 ? 4 : interestRaw > 0 ? 2 : 1;
 
+  // Altman Z-Score → 0–10 scale
+  // Safe (≥3): 9-10, Grey (1.81–2.99): 5-7, Distress (<1.81): 1-3, null: neutral 5
+  var zRaw = calcAltmanZ(metrics);
+  var altmanScore = zRaw === null ? 5
+    : zRaw >= 5   ? 10
+    : zRaw >= 3   ? 9
+    : zRaw >= 2.6 ? 8
+    : zRaw >= 2.3 ? 7
+    : zRaw >= 1.81 ? 5
+    : zRaw >= 1.23 ? 3
+    : zRaw >= 0    ? 2
+    : 1;
+
   let total =
     priceScore        * 0.12 +
     positionScore     * 0.08 +
@@ -688,13 +701,14 @@ function calculateScore(changePct, week52High, price, pe, metrics, qualScore, rs
     betaScore         * 0.04 +
     marginScore       * 0.16 +
     growthScore       * 0.12 +
-    debtScore         * 0.04 +
+    debtScore         * 0.03 +
     rsiScore          * 0.08 +
     maScore           * 0.04 +
     qualScore         * 0.04 +
     roeScore          * 0.08 +
-    currentRatioScore * 0.06 +
-    interestScore     * 0.06;
+    currentRatioScore * 0.04 +
+    interestScore     * 0.04 +
+    altmanScore       * 0.05;
 
   return {
     total: Math.min(100, Math.max(0, Math.round(total * 10))),
@@ -702,7 +716,8 @@ function calculateScore(changePct, week52High, price, pe, metrics, qualScore, rs
       price: priceScore, position: positionScore, pe: peScore, beta: betaScore,
       margin: marginScore, growth: growthScore, debt: debtScore, rsi: rsiScore,
       ma: maScore, news: qualScore, roe: roeScore,
-      currentRatio: currentRatioScore, interest: interestScore
+      currentRatio: currentRatioScore, interest: interestScore, altman: altmanScore,
+      altmanZ: zRaw
     }
   };
 }
@@ -990,9 +1005,10 @@ function displayData(data) {
 
   document.getElementById("explanation-simple").innerHTML = "";
 
-  document.getElementById("show-details-btn").style.display = "none";
+  var detailsBtn = document.getElementById("show-details-btn");
+  if (detailsBtn) { detailsBtn.innerHTML = "Score Breakdown <span style='float:right;'>▾</span>"; detailsBtn.style.display = "block"; }
 
-  document.getElementById("explanation").style.display = "block";
+  document.getElementById("explanation").style.display = "none";
 
   let _divYield = metrics['dividendYieldIndicatedAnnual'] || 0;
 
@@ -1031,6 +1047,18 @@ function displayData(data) {
     { label: "ROE", value: roe !== 0 ? roe.toFixed(1) + "%" : "—", score: breakdown.roe, what: roe !== 0 ? "Return on Equity: " + roe.toFixed(1) + "%. For every $100 shareholders invested, the company generates $" + roe.toFixed(1) + " in profit. " + (roe > 15 ? "Excellent — management generating strong returns." : roe > 10 ? "Healthy — good use of shareholder capital." : roe > 0 ? "Below average — room for improvement." : "Negative — losing shareholder money.") : "No ROE data available.", verdict: roe > 15 ? "Excellent returns on equity" : roe > 10 ? "Healthy returns on equity" : roe > 0 ? "Below average returns" : "Negative returns on equity" },
     { label: "Current Ratio", value: currentRatio !== 0 ? currentRatio.toFixed(2) + "x" : "—", score: breakdown.currentRatio, what: currentRatio !== 0 ? "Current ratio of " + currentRatio.toFixed(2) + ". " + (currentRatio > 2 ? "Very healthy — can easily cover short-term liabilities." : currentRatio > 1 ? "Adequate — can cover current liabilities." : "Warning — may struggle to pay short-term obligations.") : "No current ratio data.", verdict: currentRatio > 2 ? "Very healthy — easily covers bills" : currentRatio > 1 ? "Adequate — covers current bills" : "Warning — may struggle with bills" },
     { label: "Interest Coverage", value: interestCoverage !== 0 ? interestCoverage.toFixed(1) + "x" : "—", score: breakdown.interest, what: interestCoverage !== 0 ? "Covers interest " + interestCoverage.toFixed(1) + "x. " + (interestCoverage > 5 ? "Very safe — earnings far exceed debt payments." : interestCoverage > 3 ? "Adequate — can cover interest payments." : interestCoverage > 1 ? "Tight — barely covering interest. Risky if revenue drops." : "Danger — cannot cover interest payments.") : "No interest coverage data.", verdict: interestCoverage > 5 ? "Very safe — earnings far exceed debt" : interestCoverage > 3 ? "Adequate — covers interest payments" : "Tight or dangerous — debt risk" },
+    (function() {
+      var z = breakdown.altmanZ;
+      var zone = z === null ? "N/A" : z >= 3 ? "Safe Zone" : z >= 1.81 ? "Grey Zone" : "Distress Zone";
+      var zVal = z !== null ? z.toFixed(2) : "—";
+      var what = z === null
+        ? "Not enough balance sheet data to compute the Altman Z-Score for this stock."
+        : "Altman Z-Score: " + zVal + " (" + zone + "). " +
+          (z >= 3 ? "Score above 3 = financially safe. Low bankruptcy risk." :
+           z >= 1.81 ? "Score between 1.81–2.99 = grey zone. Some financial stress signals." :
+           "Score below 1.81 = distress zone. Elevated bankruptcy risk.");
+      return { label: "Altman Z-Score", value: zVal, score: breakdown.altman, what: what, verdict: zone };
+    })(),
   ];
   factors.sort(function(a, b) { return b.score - a.score; });
   return factors.map(function(f) { return scoreBar(f.label, f.score, { what: f.what, verdict: f.verdict, value: f.value }); }).join("");
@@ -2174,7 +2202,7 @@ function renderCandlestickChart(ohlcData, dates, volumes) {
         var yBodyTop    = Math.min(bar.y, bar.base);
         var yBodyBottom = Math.max(bar.y, bar.base);
         ctx.strokeStyle = d.c >= d.o ? '#16a34a' : '#dc2626';
-        ctx.lineWidth = 1;
+        ctx.lineWidth = 1.5;
         ctx.beginPath(); ctx.moveTo(x, yHigh); ctx.lineTo(x, yBodyTop); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(x, yBodyBottom); ctx.lineTo(x, yLow); ctx.stroke();
       });
@@ -2191,8 +2219,8 @@ function renderCandlestickChart(ohlcData, dates, volumes) {
           type: 'bar', label: 'OHLC',
           data: bodyData,
           backgroundColor: colors, borderColor: colors,
-          borderWidth: 1, borderSkipped: false,
-          yAxisID: 'yPrice', barPercentage: 0.5, order: 1
+          borderWidth: 0, borderSkipped: false,
+          yAxisID: 'yPrice', barPercentage: 0.8, categoryPercentage: 0.9, order: 1
         },
         {
           type: 'bar', label: 'Volume',
@@ -2383,10 +2411,10 @@ function toggleDetails() {
   if (!details || !btn) return;
   if (details.style.display === "none") {
     details.style.display = "block";
-    btn.textContent = "Hide Full Analysis";
+    btn.innerHTML = "Score Breakdown <span style='float:right;'>▴</span>";
   } else {
     details.style.display = "none";
-    btn.textContent = "Show Full Analysis";
+    btn.innerHTML = "Score Breakdown <span style='float:right;'>▾</span>";
   }
 }
 

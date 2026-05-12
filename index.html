@@ -928,12 +928,30 @@
           StockIQ is for education only — not financial advice. To actually buy stocks, you'll need a brokerage account (e.g. Robinhood, Fidelity, or Schwab).
           <button onclick="localStorage.setItem('broker-hint-dismissed','1');document.getElementById('broker-hint').style.display='none';">✕</button>
         </div>
+
+        <!-- CHART — appears right after the stock hero -->
+        <div id="chart-section" style="display:none;">
+          <div id="chart-header">
+            <div id="chart-range-btns">
+              <button class="range-btn" data-range="1W" onclick="setChartRange('1W')">1W</button>
+              <button class="range-btn active" data-range="1M" onclick="setChartRange('1M')">1M</button>
+              <button class="range-btn" data-range="3M" onclick="setChartRange('3M')">3M</button>
+              <button class="range-btn" data-range="6M" onclick="setChartRange('6M')">6M</button>
+              <button class="range-btn" data-range="1Y" onclick="setChartRange('1Y')">1Y</button>
+              <button class="range-btn" data-range="MAX" onclick="setChartRange('MAX')">MAX</button>
+            </div>
+            <div id="chart-type-btns">
+              <button class="chart-type-btn active" data-mode="line" onclick="toggleChartMode('line')">Line</button>
+              <button class="chart-type-btn" data-mode="candle" onclick="toggleChartMode('candle')">Candle</button>
+            </div>
+          </div>
+          <canvas id="priceChart"></canvas>
+          <div id="chart-stats"></div>
+          <div id="chart-insight"></div>
+        </div>
+
+        <!-- AI ANALYSIS — after chart -->
         <div id="explanation-simple" style="display:none;"></div>
-        <div id="company-about" style="display:none;"></div>
-        <div id="fundamentals-card" style="display:none;"></div>
-        <div id="dividend-card" style="display:none;"></div>
-        <div id="etf-holdings-card" style="display:none;"></div>
-        <div id="earnings-card" style="display:none;"></div>
         <div id="ai-explanation" style="display:none;">
           <div id="ai-label">STOCKIQ AI ANALYSIS</div>
           <div id="ai-text">—</div>
@@ -961,29 +979,16 @@
             </div>
           </div>
         </div>
+
+        <!-- FUNDAMENTALS — after AI -->
+        <div id="company-about" style="display:none;"></div>
+        <div id="fundamentals-card" style="display:none;"></div>
+        <div id="dividend-card" style="display:none;"></div>
+        <div id="etf-holdings-card" style="display:none;"></div>
+        <div id="earnings-card" style="display:none;"></div>
         <button type="button" id="show-details-btn" onclick="toggleDetails()" style="display:none;">Show Full Analysis</button>
         <div id="explanation" style="display:none;">—</div>
         <div id="quiz-cta" style="display:none;"></div>
-      </div>
-
-      <div id="chart-section" style="display:none;">
-        <div id="chart-header">
-          <div id="chart-range-btns">
-            <button class="range-btn" data-range="1W" onclick="setChartRange('1W')">1W</button>
-            <button class="range-btn active" data-range="1M" onclick="setChartRange('1M')">1M</button>
-            <button class="range-btn" data-range="3M" onclick="setChartRange('3M')">3M</button>
-            <button class="range-btn" data-range="6M" onclick="setChartRange('6M')">6M</button>
-            <button class="range-btn" data-range="1Y" onclick="setChartRange('1Y')">1Y</button>
-            <button class="range-btn" data-range="MAX" onclick="setChartRange('MAX')">MAX</button>
-          </div>
-          <div id="chart-type-btns">
-            <button class="chart-type-btn active" data-mode="line" onclick="toggleChartMode('line')">Line</button>
-            <button class="chart-type-btn" data-mode="candle" onclick="toggleChartMode('candle')">Candle</button>
-          </div>
-        </div>
-        <canvas id="priceChart"></canvas>
-        <div id="chart-stats"></div>
-        <div id="chart-insight"></div>
       </div>
 
       <div id="news-section" style="display:none;">
