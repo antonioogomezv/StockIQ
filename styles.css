@@ -7246,3 +7246,201 @@ h2 {
   color: var(--text-muted);
   line-height: 1.6;
 }
+
+/* ── Add Stock form collapse toggle ─────────────────────── */
+.add-stock-toggle-btn {
+  width: 100%;
+  background: var(--surface2);
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  cursor: pointer;
+  text-align: center;
+  margin-bottom: 4px;
+  transition: background 0.12s, color 0.12s;
+}
+.add-stock-toggle-btn:hover { background: var(--surface); color: var(--text); }
+
+/* ── Broker section ─────────────────────────────────────── */
+.broker-section { margin: 0 0 20px; }
+.broker-section h2 { margin-bottom: 6px; }
+.broker-section-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+.broker-list { display: flex; flex-direction: column; gap: 8px; }
+.broker-item {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+}
+.broker-item-name { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+.broker-item-desc { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
+.broker-disclaimer {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 8px;
+  font-style: italic;
+}
+
+/* ── Beginner UX — AI chat nudge ─────────────────────────── */
+.ai-chat-nudge {
+  font-size: 13px;
+  color: var(--accent-blue, #0ea5e9);
+  margin: 14px 0 2px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 3px;
+}
+.ai-chat-nudge:hover { opacity: 0.8; }
+
+/* ── Score inline desc ───────────────────────────────────── */
+.score-inline-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  padding: 10px 16px 0;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ── Action button subtitles ─────────────────────────────── */
+#action-btns .action-btn-primary,
+#action-btns .action-btn-secondary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  line-height: 1.2;
+  padding: 10px 14px;
+}
+.action-btn-main {
+  font-size: 14px;
+  font-weight: 700;
+}
+.action-btn-sub {
+  font-size: 10px;
+  font-weight: 500;
+  opacity: 0.72;
+  letter-spacing: 0.01em;
+}
+
+/* ── Trending edu note + big mover ───────────────────────── */
+.trending-edu-note {
+  font-size: 12px;
+  color: var(--text-muted);
+  background: var(--surface2);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 0 0 8px;
+  line-height: 1.5;
+}
+.trending-big-mover {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  color: #d97706;
+  background: rgba(217,119,6,0.1);
+  border-radius: 4px;
+  padding: 1px 5px;
+  margin-left: 6px;
+  vertical-align: middle;
+  letter-spacing: 0.01em;
+}
+
+/* ── Price alert chips ───────────────────────────────────── */
+.alert-chips {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 8px 0 6px;
+}
+.alert-chip {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 12px;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.alert-chip:hover { background: var(--surface); border-color: var(--accent-blue, #0ea5e9); }
+
+/* ── Screener two-line reason ────────────────────────────── */
+.screener-card-reason {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.screener-reason-label {
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.4;
+}
+.screener-reason-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 0.01em;
+}
+
+/* ── Screener tier headers ───────────────────────────────── */
+.screener-tier { margin-bottom: 12px; }
+.screener-tier-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+/* ── Paper trading nudge ─────────────────────────────────── */
+.paper-nudge-inner {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+.paper-nudge-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 6px;
+}
+.paper-nudge-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.paper-nudge-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+.paper-nudge-btn {
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.paper-nudge-btn:hover { opacity: 0.9; }

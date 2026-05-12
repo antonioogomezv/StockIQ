@@ -1884,8 +1884,9 @@ function renderScoreExplainer(score) {
   var current = ranges.find(function(r) { return score >= r.min && score <= r.max; });
 
   el.innerHTML =
+    '<p class="score-inline-desc">' + current.desc + '</p>' +
     '<div class="score-explainer-trigger" onclick="toggleScoreExplainer()">' +
-      '<span class="score-explainer-q">What does ' + score + '/100 mean?</span>' +
+      '<span class="score-explainer-q">See 13-factor breakdown</span>' +
       '<span class="score-explainer-chevron" id="score-explainer-chevron">▾</span>' +
     '</div>' +
     '<div class="score-explainer-body" id="score-explainer-body" style="display:none;">' +
@@ -2413,7 +2414,8 @@ function getAIExplanation(ticker, companyName, totalScore, changePct, pe, margin
   .then(function(r) { return r.json(); })
   .then(function(data) {
     if (data.content && data.content[0] && data.content[0].text) {
-      aiText.innerHTML = parseMarkdown(data.content[0].text);
+      aiText.innerHTML = parseMarkdown(data.content[0].text) +
+        '<p class="ai-chat-nudge" onclick="document.getElementById(\'ai-chat\').scrollIntoView({behavior:\'smooth\'})">Have a question about this? Ask StockIQ below ↓</p>';
       let chatEl = document.getElementById('ai-chat');
       if (chatEl) chatEl.style.display = 'block';
     } else {
@@ -2659,6 +2661,15 @@ function showQuizResult() {
   document.getElementById("quiz-icon").innerHTML = profile.icon;
   document.getElementById("quiz-result-title").textContent = profile.type + " Investor";
   document.getElementById("quiz-result-desc").textContent = profile.desc;
+  var learnNote = document.getElementById('quiz-learn-note');
+  if (learnNote) {
+    if (goal === 'learn') {
+      learnNote.textContent = "Since your goal is to learn, we've set up a Demo Portfolio and will guide you toward beginner-friendly features as you explore.";
+      learnNote.style.display = 'block';
+    } else {
+      learnNote.style.display = 'none';
+    }
+  }
   document.getElementById("step-result").style.display = "block";
   userProfile = profile;
 }
@@ -2741,7 +2752,7 @@ function _finishQuizUI() {
 }
 
 let _obStep = 0;
-const _obTotal = 6;
+const _obTotal = 3;
 
 function obSetCurrency(code) {
   _currency = code;
@@ -2785,6 +2796,19 @@ function finishOnboarding() {
   localStorage.setItem('tour-done', '1');
   document.getElementById("onboarding-overlay").style.display = "none";
   showTab('analyze');
+  if (!localStorage.getItem('screener-auto-done')) {
+    var prof = JSON.parse(localStorage.getItem('userProfile') || 'null');
+    if (prof) {
+      var q = prof.goal === 'learn' ? 'well-known companies with strong fundamentals'
+            : prof.type === 'Aggressive' ? 'fast growing stocks'
+            : prof.type === 'Conservative' ? 'safe dividend stocks'
+            : 'well-known companies with strong fundamentals';
+      localStorage.setItem('screener-auto-done', '1');
+      var noteEl = document.getElementById('screener-profile-note');
+      if (noteEl) { noteEl.textContent = 'Based on your profile, here are some stocks worth exploring first.'; noteEl.style.display = 'block'; }
+      setTimeout(function() { setScreenerQueryChip(q); }, 500);
+    }
+  }
 }
 
 function updateRiskBadge() {
@@ -2796,6 +2820,7 @@ function updateRiskBadge() {
 function quickAddToPortfolio() {
   if (!currentTicker) return;
   showTab('portfolio');
+  openAddStockForm();
   document.getElementById('port-ticker').value = currentTicker;
   // Use the same price source as the portfolio renderer so cost basis = current price = 0 G/L on add
   getSharedPrices([currentTicker], 60000).then(function(m) {
@@ -3368,6 +3393,15 @@ function openAlertInput(ticker, currentPrice) {
         hint.innerHTML =
           '52-week range: <strong>$' + lo.toFixed(2) + '</strong> — <strong>$' + hi.toFixed(2) + '</strong>' +
           (currentPrice > 0 ? ' · Current <strong>$' + currentPrice.toFixed(2) + '</strong> (' + pct + '% of range)' : '');
+        var midpoint = Math.round((lo + hi) / 2 * 100) / 100;
+        var nearHigh = Math.round(hi * 0.97 * 100) / 100;
+        var chipsDiv = document.createElement('div');
+        chipsDiv.className = 'alert-chips';
+        chipsDiv.innerHTML =
+          '<button class="alert-chip" onclick="document.getElementById(\'alert-val-' + ticker + '\').value=\'' + midpoint.toFixed(2) + '\'">📉 $' + midpoint.toFixed(2) + ' — if it dips below the year\'s midpoint</button>' +
+          '<button class="alert-chip" onclick="document.getElementById(\'alert-val-' + ticker + '\').value=\'' + nearHigh.toFixed(2) + '\'">📈 $' + nearHigh.toFixed(2) + ' — if it nears its yearly high</button>';
+        var inputRowEl = hint.parentNode && hint.parentNode.querySelector('.alert-input-row');
+        if (inputRowEl) hint.parentNode.insertBefore(chipsDiv, inputRowEl);
       } else {
         hint.textContent = 'Range data unavailable. Check the Analyze tab for more context.';
       }
@@ -3389,8 +3423,27 @@ function toggleWlHistory(ticker) {
   if (btn) btn.textContent = open ? 'History ▾' : 'History ▴';
 }
 
+function toggleAddStockForm() {
+  var body = document.getElementById('add-form-body');
+  var btn = document.getElementById('add-stock-toggle');
+  if (!body) return;
+  var open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  if (btn) btn.textContent = open ? '+ Add a Stock' : '− Close form';
+}
+
+function openAddStockForm() {
+  var body = document.getElementById('add-form-body');
+  var btn = document.getElementById('add-stock-toggle');
+  if (body && body.style.display === 'none') {
+    body.style.display = 'block';
+    if (btn) btn.textContent = '− Close form';
+  }
+}
+
 function addWatchlistToPortfolio(ticker, price) {
   showTab('portfolio');
+  openAddStockForm();
   document.getElementById('port-ticker').value = ticker;
   if (price > 0) document.getElementById('port-price').value = price.toFixed(2);
   document.getElementById('port-shares').focus();
@@ -3834,17 +3887,32 @@ function clearScreenerQuery() {
   renderScreenerResults();
 }
 
+var _GOAL_TIERS = {
+  safe: 0, dividend: 0, growth: 0,
+  value: 1, profitable: 1, gaining: 1, low52: 1, moat: 1,
+  contrarian: 2
+};
+var _TIER_LABELS = ['Start here', 'Explore more', 'Advanced'];
+
 function renderScreenerGoals() {
   var el = document.getElementById('screener-goals');
   if (!el) return;
-  el.innerHTML =
-    '<div class="screener-goals-row">' +
-    SCREENER_GOALS.map(function(g) {
-      return '<button class="screener-goal-btn' + (_screenerGoal === g.id ? ' active' : '') + '" onclick="selectScreenerGoal(\'' + g.id + '\')">' +
-        g.label +
-      '</button>';
-    }).join('') +
-    '</div>';
+  var tiers = [[], [], []];
+  SCREENER_GOALS.forEach(function(g) {
+    var t = _GOAL_TIERS[g.id] !== undefined ? _GOAL_TIERS[g.id] : 1;
+    tiers[t].push(g);
+  });
+  el.innerHTML = tiers.map(function(goals, ti) {
+    if (goals.length === 0) return '';
+    return '<div class="screener-tier">' +
+      '<div class="screener-tier-label">' + _TIER_LABELS[ti] + '</div>' +
+      '<div class="screener-goals-row">' +
+      goals.map(function(g) {
+        return '<button class="screener-goal-btn' + (_screenerGoal === g.id ? ' active' : '') + '" onclick="selectScreenerGoal(\'' + g.id + '\')">' +
+          g.label + '</button>';
+      }).join('') +
+      '</div></div>';
+  }).join('');
 }
 
 function selectScreenerGoal(id) {
@@ -3988,16 +4056,26 @@ function calcQuickScore(pe, beta, margin, growth, changePct, price, high52) {
 
 // Build a human-readable reason string for a query-mode result
 function _queryReason(s, f) {
-  var parts = [];
-  if (f.minScore >= 65) parts.push('Score ' + s.score + '/100 — ' + s.signal);
-  if (f.minGrowth > 0) parts.push('Revenue growing ' + s.growth.toFixed(1) + '%');
-  if (f.minDividend > 0) parts.push(s.dividend.toFixed(2) + '% dividend yield');
-  if (f.maxBeta <= 1.0) parts.push('Beta ' + s.beta.toFixed(2) + ' — low volatility');
-  if (f.minMargin > 0) parts.push(s.margin.toFixed(1) + '% profit margin');
-  if (f.maxPE > 0) parts.push('P/E ' + (s.pe > 0 ? s.pe.toFixed(1) : 'n/a') + ' — value priced');
-  if (f.sector) parts.push(s.sector + ' sector');
-  if (parts.length === 0) parts.push('Score ' + s.score + '/100 · ' + s.signal);
-  return parts.join(' · ');
+  // Plain-English label
+  var labels = [];
+  if (f.maxBeta <= 1.0 && f.minDividend > 0) labels.push('Stable dividend payer with low price swings');
+  else if (f.maxBeta <= 1.0) labels.push('Moves less than the market — lower volatility');
+  else if (f.minDividend > 0) labels.push('Pays regular cash dividends just for owning it');
+  if (f.minGrowth > 0) labels.push('Revenue growing fast');
+  if (f.minMargin > 0) labels.push('Keeps a large share of every dollar it earns');
+  if (f.maxPE > 0 && f.maxPE < 30) labels.push('Priced at reasonable value relative to earnings');
+  if (f.minScore >= 65) labels.push('Strong fundamentals across most factors');
+  var label = labels.length > 0 ? labels.join(' · ') : (s.score >= 65 ? 'Strong fundamentals overall' : 'Matches your search');
+  // Raw numbers
+  var nums = [];
+  if (f.maxBeta <= 1.0 && s.beta > 0) nums.push('Beta ' + s.beta.toFixed(2));
+  if (f.minDividend > 0) nums.push('Dividend ' + s.dividend.toFixed(2) + '%');
+  if (f.minGrowth > 0) nums.push('Growth ' + s.growth.toFixed(1) + '%');
+  if (f.minMargin > 0) nums.push('Margin ' + s.margin.toFixed(1) + '%');
+  if (f.maxPE > 0 && s.pe > 0) nums.push('P/E ' + s.pe.toFixed(1));
+  nums.push('Score ' + s.score + '/100');
+  return '<span class="screener-reason-label">' + label + '</span>' +
+         '<span class="screener-reason-meta">' + nums.join(' · ') + '</span>';
 }
 
 function renderScreenerResults() {
@@ -4192,17 +4270,21 @@ function setTrendingFilter(filter) {
 function renderTrending(data) {
   let list = document.getElementById('trending-list');
   if (!list) return;
-  if (data.length === 0) { list.innerHTML = '<div class="trending-loading">No matches.</div>'; return; }
-  list.innerHTML = data.map(function(r) {
+  let prefix = currentTrendingFilter === 'losers'
+    ? '<p class="trending-edu-note">A stock falling today isn\'t always a bad sign — tap one to understand why before drawing conclusions.</p>'
+    : '';
+  if (data.length === 0) { list.innerHTML = prefix + '<div class="trending-loading">No matches.</div>'; return; }
+  list.innerHTML = prefix + data.map(function(r) {
     let up = r.changePct >= 0;
     let color = up ? '#16a34a' : '#dc2626';
     let sign = up ? '+' : '';
     let initials = r.symbol.substring(0, 2).toUpperCase();
+    let bigMover = Math.abs(r.changePct) > 5;
     return "<div class='trending-row' onclick='quickSearch(\"" + escHtml(r.symbol) + "\")'>" +
       "<div class='trending-avatar'>" + initials + "</div>" +
       "<div class='trending-left'>" +
         "<div class='trending-symbol'>" + escHtml(r.symbol) + "</div>" +
-        "<div class='trending-name'>" + escHtml(r.name) + "</div>" +
+        "<div class='trending-name'>" + escHtml(r.name) + (bigMover ? "<span class='trending-big-mover'>Big mover — check news</span>" : "") + "</div>" +
       "</div>" +
       "<div class='trending-right'>" +
         "<div class='trending-price'>" + fmt$(r.price) + "</div>" +
@@ -5709,7 +5791,24 @@ function removeLotFromPortfolio(ticker, lotIndex) {
   renderPortfolio();
 }
 
+function maybeShowPaperTradingNudge() {
+  var el = document.getElementById('paper-trading-nudge');
+  if (!el) return;
+  if (localStorage.getItem('paper-nudge-done')) { el.style.display = 'none'; return; }
+  var profile = JSON.parse(localStorage.getItem('userProfile') || 'null');
+  if (!profile || profile.goal !== 'learn') { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.innerHTML =
+    '<div class="paper-nudge-inner">' +
+      '<button class="paper-nudge-close" onclick="localStorage.setItem(\'paper-nudge-done\',\'1\');document.getElementById(\'paper-trading-nudge\').style.display=\'none\'">✕</button>' +
+      '<div class="paper-nudge-title">Ready to practice for real?</div>' +
+      '<p class="paper-nudge-desc">Paper Trading lets you buy and sell stocks with virtual money — no risk, real market prices.</p>' +
+      '<button class="paper-nudge-btn" onclick="localStorage.setItem(\'paper-nudge-done\',\'1\');document.getElementById(\'paper-trading-nudge\').style.display=\'none\';promptPaperPortfolio()">Try Paper Trading →</button>' +
+    '</div>';
+}
+
 function renderPortfolio() {
+  maybeShowPaperTradingNudge();
   renderPortfolioTabs();
   let active = getActivePortfolio();
   let portfolio = active ? migratePortfolio(active.stocks || []) : [];
@@ -7931,6 +8030,36 @@ function submitPrizeClaim() {
   });
 }
 
+function renderBrokerSection() {
+  var el = document.getElementById('profile-broker-section');
+  if (!el) return;
+  var brokers = userProfile && (userProfile.type === 'Aggressive' || userProfile.goal === 'learn')
+    ? [
+        { name: 'Robinhood', desc: 'Simple to start, commission-free, fractional shares', url: '#' },
+        { name: 'Webull', desc: 'More data and tools, still commission-free', url: '#' },
+        { name: 'Fidelity', desc: 'Trusted, full-featured, excellent research', url: '#' }
+      ]
+    : [
+        { name: 'Fidelity', desc: 'Low fees, trusted institution, excellent long-term tools', url: '#' },
+        { name: 'Charles Schwab', desc: 'No minimums, strong research, great for beginners', url: '#' },
+        { name: 'Vanguard', desc: 'Built for long-term, low-cost index investing', url: '#' }
+      ];
+  el.innerHTML =
+    '<div class="broker-section">' +
+      '<h2>READY TO INVEST FOR REAL?</h2>' +
+      '<p class="broker-section-desc">StockIQ is for education. When you\'re ready to buy actual stocks, here are brokers worth looking at' + (userProfile ? ' for a ' + userProfile.type + ' investor' : '') + '.</p>' +
+      '<div class="broker-list">' +
+      brokers.map(function(b) {
+        return '<div class="broker-item">' +
+          '<div class="broker-item-name">' + b.name + '</div>' +
+          '<div class="broker-item-desc">' + b.desc + '</div>' +
+        '</div>';
+      }).join('') +
+      '</div>' +
+      '<p class="broker-disclaimer">StockIQ has no affiliation with any broker. Always do your own research.</p>' +
+    '</div>';
+}
+
 function renderProfile() {
   loadUserInfo();
   if (userProfile) {
@@ -7954,6 +8083,7 @@ function renderProfile() {
   document.getElementById('stat-streak').textContent    = streak;
   renderBadges(analyzed, watchlist.length, portCount, streak);
   renderChallengeSection();
+  renderBrokerSection();
 }
 
 let stockChatHistory = [];
