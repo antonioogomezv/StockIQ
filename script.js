@@ -374,6 +374,8 @@ let _portAutocompleteTimer = null;
 
 function onPortTickerInput() {
   let query = document.getElementById('port-ticker').value.trim();
+  var priceBtn = document.getElementById('port-use-price-btn');
+  if (priceBtn) priceBtn.style.display = query.length >= 1 ? 'block' : 'none';
   let dropdown = document.getElementById('port-ticker-dropdown');
   clearTimeout(_portAutocompleteTimer);
   if (query.length < 2) { dropdown.style.display = 'none'; return; }
@@ -394,6 +396,36 @@ function onPortTickerInput() {
       })
       .catch(function() { dropdown.style.display = 'none'; });
   }, 300);
+}
+
+function prefillTodayDate() {
+  var d = new Date();
+  var yyyy = d.getFullYear();
+  var mm = String(d.getMonth() + 1).padStart(2, '0');
+  var dd = String(d.getDate()).padStart(2, '0');
+  document.getElementById('port-date').value = yyyy + '-' + mm + '-' + dd;
+}
+
+function prefillCurrentPrice() {
+  var ticker = document.getElementById('port-ticker').value.trim().toUpperCase();
+  if (!ticker) return;
+  var btn = document.getElementById('port-use-price-btn');
+  var priceEl = document.getElementById('port-price');
+  if (btn) btn.textContent = 'Fetching…';
+  fetch(finnhubUrl('/api/v1/quote', { symbol: ticker }))
+    .then(function(r) { return r.json(); })
+    .then(function(q) {
+      if (q && q.c > 0) {
+        priceEl.value = q.c.toFixed(2);
+        if (btn) btn.textContent = 'Use today\'s price →';
+      } else {
+        if (btn) btn.textContent = 'Price unavailable';
+        setTimeout(function() { if (btn) btn.textContent = 'Use today\'s price →'; }, 2000);
+      }
+    })
+    .catch(function() {
+      if (btn) btn.textContent = 'Use today\'s price →';
+    });
 }
 
 function onPortDateChange() {
@@ -445,6 +477,8 @@ function hidePortDropdown() {
 function selectPortAutocomplete(ticker) {
   document.getElementById('port-ticker').value = ticker;
   document.getElementById('port-ticker-dropdown').style.display = 'none';
+  var priceBtn = document.getElementById('port-use-price-btn');
+  if (priceBtn) priceBtn.style.display = 'block';
   let loadingEl = document.getElementById('port-price-loading');
   let priceEl = document.getElementById('port-price');
   priceEl.value = '';
@@ -722,6 +756,46 @@ function calculateScore(changePct, week52High, price, pe, metrics, qualScore, rs
   };
 }
 
+function buildSignalChips(pe, margin, growth, beta, rsi, ma50, price) {
+  var chips = [];
+  if (margin > 20) chips.push({ icon: "↑", color: "#16a34a", label: "Strong margins" });
+  else if (margin < 0) chips.push({ icon: "↓", color: "#dc2626", label: "Losing money" });
+  else if (margin > 5) chips.push({ icon: "→", color: "#d97706", label: "Thin margins" });
+
+  if (growth > 15) chips.push({ icon: "↑", color: "#16a34a", label: "Fast growth" });
+  else if (growth < 0) chips.push({ icon: "↓", color: "#dc2626", label: "Shrinking sales" });
+  else chips.push({ icon: "→", color: "#d97706", label: "Slow growth" });
+
+  if (pe > 0 && pe < 20) chips.push({ icon: "↑", color: "#16a34a", label: "Cheap P/E" });
+  else if (pe > 35) chips.push({ icon: "↓", color: "#dc2626", label: "Expensive P/E" });
+  else if (pe > 0) chips.push({ icon: "→", color: "#d97706", label: "Fair P/E" });
+
+  if (rsi !== null && rsi < 30) chips.push({ icon: "↑", color: "#16a34a", label: "Oversold" });
+  else if (rsi !== null && rsi > 70) chips.push({ icon: "↓", color: "#dc2626", label: "Overbought" });
+
+  if (beta < 1) chips.push({ icon: "↑", color: "#16a34a", label: "Low risk" });
+  else if (beta > 1.5) chips.push({ icon: "↓", color: "#dc2626", label: "High risk" });
+
+  if (ma50 !== null) {
+    if (price > ma50) chips.push({ icon: "↑", color: "#16a34a", label: "Uptrend" });
+    else chips.push({ icon: "↓", color: "#dc2626", label: "Downtrend" });
+  }
+
+  // Sort: bad first so user sees risks, then good — deduplicate by label
+  var seen = {};
+  chips = chips.filter(function(c) { if (seen[c.label]) return false; seen[c.label] = true; return true; });
+  // Show only top 3 most diagnostic (prefer ↑ and ↓ over →)
+  chips.sort(function(a) { return a.icon === "→" ? 1 : -1; });
+  chips = chips.slice(0, 3);
+
+  return "<div class='score-signal-chips'>" +
+    chips.map(function(c) {
+      return "<span class='score-signal-chip' style='color:" + c.color + ";border-color:" + c.color + "20;background:" + c.color + "0f;'>" +
+        "<span class='ssc-icon'>" + c.icon + "</span>" + c.label + "</span>";
+    }).join("") +
+  "</div>";
+}
+
 function buildScoreExplainer(_bd, pe, margin, growth, beta, rsi, _ma50) {
   let lines = [];
 
@@ -977,7 +1051,8 @@ function displayData(data) {
       "<div class='score-badge-num' style='color:" + scoreColor + ";'>" + totalScore + "</div>" +
       "<div class='score-badge-label'>/ 100</div>" +
       "<div class='score-badge-tag' style='color:" + scoreColor + ";'>" + scoreLabel + "</div>" +
-    "</div>";
+    "</div>" +
+    (!isEtf ? buildSignalChips(pe, margin, growth, beta, rsi, ma50, price) : "");
 
 
   // Risk profile bar (between signal and action buttons)
@@ -1788,7 +1863,11 @@ function renderScoreExplainer(score) {
         '</div>';
       }).join('') +
       '<p class="score-explainer-note">Scroll down to see the 13 factors that make up this score.</p>' +
-    '</div>';
+    '</div>' +
+    (function() {
+      var analyzed = parseInt(localStorage.getItem('total-analyzed') || '0');
+      return analyzed <= 5 ? '<p class="score-first-nudge">New to these scores? Tap the question above to learn what each range means, then scroll down for the full breakdown.</p>' : '';
+    })();
   el.style.display = 'block';
 }
 

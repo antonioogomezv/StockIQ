@@ -789,7 +789,6 @@
     <div class="nav-tab" id="nav-portfolio" onclick="showTab('portfolio')">Portfolio</div>
     <div class="nav-tab" id="nav-watchlist" onclick="showTab('watchlist')">Watchlist</div>
     <div class="nav-tab" id="nav-profile" onclick="showTab('profile')">Profile</div>
-    <div class="nav-tab nav-tab-dict" id="nav-dict" onclick="toggleDictionary()">Learn Terms</div>
   </nav>
 
   <!-- MARKET BAR -->
@@ -918,10 +917,10 @@
         <div id="risk-profile-bar" style="display:none;"></div>
         <div id="week-range-bar" style="display:none;"></div>
         <div id="action-btns" style="display:none;">
-          <button type="button" id="watchlist-btn" onclick="addToWatchlist()">+ Watchlist</button>
-          <button type="button" id="portfolio-quick-btn" onclick="quickAddToPortfolio()">+ Portfolio</button>
-          <button type="button" id="compare-btn" onclick="openCompare()">⇄ Compare</button>
-          <button type="button" id="share-btn" onclick="shareStockAnalysis()">Share ↗</button>
+          <button type="button" id="portfolio-quick-btn" class="action-btn-primary" onclick="quickAddToPortfolio()">+ Portfolio</button>
+          <button type="button" id="watchlist-btn" class="action-btn-secondary" onclick="addToWatchlist()">+ Watchlist</button>
+          <button type="button" id="compare-btn" class="action-btn-ghost" onclick="openCompare()">⇄ Compare</button>
+          <button type="button" id="share-btn" class="action-btn-ghost" onclick="shareStockAnalysis()">Share ↗</button>
         </div>
 
         <!-- Compare overlay -->
@@ -1143,7 +1142,11 @@
                   <span id="port-price-loading" style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--text-muted);">...</span>
                 </div>
               </div>
-              <input type="date" id="port-date" style="width:100%;" onchange="onPortDateChange()" aria-label="Purchase date">
+              <button type="button" class="port-prefill-btn" id="port-use-price-btn" onclick="prefillCurrentPrice()" style="display:none;">Use today's price →</button>
+              <div style="position:relative;">
+                <input type="date" id="port-date" style="width:100%;" onchange="onPortDateChange()" aria-label="Purchase date">
+                <button type="button" class="port-date-today-btn" onclick="prefillTodayDate()">Today</button>
+              </div>
               <button type="button" onclick="addToPortfolio()">Add</button>
             </div>
           </div>
