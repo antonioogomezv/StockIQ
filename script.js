@@ -4821,9 +4821,9 @@ function createPortfolio(name, isDemo, stocks) {
 
 function confirmDeletePortfolio(id) {
   let all = getAllPortfolios();
-  if (Object.keys(all).length <= 1) { showToast("Can't delete your only portfolio — create another one first."); return; }
   let port = all[id];
   if (!port) return;
+  let isLast = Object.keys(all).length <= 1;
 
   let overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:2000;display:flex;align-items:center;justify-content:center;padding:24px;';
@@ -4837,7 +4837,9 @@ function confirmDeletePortfolio(id) {
 
   let desc = document.createElement('div');
   desc.style.cssText = 'font-size:13px;color:var(--text-muted);margin-bottom:24px;';
-  desc.innerHTML = 'This will permanently delete <strong>' + escHtml(port.name) + '</strong> and all its holdings. This cannot be undone.';
+  desc.innerHTML = isLast
+    ? 'This will delete <strong>' + escHtml(port.name) + '</strong> and replace it with a blank portfolio.'
+    : 'This will permanently delete <strong>' + escHtml(port.name) + '</strong> and all its holdings. This cannot be undone.';
 
   let btnRow = document.createElement('div');
   btnRow.style.cssText = 'display:flex;gap:10px;justify-content:center;';
@@ -4864,9 +4866,15 @@ function confirmDeletePortfolio(id) {
 
 function deletePortfolio(id) {
   let all = getAllPortfolios();
-  if (Object.keys(all).length <= 1) { showToast("Can't delete your only portfolio"); return; }
   delete all[id];
-  let newActive = Object.keys(all)[0];
+  let newActive;
+  if (Object.keys(all).length === 0) {
+    // Last portfolio deleted — auto-create a blank one so user is never stuck
+    newActive = 'port_' + Date.now();
+    all[newActive] = { name: 'My Portfolio', isDemo: false, stocks: [], closedPositions: [], valueHistory: [] };
+  } else {
+    newActive = Object.keys(all)[0];
+  }
   localStorage.setItem('portfolios', JSON.stringify(all));
   localStorage.setItem('activePortfolioId', newActive);
   // Must use update() not set+merge — merge never removes deleted map keys in Firestore
