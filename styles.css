@@ -24,6 +24,18 @@
   --mono:    'JetBrains Mono', monospace;
   --sans:    'Inter', system-ui, sans-serif;
   --display: 'Plus Jakarta Sans', system-ui, sans-serif;
+  /* ── Spacing scale (4pt base) ── */
+  --sp-1:  4px;
+  --sp-2:  8px;
+  --sp-3:  12px;
+  --sp-4:  16px;
+  --sp-5:  20px;
+  --sp-6:  24px;
+  --sp-7:  28px;
+  --sp-8:  32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+  --sp-16: 64px;
 }
 
 [data-theme="dark"] {
@@ -496,9 +508,13 @@ button:active { transform: translateY(0); box-shadow: none; }
   padding: 32px 28px;
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 20px;
   box-shadow: var(--shadow-lg);
 }
+/* Range bars are a logical pair — pull them together */
+#week-range-bar { margin-top: -8px; }
+/* Chart needs a visual breath before the dense data */
+#chart-section  { margin-top: 8px; }
 
 #stock-name { font-family: var(--display); color: var(--text); }
 
@@ -1958,7 +1974,7 @@ button:active { transform: translateY(0); box-shadow: none; }
   gap: 3px;
   transition: transform 0.15s, box-shadow 0.15s;
 }
-.pillar-tile:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+.pillar-tile:hover { background: var(--surface); }
 .pillar-score {
   font-family: var(--display);
   font-size: 22px;
@@ -3301,14 +3317,14 @@ details[open] .sector-summary { color: var(--text); }
 }
 .about-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0 24px;
 }
 .about-item {
-  background: var(--surface2);
-  border-radius: 10px;
-  padding: 12px 14px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
 }
+.about-item:last-child { border-bottom: none; }
 .about-label {
   font-size: 12px;
   color: var(--text-muted);
@@ -3323,8 +3339,8 @@ details[open] .sector-summary { color: var(--text); }
   font-weight: 600;
 }
 
-@media (max-width: 768px) {
-  .about-grid { grid-template-columns: repeat(2, 1fr); }
+@media (max-width: 480px) {
+  .about-grid { grid-template-columns: 1fr; }
 }
 
 /* FUNDAMENTALS CARD */
@@ -3366,7 +3382,7 @@ details[open] .sector-summary { color: var(--text); }
 }
 .fundamentals-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   gap: 10px;
 }
 .fund-item {
@@ -3379,7 +3395,7 @@ details[open] .sector-summary { color: var(--text); }
   gap: 6px;
   transition: border-color 0.18s, box-shadow 0.18s, transform 0.18s cubic-bezier(0.16,1,0.3,1);
 }
-.fund-item:hover { border-color: var(--accent-blue); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.fund-item:hover { background: var(--surface); }
 .fund-label {
   font-size: 12px;
   color: var(--text-muted);
@@ -3763,7 +3779,7 @@ footer {
   #search-section > button { font-size: 16px; padding: 18px; }
 
   /* Results */
-  #results-section { padding: 18px 14px; gap: 16px; }
+  #results-section { padding: 18px 14px; gap: 14px; }
   #stock-name { font-size: 18px; }
   #health-score { font-size: 17px; }
 
@@ -6976,7 +6992,7 @@ header p {
   padding: 12px 14px;
   transition: border-color var(--transition-fast), background var(--transition-fast);
 }
-.fund-item:hover { background: var(--surface); border-color: var(--accent-green); }
+.fund-item:hover { background: var(--surface); border-color: var(--border); }
 .fund-label { font-size: 9px; letter-spacing: 0.09em; font-weight: 700; }
 .fund-value { font-size: 15px; font-weight: 700; letter-spacing: -0.3px; }
 
