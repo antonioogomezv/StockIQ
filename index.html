@@ -993,7 +993,7 @@
               </div>
             </div>
             <div id="ai-chat-input-row">
-              <input type="text" id="ai-chat-input" placeholder="Ask anything about this stock..." onkeypress="if(event.key==='Enter') sendStockQuestion()">
+              <input type="text" id="ai-chat-input" placeholder="Ask anything about this stock..." aria-label="Ask a question about this stock" onkeypress="if(event.key==='Enter') sendStockQuestion()">
               <button onclick="sendStockQuestion()" id="ai-chat-send">Ask</button>
             </div>
           </div>
@@ -1192,7 +1192,7 @@
           <div id="port-earnings-calendar" style="display:none;"></div>
 
           <div id="port-search-wrap" style="display:none;">
-            <input type="text" id="port-search-input" placeholder="Search your stocks…" oninput="filterPortfolioList()" autocomplete="off">
+            <input type="text" id="port-search-input" placeholder="Search your stocks…" aria-label="Search your portfolio stocks" oninput="filterPortfolioList()" autocomplete="off">
           </div>
 
           <div id="portfolio-empty" class="empty-state">
@@ -1231,7 +1231,7 @@
                 <button class="chat-suggest" onclick="askPortfolioQuestion('What is portfolio risk and how is mine?')">What is portfolio risk?</button>
               </div>
               <div id="port-chat-input-row">
-                <input type="text" id="port-chat-input" placeholder="Ask anything about your portfolio…" onkeypress="if(event.key==='Enter') sendPortfolioQuestion()">
+                <input type="text" id="port-chat-input" placeholder="Ask anything about your portfolio…" aria-label="Ask a question about your portfolio" onkeypress="if(event.key==='Enter') sendPortfolioQuestion()">
                 <button type="button" id="port-chat-send" onclick="sendPortfolioQuestion()">Ask</button>
               </div>
             </div>
@@ -1364,11 +1364,11 @@
             <div class="admin-form-grid">
               <div class="admin-field">
                 <label>Title *</label>
-                <input id="admin-new-title" placeholder="e.g. Market Beater">
+                <input id="admin-new-title" placeholder="e.g. Market Beater" aria-label="Challenge title">
               </div>
               <div class="admin-field">
-                <label>Tier *</label>
-                <select id="admin-new-tier" aria-label="Challenge tier">
+                <label id="lbl-admin-tier">Tier *</label>
+                <select id="admin-new-tier" aria-labelledby="lbl-admin-tier">
                   <option value="beginner">Beginner</option>
                   <option value="intermediate" selected>Intermediate</option>
                   <option value="advanced">Advanced</option>
@@ -1376,7 +1376,7 @@
               </div>
               <div class="admin-field admin-field-full">
                 <label>Description *</label>
-                <textarea id="admin-new-desc" rows="2" placeholder="What's the challenge objective?"></textarea>
+                <textarea id="admin-new-desc" rows="2" placeholder="What's the challenge objective?" aria-label="Challenge description"></textarea>
               </div>
               <div class="admin-field" style="display:flex;gap:8px;align-items:flex-end;">
                 <div style="flex:1;">
@@ -1384,8 +1384,8 @@
                   <input id="admin-new-balance" type="number" placeholder="10000">
                 </div>
                 <div>
-                  <label>Currency</label>
-                  <select id="admin-new-balance-currency" aria-label="Balance currency">
+                  <label id="lbl-admin-currency">Currency</label>
+                  <select id="admin-new-balance-currency" aria-labelledby="lbl-admin-currency">
                     <option value="USD">USD $</option>
                     <option value="MXN">MXN $</option>
                   </select>
@@ -1400,8 +1400,8 @@
                 <input id="admin-new-end" type="date" aria-label="Challenge end date">
               </div>
               <div class="admin-field">
-                <label>Prize Type</label>
-                <select id="admin-new-prize-type" aria-label="Prize type">
+                <label id="lbl-admin-prize-type">Prize Type</label>
+                <select id="admin-new-prize-type" aria-labelledby="lbl-admin-prize-type">
                   <option value="">No prize</option>
                   <option value="cash">Cash</option>
                   <option value="gift_card">Gift Card</option>
@@ -1417,8 +1417,8 @@
                 <input id="admin-new-prize-desc" placeholder="e.g. $50 Amazon Gift Card">
               </div>
               <div class="admin-field">
-                <label>Challenge Type</label>
-                <select id="admin-new-challenge-type" aria-label="Challenge type">
+                <label id="lbl-admin-challenge-type">Challenge Type</label>
+                <select id="admin-new-challenge-type" aria-labelledby="lbl-admin-challenge-type">
                   <option value="Best Return">Best Return</option>
                   <option value="Tech Stocks Only">Tech Stocks Only</option>
                   <option value="No Loss Challenge">No Loss Challenge</option>
@@ -1428,8 +1428,8 @@
                 </select>
               </div>
               <div class="admin-field">
-                <label>Win Condition</label>
-                <select id="admin-new-win-factor" aria-label="Win condition">
+                <label id="lbl-admin-win-factor">Win Condition</label>
+                <select id="admin-new-win-factor" aria-labelledby="lbl-admin-win-factor">
                   <option value="return_pct">Best Return %</option>
                   <option value="score_weighted">Score-Weighted Return</option>
                   <option value="lowest_drawdown">Lowest Drawdown</option>
