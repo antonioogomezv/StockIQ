@@ -33,6 +33,72 @@ function isMarketOpen() {
 
 let _toastTimer = null;
 let _undoFn = null;
+
+// ── XP PROGRESSIVE LEARNING SYSTEM ────────────────────────────────────────
+var _userXP = 0;
+
+var _XP_TIERS = [
+  { tier: 1, name: 'Beginner',     minXP: 0,   next: 50  },
+  { tier: 2, name: 'Explorer',     minXP: 50,  next: 150 },
+  { tier: 3, name: 'Analyst',      minXP: 150, next: 350 },
+  { tier: 4, name: 'Advanced',     minXP: 350, next: null },
+];
+
+function getUserLevel() {
+  for (var i = _XP_TIERS.length - 1; i >= 0; i--) {
+    if (_userXP >= _XP_TIERS[i].minXP) return _XP_TIERS[i];
+  }
+  return _XP_TIERS[0];
+}
+
+function addXP(amount) {
+  var prevTier = getUserLevel().tier;
+  _userXP = Math.max(0, _userXP + amount);
+  saveToFirestore({ xp: _userXP });
+  var newLevel = getUserLevel();
+  if (newLevel.tier > prevTier) _showLevelUpToast(newLevel);
+  refreshXPProgress();
+}
+
+var _XP_UNLOCK_MSG = {
+  2: '4 Pillars + full 14-factor breakdown',
+  3: 'Key Stats — P/E, beta, margins, market cap and more',
+  4: 'Advanced mode — you\'ve analyzed stocks like a pro'
+};
+
+function _showLevelUpToast(level) {
+  var msg = _XP_UNLOCK_MSG[level.tier] || 'more features';
+  showToast('Level up! You are now ' + level.name + '. Unlocked: ' + msg);
+}
+
+function buildLockedCard(tierName, xpNeeded, desc) {
+  return '<div class="locked-section-card">' +
+    '<svg class="locked-icon-svg" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>' +
+    '<div class="locked-card-body">' +
+      '<div class="locked-card-title">Unlocks at ' + tierName + ' (' + xpNeeded + ' XP)</div>' +
+      '<div class="locked-card-desc">' + desc + '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+function refreshXPProgress() {
+  var bar   = document.getElementById('xp-progress-bar');
+  var label = document.getElementById('xp-progress-label');
+  var badge = document.getElementById('xp-tier-badge');
+  if (!bar) return;
+  var level = getUserLevel();
+  if (badge) badge.textContent = level.name;
+  if (level.next === null) {
+    bar.style.width = '100%';
+    if (label) label.textContent = _userXP + ' XP — Max Level';
+  } else {
+    var pct = Math.round((_userXP - level.minXP) / (level.next - level.minXP) * 100);
+    bar.style.width = pct + '%';
+    var nextName = _XP_TIERS[level.tier] ? _XP_TIERS[level.tier].name : '';
+    if (label) label.textContent = _userXP + ' / ' + level.next + ' XP to ' + nextName;
+  }
+}
+// ── END XP SYSTEM ──────────────────────────────────────────────────────────
 function showToast(msg) {
   let el = document.getElementById("toast");
   _undoFn = null;
@@ -1098,6 +1164,7 @@ function displayData(data) {
   analyzed += 1;
   localStorage.setItem('total-analyzed', analyzed);
   saveToFirestore({ stats: { analyzed: analyzed } });
+  addXP(10); // +10 XP for analyzing a stock
 
   currentTicker = ticker;
   currentScore = totalScore;
@@ -1239,14 +1306,23 @@ function displayData(data) {
     getScoreHistoryHtml(ticker, totalScore) +
     getSectorContext(industry, pe, margin, growth, beta);
 
-  // Inject pillar summary above the factor bars (after DOM write)
+  // Tier-gate and optionally inject pillar summary
   (function() {
     var expEl = document.getElementById('explanation');
-    if (!expEl || !result.pillars) return;
-    var ps = buildPillarSummary(result.pillars);
-    var heading = "<div class='pillar-section-label'>4 PILLARS</div>";
-    var factorHeading = "<div class='pillar-section-label' style='margin-top:20px;'>14 FACTORS</div>";
-    expEl.innerHTML = heading + ps + factorHeading + expEl.innerHTML;
+    if (!expEl) return;
+    var tier = getUserLevel().tier;
+    if (tier < 2) {
+      // Tier 1: hide full breakdown, show teaser
+      expEl.innerHTML = buildLockedCard('Explorer', 50, 'Keep analyzing stocks to see how each of 14 factors contributes to this score');
+      return;
+    }
+    // Tier 2+: inject pillars above factor bars
+    if (result.pillars) {
+      var ps = buildPillarSummary(result.pillars);
+      var heading = "<div class='pillar-section-label'>4 PILLARS</div>";
+      var factorHeading = "<div class='pillar-section-label' style='margin-top:20px;'>14 FACTORS</div>";
+      expEl.innerHTML = heading + ps + factorHeading + expEl.innerHTML;
+    }
   })();
   }
 
@@ -1266,7 +1342,12 @@ function displayData(data) {
   } else {
     renderCompanyAbout(profile, _divYield);
     var zScore = calcAltmanZ(metrics);
-  renderFundamentals({ price, changePct, prevClose, dayHigh, dayLow, week52High, week52Low, pe, beta, margin, growth, roe, marketCap: profile.marketCapitalization, dividend: _divYield, nextEarningsDate, lastEarnings, zScore });
+    if (getUserLevel().tier >= 3) {
+      renderFundamentals({ price, changePct, prevClose, dayHigh, dayLow, week52High, week52Low, pe, beta, margin, growth, roe, marketCap: profile.marketCapitalization, dividend: _divYield, nextEarningsDate, lastEarnings, zScore });
+    } else {
+      var fcEl = document.getElementById('fundamentals-card');
+      if (fcEl) fcEl.innerHTML = '<h2>KEY STATS</h2>' + buildLockedCard('Analyst', 150, 'P/E ratio, beta, profit margins, market cap, dividend yield and more');
+    }
     renderEarningsCard(nextEarningsDate, lastEarnings, companyName);
     document.getElementById('etf-holdings-card').style.display = 'none';
     renderQuizCTA(ticker, companyName, pe, beta, margin, growth, rsi, totalScore, currentRatio);
@@ -1758,7 +1839,7 @@ function answerQuiz(chosen) {
   var state = _quizState;
   var q = state.questions[state.current];
   var correct = chosen === q.answer;
-  if (correct) state.score++;
+  if (correct) { state.score++; addXP(15); } // +15 XP for correct quiz answer
 
   var body = document.getElementById('stock-quiz-body');
   var optBtns = body.querySelectorAll('.quiz-option');
@@ -8252,6 +8333,7 @@ function sendStockQuestion() {
   let question = input.value.trim();
   if (!question || !currentTicker) return;
   input.value = '';
+  addXP(5); // +5 XP for asking AI a question
 
   let messages = document.getElementById('ai-chat-messages');
   let suggestions = document.getElementById('ai-chat-suggestions');
@@ -8635,6 +8717,9 @@ auth.onAuthStateChanged(function(user) {
       if (data.stats.streak) localStorage.setItem('streak', JSON.stringify(data.stats.streak));
     }
 
+    // Restore XP
+    if (data.xp !== undefined) _userXP = data.xp;
+
     document.getElementById('auth-overlay').style.display = 'none';
 
     if (!userProfile) {
@@ -8662,6 +8747,7 @@ auth.onAuthStateChanged(function(user) {
     initScreener();
     restoreScreenerState();
     _appReady = true; // allow real-time Firestore updates to re-render
+    refreshXPProgress();
     hideAppLoading();
   });
 });
