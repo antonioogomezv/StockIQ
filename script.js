@@ -32,12 +32,22 @@ function isMarketOpen() {
 // ── END market hours ─────────────────────────────────────────
 
 let _toastTimer = null;
+let _undoFn = null;
 function showToast(msg) {
   let el = document.getElementById("toast");
-  el.textContent = msg;
+  _undoFn = null;
+  el.innerHTML = '<span>' + escHtml(msg) + '</span>';
   el.classList.add("show");
   clearTimeout(_toastTimer);
   _toastTimer = setTimeout(function() { el.classList.remove("show"); }, 3000);
+}
+function showUndoToast(msg, undoCallback) {
+  _undoFn = undoCallback;
+  let el = document.getElementById("toast");
+  el.innerHTML = '<span>' + escHtml(msg) + '</span><button class="toast-undo-btn" onclick="_undoFn&&_undoFn()">Undo</button>';
+  el.classList.add("show");
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(function() { el.classList.remove("show"); _undoFn = null; }, 3500);
 }
 
 function escHtml(str) {
@@ -2968,12 +2978,32 @@ function addToWatchlist() {
   loadMarketOverview();
 }
 
+let _removedWlItem = null;
+let _wlFirestoreTimer = null;
 function removeFromWatchlist(ticker) {
-  let watchlist = JSON.parse(localStorage.getItem("watchlist") || "[]").filter(function(i) { return i.ticker !== ticker; });
-  localStorage.setItem("watchlist", JSON.stringify(watchlist));
-  saveToFirestore({ watchlist: watchlist });
+  let watchlist = JSON.parse(localStorage.getItem("watchlist") || "[]");
+  _removedWlItem = watchlist.find(function(i) { return i.ticker === ticker; }) || null;
+  let newWatchlist = watchlist.filter(function(i) { return i.ticker !== ticker; });
+  localStorage.setItem("watchlist", JSON.stringify(newWatchlist));
   renderWatchlist();
   loadMarketOverview();
+  clearTimeout(_wlFirestoreTimer);
+  _wlFirestoreTimer = setTimeout(function() {
+    saveToFirestore({ watchlist: newWatchlist });
+    _removedWlItem = null;
+  }, 3600);
+  showUndoToast('Removed ' + ticker + ' from Watchlist', function() {
+    clearTimeout(_wlFirestoreTimer);
+    if (!_removedWlItem) return;
+    var restored = JSON.parse(localStorage.getItem("watchlist") || "[]");
+    restored.push(_removedWlItem);
+    _removedWlItem = null;
+    localStorage.setItem("watchlist", JSON.stringify(restored));
+    saveToFirestore({ watchlist: restored });
+    renderWatchlist();
+    loadMarketOverview();
+    showToast('Restored to Watchlist');
+  });
 }
 
 function setWlSort(sort) {
@@ -7875,8 +7905,10 @@ function renderProfile() {
     document.getElementById('profile-type-display').textContent = userProfile.type + ' Investor';
     document.getElementById('profile-desc-display').textContent = userProfile.desc;
     document.getElementById('profile-quiz-btn').textContent = 'Retake Quiz';
+    document.getElementById('profile-quiz-btn').classList.add('retake-mode');
   } else {
     document.getElementById('profile-quiz-btn').textContent = 'Take Risk Quiz';
+    document.getElementById('profile-quiz-btn').classList.remove('retake-mode');
   }
   let watchlist = JSON.parse(localStorage.getItem('watchlist') || '[]');
   let active = getActivePortfolio();
