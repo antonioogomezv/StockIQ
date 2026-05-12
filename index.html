@@ -1381,7 +1381,7 @@
               <div class="admin-field" style="display:flex;gap:8px;align-items:flex-end;">
                 <div style="flex:1;">
                   <label>Starting Balance *</label>
-                  <input id="admin-new-balance" type="number" placeholder="10000">
+                  <input id="admin-new-balance" type="number" placeholder="10000" aria-label="Starting balance amount">
                 </div>
                 <div>
                   <label id="lbl-admin-currency">Currency</label>
@@ -1410,11 +1410,11 @@
               </div>
               <div class="admin-field">
                 <label>Prize Value ($)</label>
-                <input id="admin-new-prize-value" type="number" placeholder="50">
+                <input id="admin-new-prize-value" type="number" placeholder="50" aria-label="Prize value in dollars">
               </div>
               <div class="admin-field admin-field-full">
                 <label>Prize Description</label>
-                <input id="admin-new-prize-desc" placeholder="e.g. $50 Amazon Gift Card">
+                <input id="admin-new-prize-desc" placeholder="e.g. $50 Amazon Gift Card" aria-label="Prize description">
               </div>
               <div class="admin-field">
                 <label id="lbl-admin-challenge-type">Challenge Type</label>
@@ -1443,7 +1443,7 @@
               </div>
               <div class="admin-field admin-field-full">
                 <label>Rules / Restrictions</label>
-                <textarea id="admin-new-rules" rows="2" placeholder="e.g. Only tech stocks allowed, max 5 positions"></textarea>
+                <textarea id="admin-new-rules" rows="2" placeholder="e.g. Only tech stocks allowed, max 5 positions" aria-label="Challenge rules"></textarea>
               </div>
             </div>
             <div class="admin-form-actions">
@@ -1521,7 +1521,7 @@
         <div class="onboarding-bullet"><span><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span><span>Learn what every number means</span></div>
       </div>
       <div id="onboarding-search-row">
-        <input type="text" id="onboarding-input" placeholder="Try AAPL, TSLA, NVDA…"
+        <input type="text" id="onboarding-input" placeholder="Try AAPL, TSLA, NVDA…" aria-label="Search for a stock to get started"
           onkeypress="if(event.key==='Enter') onboardingSearch()">
         <button id="onboarding-btn" onclick="onboardingSearch()">Let's go →</button>
       </div>
