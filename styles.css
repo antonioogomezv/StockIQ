@@ -1933,6 +1933,58 @@ button:active { transform: translateY(0); box-shadow: none; }
   line-height: 1.6;
 }
 
+/* ── PILLAR SUMMARY ── */
+.pillar-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.pillar-summary {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.pillar-tile {
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.pillar-tile:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+.pillar-score {
+  font-family: var(--display);
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.pillar-grade {
+  font-size: 12px;
+  font-weight: 700;
+  opacity: 0.8;
+}
+.pillar-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  margin-top: 2px;
+}
+.pillar-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
 /* ── CONTEXTUAL TERMS ── */
 #contextual-terms {
   margin-bottom: 14px;

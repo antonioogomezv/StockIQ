@@ -699,6 +699,14 @@ function calculateRSI(prices, period) {
   return parseFloat((100 - (100 / (1 + avgGain / avgLoss))).toFixed(2));
 }
 
+function getScoreTier(s) {
+  return s >= 85 ? { color: '#16a34a', label: 'Exceptional' }
+       : s >= 70 ? { color: '#22c55e', label: 'Strong' }
+       : s >= 55 ? { color: '#d97706', label: 'Watch' }
+       : s >= 40 ? { color: '#f97316', label: 'Weak' }
+       :           { color: '#dc2626', label: 'Risky' };
+}
+
 // ETF score — only uses factors relevant to funds (no P/E, margin, ROE, debt)
 function calculateEtfScore(changePct, week52High, price, beta, rsi, ma50, dividend, qualScore) {
   let priceScore   = changePct > 3 ? 10 : changePct > 1 ? 8 : changePct > 0 ? 6 : changePct < -3 ? 1 : changePct < -1 ? 3 : 4;
@@ -763,24 +771,54 @@ function calculateScore(changePct, week52High, price, pe, metrics, qualScore, rs
     : zRaw >= 0    ? 2
     : 1;
 
+  // Weights revised: debt 3→8, altman 5→10, roe 8→12, price 12→4, rsi 8→5
+  // Pillar A — Business Quality (35%): margin + roe + growth
+  // Pillar B — Financial Safety  (29%): altman + debt + interest + currentRatio
+  // Pillar C — Value             (16%): pe + position
+  // Pillar D — Market Signals    (20%): rsi + ma + price + beta + news
   let total =
-    priceScore        * 0.12 +
-    positionScore     * 0.08 +
-    peScore           * 0.08 +
-    betaScore         * 0.04 +
-    marginScore       * 0.16 +
-    growthScore       * 0.12 +
-    debtScore         * 0.03 +
-    rsiScore          * 0.08 +
-    maScore           * 0.04 +
-    qualScore         * 0.04 +
-    roeScore          * 0.08 +
+    marginScore       * 0.14 +
+    roeScore          * 0.12 +
+    growthScore       * 0.09 +
+    altmanScore       * 0.10 +
+    debtScore         * 0.08 +
+    interestScore     * 0.07 +
     currentRatioScore * 0.04 +
-    interestScore     * 0.04 +
-    altmanScore       * 0.05;
+    peScore           * 0.09 +
+    positionScore     * 0.07 +
+    rsiScore          * 0.05 +
+    maScore           * 0.04 +
+    priceScore        * 0.04 +
+    betaScore         * 0.04 +
+    qualScore         * 0.03;
+  // 14+12+9+10+8+7+4+9+7+5+4+4+4+3 = 100 ✓
+
+  var pillars = {
+    businessQuality: {
+      score: Math.min(100, Math.round(((marginScore * 14 + roeScore * 12 + growthScore * 9) / 35) * 10)),
+      label: 'Business Quality', weight: 35,
+      desc: 'Profitability, efficiency, and growth'
+    },
+    financialSafety: {
+      score: Math.min(100, Math.round(((altmanScore * 10 + debtScore * 8 + interestScore * 7 + currentRatioScore * 4) / 29) * 10)),
+      label: 'Financial Safety', weight: 29,
+      desc: 'Debt, liquidity, and bankruptcy risk'
+    },
+    value: {
+      score: Math.min(100, Math.round(((peScore * 9 + positionScore * 7) / 16) * 10)),
+      label: 'Value', weight: 16,
+      desc: 'Is the price fair vs. fundamentals?'
+    },
+    momentum: {
+      score: Math.min(100, Math.round(((rsiScore * 5 + maScore * 4 + priceScore * 4 + betaScore * 4 + qualScore * 3) / 20) * 10)),
+      label: 'Market Signals', weight: 20,
+      desc: 'Trend, momentum, and news'
+    }
+  };
 
   return {
     total: Math.min(100, Math.max(0, Math.round(total * 10))),
+    pillars: pillars,
     breakdown: {
       price: priceScore, position: positionScore, pe: peScore, beta: betaScore,
       margin: marginScore, growth: growthScore, debt: debtScore, rsi: rsiScore,
@@ -874,6 +912,29 @@ function buildScoreExplainer(_bd, pe, margin, growth, beta, rsi, _ma50) {
     "<button class='score-explainer-toggle' onclick=\"var e=document.getElementById('score-explainer-body');var b=this;e.style.display=e.style.display==='none'?'block':'none';b.textContent=e.style.display==='none'?'What\\'s driving this score? ▾':'Hide ▴';\">What's driving this score? ▾</button>" +
     "<div id='score-explainer-body' style='display:none;'>" + rows + "</div>" +
   "</div>";
+}
+
+function buildPillarSummary(pillars) {
+  if (!pillars) return '';
+  var items = [
+    { key: 'businessQuality', icon: '◆' },
+    { key: 'financialSafety',  icon: '◆' },
+    { key: 'value',            icon: '◆' },
+    { key: 'momentum',         icon: '◆' }
+  ];
+  var html = "<div class='pillar-summary'>";
+  items.forEach(function(item) {
+    var p = pillars[item.key];
+    var color = p.score >= 70 ? '#16a34a' : p.score >= 50 ? '#d97706' : '#dc2626';
+    var grade = p.score >= 85 ? 'A' : p.score >= 70 ? 'B' : p.score >= 55 ? 'C' : p.score >= 40 ? 'D' : 'F';
+    html += "<div class='pillar-tile'>" +
+      "<div class='pillar-score' style='color:" + color + ";'>" + p.score + "<span class='pillar-grade'>" + grade + "</span></div>" +
+      "<div class='pillar-label'>" + p.label + "</div>" +
+      "<div class='pillar-desc'>" + p.desc + "</div>" +
+    "</div>";
+  });
+  html += "</div>";
+  return html;
 }
 
 function saveScoreHistory(ticker, score, breakdown, metrics) {
@@ -1079,8 +1140,9 @@ function displayData(data) {
       "</div>" +
     "</div>";
 
-  let scoreColor = totalScore >= 65 ? "#16a34a" : totalScore >= 50 ? "#d97706" : "#dc2626";
-  let scoreLabel = totalScore >= 65 ? "Strong" : totalScore >= 50 ? "Watch" : "Risky";
+  let _tier = getScoreTier(totalScore);
+  let scoreColor = _tier.color;
+  let scoreLabel = _tier.label;
   document.getElementById("health-score").innerHTML =
     "<div class='score-badge' style='border-color:" + scoreColor + ";'>" +
       "<div class='score-badge-num' style='color:" + scoreColor + ";'>" + totalScore + "</div>" +
@@ -1175,6 +1237,16 @@ function displayData(data) {
 })() +
     getScoreHistoryHtml(ticker, totalScore) +
     getSectorContext(industry, pe, margin, growth, beta);
+
+  // Inject pillar summary above the factor bars (after DOM write)
+  (function() {
+    var expEl = document.getElementById('explanation');
+    if (!expEl || !result.pillars) return;
+    var ps = buildPillarSummary(result.pillars);
+    var heading = "<div class='pillar-section-label'>4 PILLARS</div>";
+    var factorHeading = "<div class='pillar-section-label' style='margin-top:20px;'>14 FACTORS</div>";
+    expEl.innerHTML = heading + ps + factorHeading + expEl.innerHTML;
+  })();
   }
 
   initStockChat(ticker, companyName, totalScore, changePct, pe, margin, growth, beta, rsi, price);
@@ -1633,7 +1705,7 @@ function buildStockQuiz(ticker, companyName, pe, beta, margin, growth, rsi, tota
       q: companyName + ' scores ' + totalScore + '/100. What signal does StockIQ give it?',
       options: shuffle([scoreRange, scoreWrong[0], scoreWrong[1]]),
       answer: scoreRange,
-      explain: 'Scores 70+ = Strong (solid fundamentals across most factors). 50–69 = Watch (mixed signals). Below 50 = Risky (multiple weak areas).',
+      explain: 'Scores 85–100 = Exceptional. 70–84 = Strong. 55–69 = Watch. 40–54 = Weak. Below 40 = Risky.',
       term: null
     });
   }
@@ -1877,9 +1949,11 @@ function renderScoreExplainer(score) {
   var el = document.getElementById('score-explainer-card');
   if (!el) return;
   var ranges = [
-    { min: 70, max: 100, color: '#16a34a', label: 'Strong', desc: 'Fundamentals look solid across most factors.' },
-    { min: 50, max: 69,  color: '#d97706', label: 'Watch',  desc: 'Some positives, but notable risks. Monitor closely.' },
-    { min: 0,  max: 49,  color: '#dc2626', label: 'Risky',  desc: 'Multiple weak factors. High risk — proceed carefully.' },
+    { min: 85, max: 100, color: '#16a34a', label: 'Exceptional', desc: 'Top-tier fundamentals across nearly every pillar. Very few stocks reach this level.' },
+    { min: 70, max: 84,  color: '#22c55e', label: 'Strong',      desc: 'Solid business quality and safety. Well-run company with manageable risk.' },
+    { min: 55, max: 69,  color: '#d97706', label: 'Watch',       desc: 'Some positives, but notable concerns. Worth monitoring before acting.' },
+    { min: 40, max: 54,  color: '#f97316', label: 'Weak',        desc: 'Multiple problem areas. Needs significant improvement before showing strength.' },
+    { min: 0,  max: 39,  color: '#dc2626', label: 'Risky',       desc: 'Major red flags across pillars. High risk — research very carefully.' },
   ];
   var current = ranges.find(function(r) { return score >= r.min && score <= r.max; });
 
