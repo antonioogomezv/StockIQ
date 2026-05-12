@@ -81,6 +81,41 @@ function buildLockedCard(tierName, xpNeeded, desc) {
   '</div>';
 }
 
+function hasCompletedQuizFor(ticker) {
+  var done = JSON.parse(localStorage.getItem('quiz-done-tickers') || '[]');
+  return done.indexOf(ticker.toUpperCase()) !== -1;
+}
+
+function markQuizCompletedFor(ticker) {
+  var done = JSON.parse(localStorage.getItem('quiz-done-tickers') || '[]');
+  var t = ticker.toUpperCase();
+  if (done.indexOf(t) === -1) { done.push(t); localStorage.setItem('quiz-done-tickers', JSON.stringify(done)); }
+}
+
+function buildQuizLockedCard(name) {
+  return '<div class="locked-section-card">' +
+    '<svg class="locked-icon-svg" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>' +
+    '<div class="locked-card-body">' +
+      '<div class="locked-card-title">Take the quiz to unlock</div>' +
+      '<div class="locked-card-desc">Answer the ' + escHtml(name) + ' quiz to see the full 4-pillar breakdown and 14 factors</div>' +
+      '<button class="locked-quiz-btn" onclick="openStockQuiz()">Take quiz →</button>' +
+    '</div>' +
+  '</div>';
+}
+
+function _unlockBreakdownAfterQuiz() {
+  if (getUserLevel().tier < 2) return;
+  var expEl = document.getElementById('explanation');
+  if (!expEl || !window._lastFactorBarsHTML) return;
+  expEl.innerHTML = window._lastFactorBarsHTML;
+  if (window._lastPillarsResult) {
+    var ps = buildPillarSummary(window._lastPillarsResult);
+    var heading = "<div class='pillar-section-label'>4 PILLARS</div>";
+    var factorHeading = "<div class='pillar-section-label' style='margin-top:20px;'>14 FACTORS</div>";
+    expEl.innerHTML = heading + ps + factorHeading + expEl.innerHTML;
+  }
+}
+
 function refreshXPProgress() {
   var bar   = document.getElementById('xp-progress-bar');
   var label = document.getElementById('xp-progress-label');
@@ -1306,17 +1341,25 @@ function displayData(data) {
     getScoreHistoryHtml(ticker, totalScore) +
     getSectorContext(industry, pe, margin, growth, beta);
 
+  // Save factor bars HTML so quiz unlock can restore it without re-fetching
+  window._lastFactorBarsHTML = (document.getElementById('explanation') || {}).innerHTML || '';
+  window._lastPillarsResult = result.pillars || null;
+
   // Tier-gate and optionally inject pillar summary
   (function() {
     var expEl = document.getElementById('explanation');
     if (!expEl) return;
     var tier = getUserLevel().tier;
     if (tier < 2) {
-      // Tier 1: hide full breakdown, show teaser
       expEl.innerHTML = buildLockedCard('Explorer', 50, 'Keep analyzing stocks to see how each of 14 factors contributes to this score');
       return;
     }
-    // Tier 2+: inject pillars above factor bars
+    // Tier 2+: require quiz completion for this specific stock
+    if (!hasCompletedQuizFor(ticker)) {
+      expEl.innerHTML = buildQuizLockedCard(companyName);
+      return;
+    }
+    // Quiz done — inject pillars above factor bars
     if (result.pillars) {
       var ps = buildPillarSummary(result.pillars);
       var heading = "<div class='pillar-section-label'>4 PILLARS</div>";
@@ -1886,6 +1929,11 @@ function showQuizResults() {
       '<div class="quiz-results-msg">' + msg + '</div>' +
       '<button class="quiz-next-btn" onclick="closeStockQuiz()">Done</button>' +
     '</div>';
+  // Mark this stock's quiz as done and unlock the breakdown
+  if (currentTicker) {
+    markQuizCompletedFor(currentTicker);
+    _unlockBreakdownAfterQuiz();
+  }
   // Update streak/achievement for completing a quiz
   var quizCount = parseInt(localStorage.getItem('quizzes-completed') || '0') + 1;
   localStorage.setItem('quizzes-completed', quizCount);
