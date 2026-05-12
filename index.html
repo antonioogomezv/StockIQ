@@ -166,6 +166,7 @@
         <div id="quiz-budget-prefix" class="quiz-budget-prefix">$</div>
         <input id="quiz-budget-input" type="number" min="0" inputmode="numeric"
                placeholder="e.g. 5000"
+               aria-label="Investment budget amount"
                oninput="quizBudgetInput(this)"
                onkeydown="if(event.key==='Enter') submitBudget()">
       </div>
@@ -274,7 +275,7 @@
     <button onclick="toggleDictionary()">✕</button>
   </div>
   <div id="dict-search-wrap">
-    <input type="text" id="dict-search" placeholder="Search terms…" oninput="filterDictTerms(this.value)" autocomplete="off">
+    <input type="text" id="dict-search" placeholder="Search terms…" oninput="filterDictTerms(this.value)" autocomplete="off" aria-label="Search financial terms">
   </div>
   <div id="dict-no-results" style="display:none;">No terms found.</div>
   <div id="dict-list">
@@ -854,6 +855,7 @@
         <div id="search-input-row">
           <div id="search-input-wrap">
             <input type="text" id="stock-input" placeholder="e.g. Apple, Tesla or AAPL"
+              aria-label="Search for a stock by name or ticker"
               oninput="onSearchInput()"
               onkeypress="if(event.key==='Enter'){ hideDropdown(); searchStock(); }"
               onblur="hideDropdown()"
@@ -880,7 +882,7 @@
           </div>
           <div id="screener-search-row">
             <div id="screener-search-wrap">
-              <input type="text" id="screener-query-input"
+              <input type="text" id="screener-query-input" aria-label="Search for stocks by description or criteria"
                 placeholder="e.g. stocks under $50 with big potential"
                 onkeypress="if(event.key==='Enter')searchScreener()"
                 oninput="onScreenerQueryInput()">
@@ -930,7 +932,7 @@
           </div>
           <div id="compare-search-row">
             <div style="position:relative;flex:1;">
-              <input type="text" id="compare-input" placeholder="Search company or ticker…"
+              <input type="text" id="compare-input" placeholder="Search company or ticker…" aria-label="Search for a stock to compare"
                 oninput="onCompareInput()"
                 onkeypress="if(event.key==='Enter'){hideCompareDropdown();runCompare();}"
                 onblur="setTimeout(hideCompareDropdown,150)">
@@ -1366,7 +1368,7 @@
               </div>
               <div class="admin-field">
                 <label>Tier *</label>
-                <select id="admin-new-tier">
+                <select id="admin-new-tier" aria-label="Challenge tier">
                   <option value="beginner">Beginner</option>
                   <option value="intermediate" selected>Intermediate</option>
                   <option value="advanced">Advanced</option>
@@ -1383,7 +1385,7 @@
                 </div>
                 <div>
                   <label>Currency</label>
-                  <select id="admin-new-balance-currency">
+                  <select id="admin-new-balance-currency" aria-label="Balance currency">
                     <option value="USD">USD $</option>
                     <option value="MXN">MXN $</option>
                   </select>
@@ -1391,15 +1393,15 @@
               </div>
               <div class="admin-field">
                 <label>Start Date *</label>
-                <input id="admin-new-start" type="date">
+                <input id="admin-new-start" type="date" aria-label="Challenge start date">
               </div>
               <div class="admin-field">
                 <label>End Date *</label>
-                <input id="admin-new-end" type="date">
+                <input id="admin-new-end" type="date" aria-label="Challenge end date">
               </div>
               <div class="admin-field">
                 <label>Prize Type</label>
-                <select id="admin-new-prize-type">
+                <select id="admin-new-prize-type" aria-label="Prize type">
                   <option value="">No prize</option>
                   <option value="cash">Cash</option>
                   <option value="gift_card">Gift Card</option>
@@ -1416,7 +1418,7 @@
               </div>
               <div class="admin-field">
                 <label>Challenge Type</label>
-                <select id="admin-new-challenge-type">
+                <select id="admin-new-challenge-type" aria-label="Challenge type">
                   <option value="Best Return">Best Return</option>
                   <option value="Tech Stocks Only">Tech Stocks Only</option>
                   <option value="No Loss Challenge">No Loss Challenge</option>
@@ -1427,7 +1429,7 @@
               </div>
               <div class="admin-field">
                 <label>Win Condition</label>
-                <select id="admin-new-win-factor">
+                <select id="admin-new-win-factor" aria-label="Win condition">
                   <option value="return_pct">Best Return %</option>
                   <option value="score_weighted">Score-Weighted Return</option>
                   <option value="lowest_drawdown">Lowest Drawdown</option>
@@ -1436,8 +1438,8 @@
                 </select>
               </div>
               <div class="admin-field" style="flex-direction:row;align-items:center;gap:10px;">
-                <input type="checkbox" id="admin-new-is-premium" style="width:auto;margin:0;">
-                <label style="text-transform:none;font-size:13px;font-weight:600;color:var(--text);">Premium only</label>
+                <input type="checkbox" id="admin-new-is-premium" style="width:auto;margin:0;" aria-label="Premium only">
+                <label for="admin-new-is-premium" style="text-transform:none;font-size:13px;font-weight:600;color:var(--text);">Premium only</label>
               </div>
               <div class="admin-field admin-field-full">
                 <label>Rules / Restrictions</label>

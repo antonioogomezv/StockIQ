@@ -1,0 +1,24 @@
+{
+  "name": "stockiq",
+  "version": "1.0.0",
+  "description": "A beginner-friendly stock analysis PWA. Search any company, get an AI-powered score, track your portfolio, and learn financial terms in plain English.",
+  "main": "build.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/antonioogomezv/StockIQ.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/antonioogomezv/StockIQ/issues"
+  },
+  "homepage": "https://github.com/antonioogomezv/StockIQ#readme",
+  "devDependencies": {
+    "terser": "^5.47.1"
+  }
+}
