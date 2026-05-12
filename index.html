@@ -883,6 +883,36 @@
         <div id="stock-name">—</div>
         <div id="health-score">Health Score: —</div>
         <div id="score-explainer-card" style="display:none;"></div>
+
+        <!-- AI ANALYSIS — immediately after score so beginners get the plain-English summary first -->
+        <div id="ai-explanation" style="display:none;">
+          <div id="ai-label">STOCKIQ AI ANALYSIS</div>
+          <div id="ai-text">—</div>
+          <div id="ai-chat" style="display:none;">
+            <div id="ai-chat-messages"></div>
+            <div id="ai-chat-suggestions">
+              <button class="chat-suggest" onclick="askStockQuestion('What does this score mean?')">What does the score mean?</button>
+              <button class="chat-suggest" onclick="askStockQuestion('What are the main risks for this company?')">What are the risks?</button>
+              <button class="chat-suggest" onclick="askStockQuestion('Can you explain the P/E ratio for this stock?')">Explain P/E ratio</button>
+              <button class="chat-suggest" onclick="askStockQuestion('What does beta mean and how does it affect me?')">What is beta?</button>
+            </div>
+            <div id="ai-scenarios">
+              <div class="ai-scenarios-label">What if...</div>
+              <div class="ai-scenarios-chips">
+                <button class="scenario-chip" onclick="askScenario('rates')">Rates rise</button>
+                <button class="scenario-chip" onclick="askScenario('recession')">Recession hits</button>
+                <button class="scenario-chip" onclick="askScenario('inflation')">Inflation spikes</button>
+                <button class="scenario-chip" onclick="askScenario('dollar')">Dollar strengthens</button>
+                <button class="scenario-chip" onclick="askScenario('bear')">Bear case</button>
+              </div>
+            </div>
+            <div id="ai-chat-input-row">
+              <input type="text" id="ai-chat-input" placeholder="Ask anything about this stock..." aria-label="Ask a question about this stock" onkeypress="if(event.key==='Enter') sendStockQuestion()">
+              <button onclick="sendStockQuestion()" id="ai-chat-send">Ask</button>
+            </div>
+          </div>
+        </div>
+
         <div id="risk-profile-bar" style="display:none;"></div>
         <div id="week-range-bar" style="display:none;"></div>
         <div id="action-btns" style="display:none;">
@@ -935,37 +965,9 @@
           <div id="chart-insight"></div>
         </div>
 
-        <!-- AI ANALYSIS — after chart -->
         <div id="explanation-simple" style="display:none;"></div>
-        <div id="ai-explanation" style="display:none;">
-          <div id="ai-label">STOCKIQ AI ANALYSIS</div>
-          <div id="ai-text">—</div>
-          <div id="ai-chat" style="display:none;">
-            <div id="ai-chat-messages"></div>
-            <div id="ai-chat-suggestions">
-              <button class="chat-suggest" onclick="askStockQuestion('What does this score mean?')">What does the score mean?</button>
-              <button class="chat-suggest" onclick="askStockQuestion('What are the main risks for this company?')">What are the risks?</button>
-              <button class="chat-suggest" onclick="askStockQuestion('Can you explain the P/E ratio for this stock?')">Explain P/E ratio</button>
-              <button class="chat-suggest" onclick="askStockQuestion('What does beta mean and how does it affect me?')">What is beta?</button>
-            </div>
-            <div id="ai-scenarios">
-              <div class="ai-scenarios-label">What if...</div>
-              <div class="ai-scenarios-chips">
-                <button class="scenario-chip" onclick="askScenario('rates')">Rates rise</button>
-                <button class="scenario-chip" onclick="askScenario('recession')">Recession hits</button>
-                <button class="scenario-chip" onclick="askScenario('inflation')">Inflation spikes</button>
-                <button class="scenario-chip" onclick="askScenario('dollar')">Dollar strengthens</button>
-                <button class="scenario-chip" onclick="askScenario('bear')">Bear case</button>
-              </div>
-            </div>
-            <div id="ai-chat-input-row">
-              <input type="text" id="ai-chat-input" placeholder="Ask anything about this stock..." aria-label="Ask a question about this stock" onkeypress="if(event.key==='Enter') sendStockQuestion()">
-              <button onclick="sendStockQuestion()" id="ai-chat-send">Ask</button>
-            </div>
-          </div>
-        </div>
 
-        <!-- FUNDAMENTALS — after AI -->
+        <!-- FUNDAMENTALS -->
         <div id="company-about" style="display:none;"></div>
         <div id="fundamentals-card" style="display:none;"></div>
         <div id="dividend-card" style="display:none;"></div>

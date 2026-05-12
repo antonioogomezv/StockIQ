@@ -6897,6 +6897,7 @@ header p {
   border-left: none;
   border-radius: calc(var(--radius) - 2px);
   padding: 20px 20px;
+  margin-top: 0;
   background: linear-gradient(135deg,
     rgba(22,163,74,0.04) 0%,
     rgba(14,165,233,0.03) 50%,
