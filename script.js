@@ -196,6 +196,31 @@ function _fetchAndCachePrices(symbols, existing) {
 let chartInstance = null;
 let currentTicker = null;
 let currentScore = null;
+
+function getChartTheme() {
+  var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  return {
+    grid:         isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)',
+    tick:         isDark ? '#8896a5' : '#64748b',
+    volume:       isDark ? 'rgba(14,165,233,0.18)' : 'rgba(14,165,233,0.15)',
+    tooltipBg:    '#1e293b',
+    tooltipBorder:'#334155',
+    tooltipTitle: '#f1f5f9',
+    tooltipBody:  '#94a3b8'
+  };
+}
+
+function formatChartDate(dateStr, range) {
+  var dt = new Date(dateStr + 'T12:00:00');
+  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  if (range === '1W' || range === '1M') {
+    return (dt.getMonth() + 1) + '/' + dt.getDate();
+  }
+  if (range === '3M' || range === '6M') {
+    return months[dt.getMonth()] + ' ' + dt.getDate();
+  }
+  return months[dt.getMonth()] + " '" + String(dt.getFullYear()).slice(2);
+}
 let currentName = null;
 let userProfile = null;
 
@@ -2112,7 +2137,7 @@ function renderChartInsight(prices, range) {
   let first = prices[0];
   let last  = prices[prices.length - 1];
   let changePct = ((last - first) / first) * 100;
-  let rangeLabel = range === '1W' ? 'this week' : range === '1M' ? 'this month' : 'over 3 months';
+  let rangeLabel = range === '1W' ? 'this week' : range === '1M' ? 'this month' : range === '3M' ? 'over 3 months' : range === '6M' ? 'over 6 months' : range === '1Y' ? 'over the past year' : 'all time';
   let isUp = changePct >= 0;
 
   // Trend
@@ -2162,78 +2187,83 @@ function renderPriceChart(prices, dates, volumes, ohlc) {
   }
   if (chartInstance) chartInstance.destroy();
 
-  let labels = dates.map(function(d) {
-    let dt = new Date(d + "T12:00:00");
-    return (dt.getMonth() + 1) + "/" + dt.getDate();
-  });
+  var activeRange = (document.querySelector('.range-btn.active') || {}).dataset && document.querySelector('.range-btn.active').dataset.range || '1M';
+  var labels = dates.map(function(d) { return formatChartDate(d, activeRange); });
+  var theme = getChartTheme();
 
-  let isUp = prices.length > 0 && prices[prices.length - 1] >= prices[0];
-  let lineColor  = isUp ? "#16a34a" : "#dc2626";
-  let fillColor  = isUp ? "rgba(22,163,74,0.06)" : "rgba(220,38,38,0.06)";
-  let maxVol = volumes.length > 0 ? Math.max.apply(null, volumes) : 1;
+  var isUp = prices.length > 0 && prices[prices.length - 1] >= prices[0];
+  var lineColor = isUp ? '#16a34a' : '#dc2626';
+  var maxVol = volumes.length > 0 ? Math.max.apply(null, volumes) : 1;
 
-  let datasets = [
+  var canvas = document.getElementById('priceChart');
+  var ctx = canvas.getContext('2d');
+  var gradientFill = ctx.createLinearGradient(0, 0, 0, canvas.offsetHeight || 240);
+  gradientFill.addColorStop(0, isUp ? 'rgba(22,163,74,0.18)' : 'rgba(220,38,38,0.18)');
+  gradientFill.addColorStop(1, isUp ? 'rgba(22,163,74,0.00)' : 'rgba(220,38,38,0.00)');
+
+  var datasets = [
     {
-      type: "line",
-      label: "Price",
+      type: 'line',
+      label: 'Price',
       data: prices,
       borderColor: lineColor,
-      backgroundColor: fillColor,
+      backgroundColor: gradientFill,
       borderWidth: 2,
       pointRadius: 0,
       pointHoverRadius: 5,
       pointHoverBackgroundColor: lineColor,
       tension: 0.2,
       fill: true,
-      yAxisID: "yPrice",
+      yAxisID: 'yPrice',
       order: 1
     },
     {
-      type: "bar",
-      label: "Volume",
+      type: 'bar',
+      label: 'Volume',
       data: volumes,
-      backgroundColor: "rgba(14,165,233,0.12)",
+      backgroundColor: theme.volume,
       borderWidth: 0,
-      yAxisID: "yVolume",
+      yAxisID: 'yVolume',
       order: 3
     }
   ];
 
   if (chartPrevClose > 0) {
     datasets.push({
-      type: "line",
-      label: "Prev Close",
+      type: 'line',
+      label: 'Prev Close',
       data: prices.map(function() { return chartPrevClose; }),
-      borderColor: "rgba(217,119,6,0.55)",
+      borderColor: 'rgba(217,119,6,0.55)',
       borderWidth: 1,
       borderDash: [5, 4],
       pointRadius: 0,
       pointHoverRadius: 0,
       fill: false,
-      yAxisID: "yPrice",
+      yAxisID: 'yPrice',
       order: 0
     });
   }
 
-  chartInstance = new Chart(document.getElementById("priceChart").getContext("2d"), {
+  chartInstance = new Chart(ctx, {
     data: { labels: labels, datasets: datasets },
     options: {
       responsive: true,
-      interaction: { mode: "index", intersect: false },
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: "#1e293b",
-          borderColor: "#334155",
+          backgroundColor: theme.tooltipBg,
+          borderColor: theme.tooltipBorder,
           borderWidth: 1,
-          titleColor: "#f1f5f9",
-          bodyColor: "#94a3b8",
+          titleColor: theme.tooltipTitle,
+          bodyColor: theme.tooltipBody,
           padding: 12,
           callbacks: {
             title: function(items) { return items[0].label; },
             label: function(ctx) {
-              if (ctx.dataset.label === "Price")  return "  Price: $" + ctx.parsed.y.toFixed(2);
-              if (ctx.dataset.label === "Volume") return "  Vol: " + (ctx.parsed.y >= 1e6 ? (ctx.parsed.y / 1e6).toFixed(1) + "M" : (ctx.parsed.y / 1e3).toFixed(0) + "K");
+              if (ctx.dataset.label === 'Price')  return '  Price: $' + ctx.parsed.y.toFixed(2);
+              if (ctx.dataset.label === 'Volume') return '  Vol: ' + (ctx.parsed.y >= 1e6 ? (ctx.parsed.y / 1e6).toFixed(1) + 'M' : (ctx.parsed.y / 1e3).toFixed(0) + 'K');
               return null;
             }
           }
@@ -2241,19 +2271,14 @@ function renderPriceChart(prices, dates, volumes, ohlc) {
       },
       scales: {
         yPrice: {
-          type: "linear",
-          position: "left",
-          ticks: { color: "#64748b", callback: function(v) { return "$" + v.toLocaleString(); } },
-          grid: { color: "#e2e8f0" }
+          type: 'linear',
+          position: 'left',
+          ticks: { color: theme.tick, callback: function(v) { return '$' + v.toLocaleString(); } },
+          grid: { color: theme.grid }
         },
-        yVolume: {
-          type: "linear",
-          position: "right",
-          display: false,
-          max: maxVol * 6
-        },
+        yVolume: { type: 'linear', position: 'right', display: false, max: maxVol * 6 },
         x: {
-          ticks: { color: "#64748b", maxTicksLimit: 8 },
+          ticks: { color: theme.tick, maxTicksLimit: activeRange === '1Y' || activeRange === 'MAX' ? 10 : 8 },
           grid: { display: false }
         }
       }
@@ -2265,10 +2290,9 @@ function renderCandlestickChart(ohlcData, dates, volumes) {
   if (chartInstance) chartInstance.destroy();
   _chartOHLCSlice = ohlcData;
 
-  var labels = dates.map(function(d) {
-    var dt = new Date(d + "T12:00:00");
-    return (dt.getMonth() + 1) + "/" + dt.getDate();
-  });
+  var activeRange = (document.querySelector('.range-btn.active') || {}).dataset && document.querySelector('.range-btn.active').dataset.range || '1M';
+  var theme = getChartTheme();
+  var labels = dates.map(function(d) { return formatChartDate(d, activeRange); });
 
   var bodyData = ohlcData.map(function(d) {
     return [Math.min(d.o, d.c), Math.max(d.o, d.c)];
@@ -2317,19 +2341,20 @@ function renderCandlestickChart(ohlcData, dates, volumes) {
         {
           type: 'bar', label: 'Volume',
           data: volumes,
-          backgroundColor: 'rgba(14,165,233,0.10)',
+          backgroundColor: theme.volume,
           borderWidth: 0, yAxisID: 'yVolume', order: 2
         }
       ]
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: '#1e293b', borderColor: '#334155', borderWidth: 1,
-          titleColor: '#f1f5f9', bodyColor: '#94a3b8', padding: 12,
+          backgroundColor: theme.tooltipBg, borderColor: theme.tooltipBorder, borderWidth: 1,
+          titleColor: theme.tooltipTitle, bodyColor: theme.tooltipBody, padding: 12,
           callbacks: {
             title: function(items) { return items[0].label; },
             label: function(ctx) {
@@ -2347,11 +2372,11 @@ function renderCandlestickChart(ohlcData, dates, volumes) {
       scales: {
         yPrice: {
           type: 'linear', position: 'left',
-          ticks: { color: '#64748b', callback: function(v) { return '$' + v.toLocaleString(); } },
-          grid: { color: 'rgba(100,116,139,0.1)' }
+          ticks: { color: theme.tick, callback: function(v) { return '$' + v.toLocaleString(); } },
+          grid: { color: theme.grid }
         },
         yVolume: { type: 'linear', position: 'right', display: false, max: maxVol * 6 },
-        x: { ticks: { color: '#64748b', maxTicksLimit: 8 }, grid: { display: false } }
+        x: { ticks: { color: theme.tick, maxTicksLimit: activeRange === '1Y' || activeRange === 'MAX' ? 10 : 8 }, grid: { display: false } }
       }
     }
   });

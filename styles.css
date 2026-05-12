@@ -1119,7 +1119,7 @@ button:active { transform: translateY(0); }
   color: var(--text);
 }
 
-#priceChart { margin-top: 4px; }
+#priceChart { margin-top: 4px; height: 240px; max-height: 260px; }
 
 #chart-insight { margin-top: 16px; }
 
