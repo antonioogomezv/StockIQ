@@ -2375,9 +2375,18 @@ function renderCandlestickChart(ohlcData, dates, volumes) {
     return [Math.min(d.o, d.c), Math.max(d.o, d.c)];
   });
   var colors = ohlcData.map(function(d) {
-    return d.c >= d.o ? 'rgba(22,163,74,0.85)' : 'rgba(220,38,38,0.85)';
+    return d.c >= d.o ? 'rgba(22,163,74,0.9)' : 'rgba(220,38,38,0.9)';
   });
   var maxVol = volumes.length > 0 ? Math.max.apply(null, volumes) : 1;
+
+  // Clamp y-axis to actual price range so candle bodies are visible
+  var allLows  = ohlcData.map(function(d) { return d.l; });
+  var allHighs = ohlcData.map(function(d) { return d.h; });
+  var priceMin = Math.min.apply(null, allLows);
+  var priceMax = Math.max.apply(null, allHighs);
+  var pricePad = (priceMax - priceMin) * 0.08;
+  var yMin = priceMin - pricePad;
+  var yMax = priceMax + pricePad;
 
   var wickPlugin = {
     id: 'wickPlugin',
@@ -2413,7 +2422,7 @@ function renderCandlestickChart(ohlcData, dates, volumes) {
           data: bodyData,
           backgroundColor: colors, borderColor: colors,
           borderWidth: 0, borderSkipped: false,
-          yAxisID: 'yPrice', barPercentage: 0.8, categoryPercentage: 0.9, order: 1
+          yAxisID: 'yPrice', barPercentage: 0.6, categoryPercentage: 0.8, order: 1
         },
         {
           type: 'bar', label: 'Volume',
@@ -2449,6 +2458,7 @@ function renderCandlestickChart(ohlcData, dates, volumes) {
       scales: {
         yPrice: {
           type: 'linear', position: 'left',
+          min: yMin, max: yMax,
           ticks: { color: theme.tick, callback: function(v) { return '$' + v.toLocaleString(); } },
           grid: { color: theme.grid }
         },
