@@ -121,6 +121,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
   min-height: 100dvh;
+  overflow-x: hidden;
   transition: background-color 0.25s, color 0.25s;
   letter-spacing: -0.01em;
 }
@@ -3215,7 +3216,8 @@ button:active { transform: translateY(0); box-shadow: none; }
   #analyze-layout {
     grid-template-columns: 220px 1fr;
   }
-  #analyze-challenge-sidebar { display: none; }
+  /* !important beats inline style set by JS when challenge is active */
+  #analyze-challenge-sidebar { display: none !important; }
 }
 @media (max-width: 900px) {
   #analyze-layout {
@@ -4569,6 +4571,10 @@ footer {
   top: 0;
   z-index: 100;
   box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  /* GPU layer — prevents iOS sticky nav flicker on scroll */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 .nav-tab {
@@ -6433,7 +6439,8 @@ footer {
   }
   #tab-analyze main  { order: 1; padding: 0; }
   #trending-section  { order: 2; position: static; max-height: none; padding: 14px 12px; }
-  #trending-list { max-height: 320px; overflow-y: auto; }
+  /* No nested scroll on mobile — let the page handle scrolling */
+  #trending-list { max-height: none; overflow-y: visible; }
 
   /* ── Search ── */
   #search-section { margin-bottom: 20px; }
@@ -6463,7 +6470,7 @@ footer {
   #chart-stats { grid-template-columns: repeat(3, 1fr); gap: 4px; }
   .chart-stat { padding: 8px 4px; }
   .chart-stat-value { font-size: 12px; }
-  .chart-stat-label { font-size: 9px; }
+  .chart-stat-label { font-size: 10px; }
 
   /* ── News & company cards ── */
   #news-section,
@@ -6536,7 +6543,7 @@ footer {
   .scenario-chip { font-size: 12px; padding: 4px 11px; }
 
   /* ── Toast ── */
-  #toast { bottom: 16px; font-size: 12px; padding: 10px 16px; }
+  #toast { font-size: 12px; padding: 10px 16px; }
 
   /* ── Footer ── */
   footer { padding: 20px 16px; font-size: 12px; margin-top: 16px; }
@@ -7687,6 +7694,10 @@ h2 {
   #tab-watchlist main { padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px)); }
   #tab-profile main { padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
 
+  /* Float buttons and toast: clear home indicator */
+  #float-dict-btn { bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
+  #toast { bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
+
   /* Prevent rubber-band scroll leaking out of sheets and drawers */
   #dict-drawer,
   #onboarding-modal,
@@ -7698,6 +7709,19 @@ h2 {
   #trending-list,
   #ai-chat-suggestions,
   #port-chat-suggestions { -webkit-overflow-scrolling: touch; }
+
+  /* Isolate card repaint areas — reduces scroll jank on low-end Android */
+  #results-section,
+  #watchlist-section,
+  #port-main,
+  .challenge-card,
+  .port-metric { contain: layout; }
+
+  /* Prevent horizontal overflow from any single wide element */
+  #tab-analyze main,
+  #tab-portfolio,
+  #tab-watchlist,
+  #tab-profile { max-width: 100vw; overflow-x: hidden; }
 }
 
 /* Android Chrome address bar color follows theme */

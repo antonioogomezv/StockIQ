@@ -7932,9 +7932,10 @@ function renderAnalyzeChallengeBanner() {
 function _renderAnalyzeChallengeBannerUI(bannerEl, lbEl, all) {
   var sidebar = document.getElementById('analyze-challenge-sidebar');
   var layout = document.getElementById('analyze-layout');
+  var isMobile = window.innerWidth <= 1100;
   if (!_activeChallenges || _activeChallenges.length === 0) {
-    // Show placeholder so the sidebar column still looks intentional
-    if (sidebar) {
+    // Show placeholder so the sidebar column still looks intentional (desktop only)
+    if (sidebar && !isMobile) {
       sidebar.style.display = 'flex';
       bannerEl.innerHTML =
         '<div class="challenge-no-active">' +
@@ -7944,11 +7945,11 @@ function _renderAnalyzeChallengeBannerUI(bannerEl, lbEl, all) {
         '</div>';
       lbEl.innerHTML = '';
     }
-    if (layout) layout.classList.add('has-challenge-sidebar');
+    if (layout && !isMobile) layout.classList.add('has-challenge-sidebar');
     return;
   }
-  if (sidebar) sidebar.style.display = 'flex';
-  if (layout) layout.classList.add('has-challenge-sidebar');
+  if (sidebar && !isMobile) sidebar.style.display = 'flex';
+  if (layout && !isMobile) layout.classList.add('has-challenge-sidebar');
   var c = _activeChallenges[0];
   var hasJoined = Object.values(all).some(function(p) { return p.challengeId === c.id; });
   var daysLeft = daysLeftText(c.endDate);
