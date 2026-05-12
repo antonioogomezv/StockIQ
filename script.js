@@ -1251,7 +1251,7 @@ function displayData(data) {
 
   initStockChat(ticker, companyName, totalScore, changePct, pe, margin, growth, beta, rsi, price);
   let chatEl = document.getElementById('ai-chat');
-  if (chatEl) { chatEl.style.display = 'none'; document.getElementById('ai-chat-messages').innerHTML = ''; document.getElementById('ai-chat-suggestions').style.display = 'flex'; }
+  if (chatEl) { chatEl.style.display = 'none'; document.getElementById('ai-chat-messages').innerHTML = ''; document.getElementById('ai-chat-suggestions').style.display = 'flex'; var sc = document.getElementById('ai-scenarios'); if (sc) sc.style.display = 'none'; }
   getAIExplanation(ticker, companyName, totalScore, changePct, pe, margin, growth, beta, rsi, ma50, price, topHeadline, roe, currentRatio, interestCoverage);
   loadChart(prices, dates, volumes || [], data.ohlc || [], prevClose, dayHigh, dayLow, week52High);
 
@@ -3865,7 +3865,26 @@ function initScreener() {
 }
 
 function toggleScreener() {
-  // kept for any legacy callers — no-op now that screener is always visible
+  var body = document.getElementById('screener-body');
+  var toggle = document.getElementById('screener-toggle');
+  var chevron = document.getElementById('screener-chevron');
+  if (!body) return;
+  var isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  if (toggle) toggle.setAttribute('aria-expanded', String(!isOpen));
+  if (chevron) chevron.textContent = isOpen ? '▾' : '▴';
+  localStorage.setItem('screener-open', isOpen ? '0' : '1');
+}
+
+function restoreScreenerState() {
+  if (localStorage.getItem('screener-open') === '1') {
+    var body = document.getElementById('screener-body');
+    var toggle = document.getElementById('screener-toggle');
+    var chevron = document.getElementById('screener-chevron');
+    if (body) body.style.display = 'block';
+    if (toggle) toggle.setAttribute('aria-expanded', 'true');
+    if (chevron) chevron.textContent = '▴';
+  }
 }
 
 function onScreenerQueryInput() {
@@ -3878,6 +3897,16 @@ function onScreenerQueryInput() {
 function setScreenerQueryChip(text) {
   var input = document.getElementById('screener-query-input');
   if (input) input.value = text;
+  // ensure screener body is open so results are visible
+  var body = document.getElementById('screener-body');
+  var toggle = document.getElementById('screener-toggle');
+  var chevron = document.getElementById('screener-chevron');
+  if (body && body.style.display === 'none') {
+    body.style.display = 'block';
+    if (toggle) toggle.setAttribute('aria-expanded', 'true');
+    if (chevron) chevron.textContent = '▴';
+    localStorage.setItem('screener-open', '1');
+  }
   searchScreener();
 }
 
@@ -3934,6 +3963,16 @@ function parseScreenerNL(text) {
 }
 
 function searchScreener() {
+  // auto-open screener body if collapsed
+  var body = document.getElementById('screener-body');
+  var toggle = document.getElementById('screener-toggle');
+  var chevron = document.getElementById('screener-chevron');
+  if (body && body.style.display === 'none') {
+    body.style.display = 'block';
+    if (toggle) toggle.setAttribute('aria-expanded', 'true');
+    if (chevron) chevron.textContent = '▴';
+    localStorage.setItem('screener-open', '1');
+  }
   var input = document.getElementById('screener-query-input');
   var text = input ? input.value.trim() : '';
   if (!text) {
@@ -8237,6 +8276,8 @@ function sendStockQuestion() {
       "<div class='chat-bubble chat-bubble-ai'>" + parseMarkdown(reply) + "</div>" +
       "</div>";
     requestAnimationFrame(function() { messages.scrollTop = messages.scrollHeight; });
+    var scenariosEl = document.getElementById('ai-scenarios');
+    if (scenariosEl && scenariosEl.style.display === 'none') scenariosEl.style.display = 'block';
   })
   .catch(function() {
     let typing = document.getElementById(typingId);
@@ -8606,6 +8647,7 @@ auth.onAuthStateChanged(function(user) {
     initCurrency();
     handleUrlParams();
     initScreener();
+    restoreScreenerState();
     _appReady = true; // allow real-time Firestore updates to re-render
     hideAppLoading();
   });

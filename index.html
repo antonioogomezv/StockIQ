@@ -843,30 +843,35 @@
         </div>
         <div id="search-history" style="display:none;"></div>
         <div id="screener-panel">
-          <div id="screener-header">
-            <div id="screener-title">Stock Ideas</div>
-            <div id="screener-subtitle">Browse by theme — or search by company name.</div>
-          </div>
-          <div id="screener-search-row">
-            <div id="screener-search-wrap">
-              <input type="text" id="screener-query-input" aria-label="Search for stocks by description or criteria"
-                placeholder="Search by company name or theme…"
-                onkeypress="if(event.key==='Enter')searchScreener()"
-                oninput="onScreenerQueryInput()">
-              <button type="button" id="screener-search-btn" onclick="searchScreener()">→</button>
+          <button type="button" id="screener-toggle" onclick="toggleScreener()" aria-expanded="false">
+            <div id="screener-toggle-left">
+              <div id="screener-title">Stock Ideas</div>
+              <div id="screener-subtitle">Not sure what to search? Browse by theme.</div>
             </div>
-            <div id="screener-query-chips">
-              <button class="screener-query-chip" onclick="setScreenerQueryChip('under $50 with big potential')">Under $50 + potential</button>
-              <button class="screener-query-chip" onclick="setScreenerQueryChip('safe dividend stocks')">Safe dividends</button>
-              <button class="screener-query-chip" onclick="setScreenerQueryChip('fast growing tech stocks')">Fast growth</button>
-              <button class="screener-query-chip" onclick="setScreenerQueryChip('cheap undervalued stocks')">Undervalued</button>
+            <span id="screener-chevron">▾</span>
+          </button>
+          <div id="screener-body" style="display:none;">
+            <div id="screener-search-row">
+              <div id="screener-search-wrap">
+                <input type="text" id="screener-query-input" aria-label="Search for stocks by description or criteria"
+                  placeholder="Search by company name or theme…"
+                  onkeypress="if(event.key==='Enter')searchScreener()"
+                  oninput="onScreenerQueryInput()">
+                <button type="button" id="screener-search-btn" onclick="searchScreener()">→</button>
+              </div>
+              <div id="screener-query-chips">
+                <button class="screener-query-chip" onclick="setScreenerQueryChip('under $50 with big potential')">Under $50 + potential</button>
+                <button class="screener-query-chip" onclick="setScreenerQueryChip('safe dividend stocks')">Safe dividends</button>
+                <button class="screener-query-chip" onclick="setScreenerQueryChip('fast growing tech stocks')">Fast growth</button>
+                <button class="screener-query-chip" onclick="setScreenerQueryChip('cheap undervalued stocks')">Undervalued</button>
+              </div>
             </div>
+            <p id="screener-profile-note" style="display:none;font-size:13px;color:var(--text-muted);margin:0 0 10px;line-height:1.5;"></p>
+            <div id="screener-goals"></div>
+            <div id="screener-learn-box" style="display:none;"></div>
+            <div id="screener-status"></div>
+            <div id="screener-results"></div>
           </div>
-          <p id="screener-profile-note" style="display:none;font-size:13px;color:var(--text-muted);margin:0 0 10px;line-height:1.5;"></p>
-          <div id="screener-goals"></div>
-          <div id="screener-learn-box" style="display:none;"></div>
-          <div id="screener-status"></div>
-          <div id="screener-results"></div>
         </div>
         <div id="loading" style="display:none;">
           <div class="loading-state">
@@ -896,7 +901,7 @@
               <button class="chat-suggest" onclick="askStockQuestion('Can you explain the P/E ratio for this stock?')">Explain P/E ratio</button>
               <button class="chat-suggest" onclick="askStockQuestion('What does beta mean and how does it affect me?')">What is beta?</button>
             </div>
-            <div id="ai-scenarios">
+            <div id="ai-scenarios" style="display:none;">
               <div class="ai-scenarios-label">What if...</div>
               <div class="ai-scenarios-chips">
                 <button class="scenario-chip" onclick="askScenario('rates')">Rates rise</button>
