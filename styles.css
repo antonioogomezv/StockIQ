@@ -647,7 +647,7 @@ button:active { transform: translateY(0); box-shadow: none; }
   background: rgba(217,119,6,0.06);
   border: 1px solid rgba(217,119,6,0.2);
   border-radius: calc(var(--radius) - 2px);
-  padding: 14px 18px;
+  padding: 14px 20px;
 }
 .earnings-item-label {
   font-size: 12px;
@@ -884,7 +884,7 @@ button:active { transform: translateY(0); box-shadow: none; }
 
 /* AI CHAT */
 #ai-chat {
-  margin-top: 20px;
+  margin-top: 16px;
   border-top: 1px solid var(--border);
   padding-top: 16px;
 }
@@ -1178,7 +1178,7 @@ button:active { transform: translateY(0); box-shadow: none; }
   border: 1px solid var(--border);
   box-shadow: 0 4px 24px rgba(0,0,0,0.06);
   border-radius: var(--radius);
-  padding: 32px;
+  padding: 24px;
 }
 
 .empty-state {
@@ -3312,14 +3312,14 @@ details[open] .sector-summary { color: var(--text); }
   margin-bottom: 0;
   box-shadow: var(--shadow-sm);
 }
-#fundamentals-card h2 { margin-bottom: 16px; }
+#fundamentals-card h2 { margin-bottom: 14px; }
 
 /* ── Dividend card ── */
 #dividend-card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 18px;
+  padding: 24px;
   margin-bottom: 16px;
 }
 #dividend-card h2 { margin-bottom: 12px; }
@@ -3446,7 +3446,7 @@ details[open] .sector-summary { color: var(--text); }
   position: relative;
   display: inline-block;
   width: 100%;
-  margin: 3px 0;
+  margin: 5px 0;
   cursor: help;
 }
 
@@ -3729,7 +3729,7 @@ footer {
   .nav-tab { font-size: 12px; padding: 12px 4px; letter-spacing: 0.5px; }
 
   /* Main content */
-  main { padding: 0 14px 60px; }
+  main { padding: 16px 14px 80px; }
   #hero { padding: 18px 0 0; }
   #hero-examples span { padding: 6px 14px; font-size: 12px; }
 
@@ -5073,8 +5073,8 @@ footer {
 #profile-actions {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding-top: 4px;
+  gap: 12px;
+  padding-top: 12px;
 }
 
 @media (max-width: 500px) {
@@ -5103,7 +5103,7 @@ footer {
 }
 
 #tab-watchlist main {
-  padding: 32px 24px;
+  padding: 24px 20px 88px;
 }
 
 /* ── PORTFOLIO LAYOUT ── */
@@ -5137,7 +5137,7 @@ footer {
 }
 
 @media (max-width: 860px) {
-  #port-main { padding: 20px 16px 60px; }
+  #port-main { padding: 20px 16px 80px; }
   #port-layout { grid-template-columns: 1fr; }
 }
 
@@ -6860,7 +6860,8 @@ header p {
 #action-btns button {
   flex: 1;
   padding: 0;
-  height: 38px;
+  min-height: 44px;
+  height: auto;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.3px;
@@ -6871,7 +6872,8 @@ header p {
 }
 #watchlist-btn {
   border-radius: 20px;
-  height: 38px;
+  min-height: 44px;
+  height: auto;
   padding: 0 16px;
   font-size: 12px;
   font-weight: 700;
@@ -6880,7 +6882,8 @@ header p {
 }
 #share-btn {
   border-radius: 20px;
-  height: 38px;
+  min-height: 44px;
+  height: auto;
   padding: 0 14px;
   font-size: 12px;
   display: flex;
