@@ -1344,7 +1344,7 @@ button:active { transform: translateY(0); }
 /* ANALYZE LAYOUT */
 #analyze-layout {
   display: grid;
-  grid-template-columns: 220px 1fr 240px;
+  grid-template-columns: 220px 1fr;
   gap: 32px;
   max-width: 1400px;
   margin: 0 auto;
@@ -7082,3 +7082,44 @@ h2 {
 .loading-msg { font-size: 15px; font-weight: 600; color: var(--text); letter-spacing: -0.2px; }
 .loading-sub { font-size: 12px; }
 
+
+
+/* ═══════════════════════════════════════════════════════════
+   ANALYZE LAYOUT — dynamic sidebar
+   ═══════════════════════════════════════════════════════════ */
+
+/* 3-column only when challenge sidebar is active */
+#analyze-layout.has-challenge-sidebar {
+  grid-template-columns: 220px 1fr 240px;
+}
+
+/* ── No-challenge placeholder card ── */
+.challenge-no-active {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  padding: 24px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+}
+.challenge-no-active-icon {
+  font-size: 28px;
+  line-height: 1;
+  filter: grayscale(0.3);
+}
+.challenge-no-active-title {
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.1px;
+}
+.challenge-no-active-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}

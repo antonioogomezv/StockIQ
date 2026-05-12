@@ -7565,11 +7565,24 @@ function renderAnalyzeChallengeBanner() {
 
 function _renderAnalyzeChallengeBannerUI(bannerEl, lbEl, all) {
   var sidebar = document.getElementById('analyze-challenge-sidebar');
+  var layout = document.getElementById('analyze-layout');
   if (!_activeChallenges || _activeChallenges.length === 0) {
-    if (sidebar) sidebar.style.display = 'none';
+    // Show placeholder so the sidebar column still looks intentional
+    if (sidebar) {
+      sidebar.style.display = 'flex';
+      bannerEl.innerHTML =
+        '<div class="challenge-no-active">' +
+          '<div class="challenge-no-active-icon">🏆</div>' +
+          '<div class="challenge-no-active-title">No Active Challenge</div>' +
+          '<div class="challenge-no-active-desc">Challenges let you compete with other investors using paper trading. Check back soon for the next one.</div>' +
+        '</div>';
+      lbEl.innerHTML = '';
+    }
+    if (layout) layout.classList.add('has-challenge-sidebar');
     return;
   }
   if (sidebar) sidebar.style.display = 'flex';
+  if (layout) layout.classList.add('has-challenge-sidebar');
   var c = _activeChallenges[0];
   var hasJoined = Object.values(all).some(function(p) { return p.challengeId === c.id; });
   var daysLeft = daysLeftText(c.endDate);
