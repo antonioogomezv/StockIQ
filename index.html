@@ -3,7 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>StockIQ</title>
+  <title>StockIQ — Learn to Understand Stocks</title>
+  <meta name="description" content="StockIQ helps beginners make sense of stocks, not just prices. Get AI-powered health scores, plain-English breakdowns, and portfolio insights — free.">
+  <link rel="canonical" href="https://stockiq-learn.netlify.app/">
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://stockiq-learn.netlify.app/">
+  <meta property="og:title" content="StockIQ — Learn to Understand Stocks">
+  <meta property="og:description" content="StockIQ helps beginners make sense of stocks, not just prices. Get AI-powered health scores, plain-English breakdowns, and portfolio insights — free.">
+  <meta property="og:image" content="https://stockiq-learn.netlify.app/icon-512.png">
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="StockIQ — Learn to Understand Stocks">
+  <meta name="twitter:description" content="StockIQ helps beginners make sense of stocks, not just prices. Get AI-powered health scores and plain-English breakdowns — free.">
+  <meta name="twitter:image" content="https://stockiq-learn.netlify.app/icon-512.png">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%2316a34a'/><text y='72' x='50' text-anchor='middle' font-size='52' font-weight='700' font-family='system-ui,sans-serif' fill='white'>IQ</text></svg>">
   <link rel="stylesheet" href="styles.css">
   <link rel="manifest" href="manifest.json">
@@ -11,6 +24,10 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="StockIQ">
+  <!-- Preconnect for external resources -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <script>
     (function() {
       var t = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
@@ -76,9 +93,9 @@
     <div id="auth-signup">
       <div class="auth-title">Create your account</div>
       <div class="auth-subtitle">Free forever. No credit card needed.</div>
-      <input type="text" id="auth-name" placeholder="Your name" autocomplete="name">
-      <input type="email" id="auth-email" placeholder="Email address" autocomplete="email">
-      <input type="password" id="auth-password" placeholder="Password (min 6 characters)" autocomplete="new-password">
+      <input type="text" id="auth-name" placeholder="Your name" autocomplete="name" aria-label="Your name">
+      <input type="email" id="auth-email" placeholder="Email address" autocomplete="email" aria-label="Email address">
+      <input type="password" id="auth-password" placeholder="Password (min 6 characters)" autocomplete="new-password" aria-label="Password">
       <button type="button" onclick="submitSignUp()">Create Account</button>
       <div class="auth-switch">Already have an account? <span onclick="showLogin()">Log in</span></div>
     </div>
@@ -87,8 +104,8 @@
     <div id="auth-login" style="display:none;">
       <div class="auth-title">Welcome back</div>
       <div class="auth-subtitle">Log in to your StockIQ account</div>
-      <input type="email" id="login-email" placeholder="Email address" autocomplete="email">
-      <input type="password" id="login-password" placeholder="Password" autocomplete="current-password">
+      <input type="email" id="login-email" placeholder="Email address" autocomplete="email" aria-label="Email address">
+      <input type="password" id="login-password" placeholder="Password" autocomplete="current-password" aria-label="Password">
       <button type="button" onclick="submitLogin()">Log In</button>
       <div class="auth-switch"><span onclick="resetPassword()" style="color:var(--text-muted);">Forgot password?</span></div>
       <div class="auth-switch">Don't have an account? <span onclick="showSignUp()">Sign up</span></div>
@@ -832,7 +849,7 @@
       </aside>
 
       <!-- RIGHT: Main content -->
-      <main>
+      <section aria-label="Stock analysis">
       <div id="search-section">
         <div id="search-input-row">
           <div id="search-input-wrap">
@@ -999,12 +1016,12 @@
       <div id="sector-stocks-panel" style="display:none;">
         <div id="sector-stocks-header">
           <button type="button" id="sector-back-btn" onclick="closeSectorPanel(true)">← Back</button>
-          <h2 id="sector-stocks-title"></h2>
+          <h2 id="sector-stocks-title" aria-hidden="true"></h2>
         </div>
         <div id="sector-about"></div>
         <div id="sector-stocks-list"></div>
       </div>
-      </main>
+      </section>
 
       <!-- RIGHT: Challenge sidebar -->
       <aside id="analyze-challenge-sidebar" style="display:none;">
@@ -1114,17 +1131,17 @@
             <h2>ADD A STOCK</h2>
             <div class="add-form-col">
               <div id="port-ticker-wrap" style="position:relative;">
-                <input type="text" id="port-ticker" placeholder="Ticker (e.g. AAPL)" style="width:100%;" oninput="onPortTickerInput()" onblur="hidePortDropdown()">
+                <input type="text" id="port-ticker" placeholder="Ticker (e.g. AAPL)" style="width:100%;" oninput="onPortTickerInput()" onblur="hidePortDropdown()" aria-label="Stock ticker symbol">
                 <div id="port-ticker-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,0.12);overflow:hidden;margin-top:4px;"></div>
               </div>
               <div class="add-form-row2">
-                <input type="number" id="port-shares" placeholder="Shares">
+                <input type="number" id="port-shares" placeholder="Shares" aria-label="Number of shares">
                 <div style="position:relative;flex:1;">
-                  <input type="number" id="port-price" placeholder="Buy price $" style="width:100%;">
+                  <input type="number" id="port-price" placeholder="Buy price $" style="width:100%;" aria-label="Buy price in dollars">
                   <span id="port-price-loading" style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--text-muted);">...</span>
                 </div>
               </div>
-              <input type="date" id="port-date" style="width:100%;" onchange="onPortDateChange()">
+              <input type="date" id="port-date" style="width:100%;" onchange="onPortDateChange()" aria-label="Purchase date">
               <button type="button" onclick="addToPortfolio()">Add</button>
             </div>
           </div>
@@ -1226,7 +1243,7 @@
 
   <!-- ── TAB: WATCHLIST ── -->
   <div class="tab-content" id="tab-watchlist">
-    <main>
+    <section aria-label="Watchlist">
       <div id="watchlist-section">
         <div id="wl-subtabs">
           <button class="wl-subtab active" id="wl-subtab-list" onclick="switchWlTab('list')">My Watchlist</button>
@@ -1253,12 +1270,12 @@
           </div>
         </div>
       </div>
-    </main>
+    </section>
   </div>
 
   <!-- ── TAB: PROFILE ── -->
   <div class="tab-content" id="tab-profile">
-    <main>
+    <section aria-label="Profile">
       <div id="profile-section">
 
         <!-- Hero card: identity + investor type merged -->
@@ -1480,7 +1497,7 @@
         </div>
 
       </div>
-    </main>
+    </section>
   </div>
 
   <footer>
@@ -1494,7 +1511,7 @@
   <div id="welcome-overlay" style="display:none;">
     <div id="onboarding-modal">
       <div id="onboarding-logo">StockIQ</div>
-      <h1 id="onboarding-title">Understand any stock<br>in seconds.</h1>
+      <p id="onboarding-title">Understand any stock<br>in seconds.</p>
       <p id="onboarding-sub">No finance degree needed. StockIQ breaks down every number so you actually know what you're looking at.</p>
       <div id="onboarding-bullets">
         <div class="onboarding-bullet"><span><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span><span>Search any company or ticker</span></div>
