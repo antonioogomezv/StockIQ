@@ -1814,6 +1814,7 @@ function renderContextualTerms(pe, beta, margin, growth, rsi, ma50, currentRatio
   if (ma50 !== null) terms.push('Moving Average');
   if (currentRatio > 0) terms.push('Current Ratio');
   if (interestCoverage > 0) terms.push('Interest Coverage');
+  terms.push('Altman Z-Score');
   // Pick 4 most relevant
   terms = terms.slice(0, 4);
   if (terms.length === 0) { el.style.display = 'none'; return; }
@@ -1874,7 +1875,9 @@ var _WHY_EXPLANATIONS = {
 
   "52wk Position": "Shows where the stock sits relative to its 52-week high — the highest price it's traded at over the past year. <span class='score-why-deep'>Being near the 52-week high is generally bullish — it means buyers keep showing up and the stock keeps getting bid higher. Being far below it could mean opportunity (the business hasn't changed but fear drove the price down) or it could mean a fundamental deterioration (the market repriced it lower for good reason). This signal works best alongside the fundamentals: a stock 40% below its high with strong earnings growth is very different from one 40% below its high with declining revenue.</span>",
 
-  "Price Movement": "Today's price change as a percentage, reflecting buying and selling pressure in the current session. <span class='score-why-deep'>Single-day moves are mostly noise unless accompanied by high volume or a specific catalyst (earnings, news, analyst upgrade). A stock up 5% on 3x normal volume on a good earnings report is meaningful. A stock up 1.2% on a quiet day is essentially random. Where single-day moves matter most: they can trigger stop-losses and momentum strategies, which can then cascade into bigger moves than the original catalyst warranted. Don't make long-term decisions based on a one-day swing.</span>"
+  "Price Movement": "Today's price change as a percentage, reflecting buying and selling pressure in the current session. <span class='score-why-deep'>Single-day moves are mostly noise unless accompanied by high volume or a specific catalyst (earnings, news, analyst upgrade). A stock up 5% on 3x normal volume on a good earnings report is meaningful. A stock up 1.2% on a quiet day is essentially random. Where single-day moves matter most: they can trigger stop-losses and momentum strategies, which can then cascade into bigger moves than the original catalyst warranted. Don't make long-term decisions based on a one-day swing.</span>",
+
+  "Altman Z-Score": "The Altman Z-Score is a formula created by NYU professor Edward Altman in 1968 to predict the likelihood a company goes bankrupt within two years. It combines five financial ratios into a single number. <span class='score-why-deep'>The three zones: <strong>Safe Zone (Z ≥ 3.0)</strong> — the company's finances look solid, bankruptcy is unlikely. <strong>Grey Zone (1.81–2.99)</strong> — some stress signals, outcome uncertain. <strong>Distress Zone (below 1.81)</strong> — elevated bankruptcy risk, proceed with caution. The five components are: working capital efficiency, retained earnings accumulation, operating profitability, equity vs. liabilities buffer, and asset turnover. Originally built for manufacturing companies, it's less precise for financial firms, startups, or asset-light tech businesses — but still a useful early warning signal. A score trending downward over several quarters is more concerning than a single data point. Pair it with interest coverage and debt levels for the full picture.</span>"
 };
 
 function toggleScoreWhy(btn) {
