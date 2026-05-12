@@ -2016,7 +2016,8 @@ button:active { transform: translateY(0); box-shadow: none; }
   margin-bottom: 14px;
 }
 #compare-input {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   padding: 10px 14px;
   border: 1px solid var(--border);
   border-radius: 8px;
