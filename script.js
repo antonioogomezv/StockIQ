@@ -104,7 +104,6 @@ function buildQuizLockedCard(name) {
 }
 
 function _unlockBreakdownAfterQuiz() {
-  if (getUserLevel().tier < 2) return;
   var expEl = document.getElementById('explanation');
   if (!expEl || !window._lastFactorBarsHTML) return;
   expEl.innerHTML = window._lastFactorBarsHTML;
@@ -1434,28 +1433,20 @@ function displayData(data) {
   window._lastFactorBarsHTML = (document.getElementById('explanation') || {}).innerHTML || '';
   window._lastPillarsResult = result.pillars || null;
 
-  // Tier-gate and optionally inject pillar summary
+  // All tiers see factors; Tier 2+ users who completed the quiz also see pillars + D2
   (function() {
     var expEl = document.getElementById('explanation');
     if (!expEl) return;
     var tier = getUserLevel().tier;
-    if (tier < 2) {
-      expEl.innerHTML = buildLockedCard('Explorer', 50, 'Keep analyzing stocks to see how each of 14 factors contributes to this score');
-      return;
+    if (tier >= 2 && hasCompletedQuizFor(ticker)) {
+      if (result.pillars) {
+        var ps = buildPillarSummary(result.pillars);
+        var heading = "<div class='pillar-section-label'>4 PILLARS</div>";
+        var factorHeading = "<div class='pillar-section-label' style='margin-top:20px;'>14 FACTORS</div>";
+        expEl.innerHTML = heading + ps + factorHeading + expEl.innerHTML;
+      }
+      showDecisionPoint2(companyName);
     }
-    // Tier 2+: require quiz completion for this specific stock
-    if (!hasCompletedQuizFor(ticker)) {
-      expEl.innerHTML = buildQuizLockedCard(companyName);
-      return;
-    }
-    // Quiz done — inject pillars above factor bars
-    if (result.pillars) {
-      var ps = buildPillarSummary(result.pillars);
-      var heading = "<div class='pillar-section-label'>4 PILLARS</div>";
-      var factorHeading = "<div class='pillar-section-label' style='margin-top:20px;'>14 FACTORS</div>";
-      expEl.innerHTML = heading + ps + factorHeading + expEl.innerHTML;
-    }
-    showDecisionPoint2(companyName);
   })();
   }
 
@@ -2421,19 +2412,20 @@ function scoreBar(label, score, tooltip) {
   let verdictText = score >= 7 ? "Strong" : score >= 4 ? "Average" : "Weak";
   let width = (score / 10) * 100;
   let deepExp = _WHY_EXPLANATIONS[label] || '';
-  // Use deep explanation if available, otherwise fall back to the data-specific sentence
   let panelContent = deepExp || (tooltip ? tooltip.what : '');
-  var microQHtml = "<div class='factor-micro-q'>" +
+  let userTier = getUserLevel().tier;
+  let showWhy = userTier >= 2;
+  var microQHtml = showWhy ? "<div class='factor-micro-q'>" +
     "<div class='factor-micro-prompt'>Stronger or weaker signal for this stock?</div>" +
     "<div class='factor-micro-btns'>" +
       "<button class='fq-btn' onclick='answerFactorQ(this," + score + ")'>Stronger</button>" +
       "<button class='fq-btn' onclick='answerFactorQ(this," + score + ")'>Neutral</button>" +
       "<button class='fq-btn' onclick='answerFactorQ(this," + score + ")'>Weaker</button>" +
     "</div>" +
-  "</div>";
-  let whatHtml = panelContent ? "<div class='score-why'>" + panelContent + microQHtml + "</div>" : "";
+  "</div>" : "";
+  let whatHtml = (showWhy && panelContent) ? "<div class='score-why'>" + panelContent + microQHtml + "</div>" : "";
   let verdictHtml = tooltip ? "<span class='score-verdict " + verdictClass + "'>" + verdictText + " — " + tooltip.verdict + "</span>" : "";
-  let whyBtn = "<button class='score-why-btn' onclick='toggleScoreWhy(this)'>Why?</button>";
+  let whyBtn = showWhy ? "<button class='score-why-btn' onclick='toggleScoreWhy(this)'>Why?</button>" : "";
   let valueHtml = (tooltip && tooltip.value && tooltip.value !== '—') ? "<span class='score-item-value'>" + tooltip.value + "</span>" : "";
   let dataAttr = "data-factor='" + label.replace(/'/g, '') + "'";
   return "<div class='score-item' " + dataAttr + ">" +
