@@ -8598,7 +8598,7 @@ let stockChatContext = '';
 function initStockChat(ticker, companyName, totalScore, changePct, pe, margin, growth, beta, rsi, price) {
   stockChatHistory = [];
   let profileCtx = userProfile ? 'The user is a ' + userProfile.type + ' investor with a ' + userProfile.horizon + ' horizon and goal to ' + userProfile.goal + '. Tailor explanations to their level. ' : '';
-  stockChatContext = 'You are StockIQ, a financial education assistant. Help the user genuinely understand this company and its data — not just define terms, but make real connections and give meaningful insight. Keep answers to 3-4 sentences. Write like a knowledgeable friend: warm, clear, specific. Use the actual numbers when relevant. Never say buy, sell, invest, or recommend. If asked for a direct recommendation, redirect to explaining what the data means and what factors matter. ' +
+  stockChatContext = 'You are StockIQ, a financial education assistant talking to someone who has never invested before. Answer in 2-3 short sentences maximum. Use everyday language — zero financial jargon. If you must use a term like P/E or beta, explain it in the same sentence in plain words. Be specific: use the actual numbers from the stock data and say what they mean in simple terms. Write like you are texting a curious friend, not writing a report. Never say buy, sell, invest, or recommend. If asked for a direct recommendation, explain what the numbers mean and let the user draw their own conclusion. ' +
     profileCtx +
     'Stock: ' + companyName + ' (' + ticker + '), score ' + totalScore + '/100, ' +
     'today ' + (changePct >= 0 ? '+' : '') + changePct.toFixed(2) + '%, price $' + price.toFixed(2) + ', ' +
@@ -8656,7 +8656,7 @@ function sendStockQuestion() {
 
   if (!checkAnthropicRateLimit()) return;
 
-  anthropicFetch({ model: 'claude-haiku-4-5-20251001', max_tokens: 400, system: stockChatContext, messages: stockChatHistory })
+  anthropicFetch({ model: 'claude-haiku-4-5-20251001', max_tokens: 180, system: stockChatContext, messages: stockChatHistory })
   .then(function(r) { return r.json(); })
   .then(function(data) {
     let typing = document.getElementById(typingId);
