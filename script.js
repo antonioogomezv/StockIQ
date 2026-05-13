@@ -556,6 +556,70 @@ function clearThesisSelection() {
   document.querySelectorAll('.thesis-chip').forEach(function(b) { b.classList.remove('selected'); });
 }
 
+function checkThesisMismatch(ticker, thesis) {
+  if (!window._currentMetrics || currentTicker !== ticker) return null;
+  var m = window._currentMetrics;
+  var name = ticker;
+
+  if (thesis === 'value') {
+    if (m.pe > 25) return {
+      data: name + ' has a P/E of ' + m.pe.toFixed(1) + 'x — above the average of ~20x for most stocks.',
+      question: 'What makes you see ' + name + ' as underpriced at this valuation?'
+    };
+    if (m.price > 0 && m.week52High > 0 && m.price >= m.week52High * 0.92) return {
+      data: name + ' is within 8% of its 52-week high — not a typical entry point for value investing.',
+      question: 'Value plays usually enter when a stock is beaten down. What\'s your case here?'
+    };
+  }
+
+  if (thesis === 'growth') {
+    if (m.growth <= 5) return {
+      data: name + '\'s revenue growth is ' + (m.growth > 0 ? '+' : '') + m.growth.toFixed(1) + '% — ' + (m.growth <= 0 ? 'declining.' : 'relatively flat.'),
+      question: 'What growth are you expecting that the current numbers don\'t yet show?'
+    };
+  }
+
+  if (thesis === 'dividend') {
+    if ((window._currentDivYield || 0) === 0) return {
+      data: name + ' does not currently pay a dividend.',
+      question: 'Are you expecting them to start one, or is there another income angle here?'
+    };
+  }
+
+  if (thesis === 'trend') {
+    var belowMa = m.ma50 && m.price < m.ma50;
+    var oversold = m.rsi && m.rsi < 40;
+    if (belowMa || oversold) return {
+      data: belowMa
+        ? name + ' is trading below its 50-day average — currently in a downtrend.'
+        : 'RSI is ' + m.rsi + ' — the stock has been selling off recently.',
+      question: 'What trend are you following? Is this a reversal bet?'
+    };
+  }
+
+  return null;
+}
+
+function showThesisChallenge(challenge) {
+  var el = document.getElementById('thesis-challenge');
+  if (!el) return;
+  el.style.display = 'block';
+  el.innerHTML =
+    '<div class="thesis-challenge-data">' + escHtml(challenge.data) + '</div>' +
+    '<div class="thesis-challenge-question">' + escHtml(challenge.question) + '</div>' +
+    '<textarea id="thesis-reasoning-input" class="thesis-reasoning-input" placeholder="Your reasoning (optional)…" rows="2"></textarea>' +
+    '<div class="thesis-challenge-actions">' +
+      '<button class="thesis-proceed-btn" onclick="_doAddToPortfolio()">Add anyway</button>' +
+      '<button class="thesis-change-btn" onclick="dismissThesisChallenge()">Change thesis</button>' +
+    '</div>';
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function dismissThesisChallenge() {
+  var el = document.getElementById('thesis-challenge');
+  if (el) el.style.display = 'none';
+}
+
 function prefillTodayDate() {
   var d = new Date();
   var yyyy = d.getFullYear();
@@ -1227,6 +1291,7 @@ function displayData(data) {
   currentScore = totalScore;
   currentName = companyName;
   window._currentMetrics = { pe, beta, margin, growth, roe, rsi, ma50, ma20, price, week52High, changePct };
+  window._currentDivYield = 0; // will be updated below when _divYield is set
   saveSearchHistory(ticker, companyName);
 
   document.getElementById("action-btns").style.display = "flex";
@@ -1308,6 +1373,7 @@ function displayData(data) {
   document.getElementById("explanation").style.display = "none";
 
   let _divYield = metrics['dividendYieldIndicatedAnnual'] || 0;
+  window._currentDivYield = _divYield;
 
   if (isEtf) {
     // ── ETF score breakdown — only fund-relevant factors ────────────────────
@@ -6002,6 +6068,35 @@ function migratePortfolio(portfolio) {
 }
 
 function addToPortfolio() {
+  // Thesis is mandatory
+  var thesis = getSelectedThesis();
+  if (!thesis) {
+    var sel = document.getElementById('thesis-selector');
+    if (sel) { sel.classList.add('thesis-required'); setTimeout(function() { sel.classList.remove('thesis-required'); }, 700); }
+    showToast('Pick a reason before adding');
+    return;
+  }
+
+  var ticker = document.getElementById('port-ticker').value.trim().toUpperCase();
+  var shares = parseFloat(document.getElementById('port-shares').value);
+  var buyPrice = parseFloat(document.getElementById('port-price').value);
+  if (!ticker || !shares || !buyPrice) { showToast('Please fill in all fields!'); return; }
+
+  // Check if thesis conflicts with the stock's actual data
+  var mismatch = checkThesisMismatch(ticker, thesis);
+  if (mismatch) {
+    showThesisChallenge(mismatch);
+    return;
+  }
+
+  _doAddToPortfolio();
+}
+
+function _doAddToPortfolio() {
+  var thesis = getSelectedThesis();
+  var reasoning = (document.getElementById('thesis-reasoning-input') || {}).value || '';
+  dismissThesisChallenge();
+
   let ticker = document.getElementById('port-ticker').value.trim().toUpperCase();
   let shares = parseFloat(document.getElementById('port-shares').value);
   let buyPrice = parseFloat(document.getElementById('port-price').value);
@@ -6013,7 +6108,6 @@ function addToPortfolio() {
   if (!all[id]) return;
 
   // Paper trading: validate + deduct from virtual balance
-  // buyPrice is always stored in USD (auto-filled from Finnhub), so no FX conversion needed
   if (all[id].isPaper) {
     let rate = (typeof _fxRate !== 'undefined' ? _fxRate : 1);
     let costUSD = shares * buyPrice;
@@ -6026,14 +6120,16 @@ function addToPortfolio() {
     all[id].paperBalance = Math.max(0, balUSD - costUSD);
   }
 
-  let thesis = getSelectedThesis();
+  let lot = { shares, price: buyPrice, date: buyDate, thesis: thesis };
+  if (reasoning) lot.reasoning = reasoning;
+
   let portfolio = migratePortfolio(all[id].stocks || []);
   let existing = portfolio.find(function(i) { return i.ticker === ticker; });
   if (existing) {
-    existing.lots.push({ shares, price: buyPrice, date: buyDate, thesis: thesis });
+    existing.lots.push(lot);
     showToast('Added new lot to ' + ticker);
   } else {
-    portfolio.push({ ticker, lots: [{ shares, price: buyPrice, date: buyDate, thesis: thesis }] });
+    portfolio.push({ ticker, lots: [lot] });
   }
   all[id].stocks = portfolio;
   savePortfolios(all);
@@ -6043,6 +6139,7 @@ function addToPortfolio() {
   document.getElementById('port-price').value = '';
   document.getElementById('port-date').value = '';
   clearThesisSelection();
+  addXP(5); // +5 XP for adding to portfolio
   renderPortfolio();
 }
 
