@@ -2820,7 +2820,7 @@ function getAIExplanation(ticker, companyName, totalScore, changePct, pe, margin
 
   let profileContext = userProfile ? "The reader is a " + userProfile.type + " investor with a " + userProfile.horizon + " time horizon and a goal to " + userProfile.goal + ". Tailor your explanation to their level. " : "";
 
-  let prompt = "You are StockIQ, a plain-English financial education tool. Your job is to help beginners genuinely understand what this company's data means — not just list numbers, but connect the dots between them. Write 4-5 sentences. Do the following: (1) Summarize what the score and overall picture says about the company's health. (2) Point out 1-2 interesting patterns or tensions in the data — for example if growth is high but margins are thin, or if the stock is volatile but fundamentals are strong. (3) Explain what the most recent news might mean for the company's story. (4) Mention one thing a beginner should pay attention to going forward. Write in a warm, curious tone — like a knowledgeable friend, not a textbook. Never use the words buy, sell, invest, or recommend. Never give financial advice. Focus entirely on helping the user understand and learn. " +
+  let prompt = "You are StockIQ. Explain this stock to someone who has never invested before. Write exactly 3 short sentences — no more. Sentence 1: what this company does and how healthy it looks overall, based on the score. Sentence 2: one specific thing that stands out in the numbers, explained in plain everyday words — if a number comes up, say what it means in simple terms. Sentence 3: one thing worth keeping an eye on. Rules: no financial jargon at all. If you must use a term like P/E or beta, explain it in the same breath (e.g. 'P/E ratio — basically how expensive the stock is'). Write like you're texting a curious friend, not writing a report. Never say buy, sell, invest, or recommend. " +
     profileContext +
     "Data — Company: " + companyName + " (" + ticker + "). Score: " + totalScore + "/100. Today: " + (changePct >= 0 ? "+" : "") + changePct.toFixed(2) + "%. Price: $" + price.toFixed(2) + ". " +
     (pe > 0 ? "P/E: " + pe.toFixed(1) + ". " : "") +
@@ -2836,7 +2836,7 @@ function getAIExplanation(ticker, companyName, totalScore, changePct, pe, margin
 
   anthropicFetch({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 500,
+      max_tokens: 220,
       messages: [{ role: "user", content: prompt }]
     })
   .then(function(r) { return r.json(); })
