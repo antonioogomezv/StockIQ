@@ -534,6 +534,28 @@ function onPortTickerInput() {
   }, 300);
 }
 
+var _THESIS_LABELS = {
+  value:     'Value play',
+  growth:    'Growth story',
+  dividend:  'Dividend income',
+  trend:     'Following a trend',
+  exploring: 'Just exploring'
+};
+
+function selectThesis(btn) {
+  document.querySelectorAll('.thesis-chip').forEach(function(b) { b.classList.remove('selected'); });
+  btn.classList.add('selected');
+}
+
+function getSelectedThesis() {
+  var active = document.querySelector('.thesis-chip.selected');
+  return active ? active.getAttribute('data-thesis') : null;
+}
+
+function clearThesisSelection() {
+  document.querySelectorAll('.thesis-chip').forEach(function(b) { b.classList.remove('selected'); });
+}
+
 function prefillTodayDate() {
   var d = new Date();
   var yyyy = d.getFullYear();
@@ -6004,21 +6026,23 @@ function addToPortfolio() {
     all[id].paperBalance = Math.max(0, balUSD - costUSD);
   }
 
+  let thesis = getSelectedThesis();
   let portfolio = migratePortfolio(all[id].stocks || []);
   let existing = portfolio.find(function(i) { return i.ticker === ticker; });
   if (existing) {
-    existing.lots.push({ shares, price: buyPrice, date: buyDate });
+    existing.lots.push({ shares, price: buyPrice, date: buyDate, thesis: thesis });
     showToast('Added new lot to ' + ticker);
   } else {
-    portfolio.push({ ticker, lots: [{ shares, price: buyPrice, date: buyDate }] });
+    portfolio.push({ ticker, lots: [{ shares, price: buyPrice, date: buyDate, thesis: thesis }] });
   }
   all[id].stocks = portfolio;
   savePortfolios(all);
-  _spyBenchmark = null; // recalculate benchmark from new earliest lot date
+  _spyBenchmark = null;
   document.getElementById('port-ticker').value = '';
   document.getElementById('port-shares').value = '';
   document.getElementById('port-price').value = '';
   document.getElementById('port-date').value = '';
+  clearThesisSelection();
   renderPortfolio();
 }
 
@@ -6621,6 +6645,7 @@ function renderPortfolioRows(data) {
             '<div class="port-lot-info">' +
               '<span class="port-lot-num">Lot ' + (i + 1) + '</span>' +
               '<span>' + lot.shares + ' shares @ ' + fmt$(lot.price) + (lot.date ? ' · ' + lot.date : '') + '</span>' +
+              (lot.thesis ? '<span class="port-thesis-badge thesis-' + lot.thesis + '" style="margin-left:6px;">' + (_THESIS_LABELS[lot.thesis] || lot.thesis) + '</span>' : '') +
             '</div>' +
             '<div class="port-lot-gain" style="color:' + lotGc + ';">' + fmtSigned$(lotGain) + ' (' + (lotGainPct >= 0 ? '+' : '') + lotGainPct.toFixed(1) + '%)</div>' +
             (hasMultiple ? '<button onclick="event.stopPropagation();removeLotFromPortfolio(' + escHtml(JSON.stringify(s.ticker)) + ',' + i + ')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:13px;padding:2px 6px;flex-shrink:0;">✕</button>' : '') +
@@ -6652,6 +6677,10 @@ function renderPortfolioRows(data) {
               '<div style="font-weight:600;font-size:14px;">' + s.ticker + '</div>' +
               '<div style="font-size:11px;color:#64748b;">' + s.shares.toFixed(s.shares % 1 === 0 ? 0 : 2) + ' shares · avg ' + fmt$(s.buyPrice) + (hasMultiple ? ' · ' + s.lots.length + ' lots' : (s.lots && s.lots[0] && s.lots[0].date ? ' · ' + s.lots[0].date : '')) + '</div>' +
               '<div style="font-size:11px;margin-top:2px;"><span style="color:var(--text-muted);">now ' + fmt$(s.currentPrice) + '</span> <span style="color:' + dc + ';">' + fmtSigned$(s.dayChangeAmt) + ' today</span></div>' +
+              (function() {
+                var thesis = s.lots && s.lots[s.lots.length - 1] && s.lots[s.lots.length - 1].thesis;
+                return thesis ? '<span class="port-thesis-badge thesis-' + thesis + '">' + (_THESIS_LABELS[thesis] || thesis) + '</span>' : '';
+              })() +
             '</div>' +
           '</div>' +
           '<div><div>' + fmt$(s.value) + '</div></div>' +

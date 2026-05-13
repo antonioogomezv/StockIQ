@@ -7842,3 +7842,67 @@ h2 {
   color: var(--text-muted);
 }
 /* ── END XP PROGRESSIVE LEARNING ──────────────────────────────────── */
+
+/* ── BUY THESIS ────────────────────────────────────────────────────── */
+
+#thesis-selector {
+  padding: 10px 0 4px;
+}
+
+.thesis-prompt {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.thesis-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.thesis-chip {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.thesis-chip:hover {
+  border-color: var(--accent-blue, #3b82f6);
+  color: var(--accent-blue, #3b82f6);
+}
+
+.thesis-chip.selected {
+  background: color-mix(in oklch, var(--accent-blue, #3b82f6) 12%, transparent);
+  border-color: var(--accent-blue, #3b82f6);
+  color: var(--accent-blue, #3b82f6);
+  font-weight: 600;
+}
+
+/* Thesis badge on holding cards */
+.port-thesis-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  margin-top: 4px;
+  letter-spacing: 0.02em;
+}
+
+.thesis-value    { background: color-mix(in oklch, #3b82f6 12%, transparent); color: #3b82f6; }
+.thesis-growth   { background: color-mix(in oklch, #16a34a 12%, transparent); color: #16a34a; }
+.thesis-dividend { background: color-mix(in oklch, #d97706 12%, transparent); color: #d97706; }
+.thesis-trend    { background: color-mix(in oklch, #7c3aed 12%, transparent); color: #7c3aed; }
+.thesis-exploring{ background: color-mix(in oklch, #64748b 12%, transparent); color: #64748b; }
+
+/* ── END BUY THESIS ────────────────────────────────────────────────── */

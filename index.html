@@ -1124,6 +1124,16 @@
                 <input type="date" id="port-date" style="width:100%;" onchange="onPortDateChange()" aria-label="Purchase date">
                 <button type="button" class="port-date-today-btn" onclick="prefillTodayDate()">Today</button>
               </div>
+              <div id="thesis-selector">
+                <div class="thesis-prompt">Why are you adding this?</div>
+                <div class="thesis-chips">
+                  <button type="button" class="thesis-chip" data-thesis="value" onclick="selectThesis(this)">Value play</button>
+                  <button type="button" class="thesis-chip" data-thesis="growth" onclick="selectThesis(this)">Growth story</button>
+                  <button type="button" class="thesis-chip" data-thesis="dividend" onclick="selectThesis(this)">Dividend income</button>
+                  <button type="button" class="thesis-chip" data-thesis="trend" onclick="selectThesis(this)">Following a trend</button>
+                  <button type="button" class="thesis-chip" data-thesis="exploring" onclick="selectThesis(this)">Just exploring</button>
+                </div>
+              </div>
               <button type="button" onclick="addToPortfolio()">Add</button>
             </div>
           </div>
