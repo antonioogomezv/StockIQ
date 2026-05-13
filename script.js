@@ -114,6 +114,7 @@ function _unlockBreakdownAfterQuiz() {
     var factorHeading = "<div class='pillar-section-label' style='margin-top:20px;'>14 FACTORS</div>";
     expEl.innerHTML = heading + ps + factorHeading + expEl.innerHTML;
   }
+  showDecisionPoint2(currentName);
 }
 
 function refreshXPProgress() {
@@ -1454,9 +1455,11 @@ function displayData(data) {
       var factorHeading = "<div class='pillar-section-label' style='margin-top:20px;'>14 FACTORS</div>";
       expEl.innerHTML = heading + ps + factorHeading + expEl.innerHTML;
     }
+    showDecisionPoint2(companyName);
   })();
   }
 
+  showDecisionPoint1(companyName);
   initStockChat(ticker, companyName, totalScore, changePct, pe, margin, growth, beta, rsi, price);
   let chatEl = document.getElementById('ai-chat');
   if (chatEl) { chatEl.style.display = 'none'; document.getElementById('ai-chat-messages').innerHTML = ''; document.getElementById('ai-chat-suggestions').style.display = 'flex'; var sc = document.getElementById('ai-scenarios'); if (sc) sc.style.display = 'none'; }
@@ -2287,6 +2290,120 @@ var _WHY_EXPLANATIONS = {
   "Altman Z-Score": "The Altman Z-Score is a formula created by NYU professor Edward Altman in 1968 to predict the likelihood a company goes bankrupt within two years. It combines five financial ratios into a single number. <span class='score-why-deep'>The three zones: <strong>Safe Zone (Z ≥ 3.0)</strong> — the company's finances look solid, bankruptcy is unlikely. <strong>Grey Zone (1.81–2.99)</strong> — some stress signals, outcome uncertain. <strong>Distress Zone (below 1.81)</strong> — elevated bankruptcy risk, proceed with caution. The five components are: working capital efficiency, retained earnings accumulation, operating profitability, equity vs. liabilities buffer, and asset turnover. Originally built for manufacturing companies, it's less precise for financial firms, startups, or asset-light tech businesses — but still a useful early warning signal. A score trending downward over several quarters is more concerning than a single data point. Pair it with interest coverage and debt levels for the full picture.</span>"
 };
 
+// ── ACTIVE LEARNING SYSTEM ────────────────────────────────────────────────
+var _d1Answer = null;
+var _d2Answer = null;
+
+var _DP_LABELS = { yes: 'Yes, looks good', no: 'No, I\'d skip', maybe: 'Not sure yet' };
+var _DP2_LABELS = { yes: 'Yes, I would', no: 'No, I wouldn\'t', maybe: 'Still not sure' };
+
+var _DP_COMPARISON = {
+  'yes-yes':     'You stayed confident throughout. You saw the big picture and the details confirmed it.',
+  'no-no':       'Your skepticism held after digging deeper. Disciplined — the numbers backed your instinct.',
+  'maybe-yes':   'The details convinced you. That\'s analysis working exactly as it should.',
+  'maybe-no':    'The data made you more cautious. Good — that\'s what the breakdown is for.',
+  'yes-no':      'You changed your mind after seeing the numbers. That\'s exactly how good investors think — data over gut.',
+  'no-yes':      'The data changed your view from skeptical to interested. Worth asking yourself what turned you around.',
+  'yes-maybe':   'Still uncertain after seeing the details? Healthy skepticism. Keep it on your watchlist.',
+  'no-maybe':    'The details softened your initial No — worth keeping an eye on.',
+  'maybe-maybe': 'Still undecided. Sometimes that\'s the right call — more time or data might help.'
+};
+
+function showDecisionPoint1(name) {
+  _d1Answer = null;
+  _d2Answer = null;
+  var el = document.getElementById('decision-point-1');
+  if (!el) return;
+  el.style.display = 'block';
+  el.innerHTML =
+    '<div class="dp-card" id="dp1-card">' +
+      '<div class="dp-eyebrow">First impression</div>' +
+      '<div class="dp-question">Based on what you\'ve read, would you invest in ' + escHtml(name) + '?</div>' +
+      '<div class="dp-btns">' +
+        '<button class="dp-btn" onclick="answerDecisionPoint1(\'yes\')">Yes, looks good</button>' +
+        '<button class="dp-btn" onclick="answerDecisionPoint1(\'no\')">No, I\'d skip</button>' +
+        '<button class="dp-btn" onclick="answerDecisionPoint1(\'maybe\')">Not sure yet</button>' +
+      '</div>' +
+    '</div>';
+}
+
+function answerDecisionPoint1(choice) {
+  _d1Answer = choice;
+  var el = document.getElementById('decision-point-1');
+  if (!el) return;
+  el.innerHTML =
+    '<div class="dp-answered">' +
+      '<span class="dp-answered-label">First impression</span>' +
+      '<span class="dp-answered-choice">' + escHtml(_DP_LABELS[choice]) + '</span>' +
+      '<span class="dp-answered-hint">Scroll down to see the full analysis — then revisit your answer.</span>' +
+    '</div>';
+}
+
+function showDecisionPoint2(name) {
+  var el = document.getElementById('decision-point-2');
+  if (!el) return;
+  el.style.display = 'block';
+  el.innerHTML =
+    '<div class="dp-card dp2-card" id="dp2-card">' +
+      '<div class="dp-eyebrow">After reading the details</div>' +
+      '<div class="dp-question">Would you invest in ' + escHtml(name) + '?</div>' +
+      '<div class="dp-btns">' +
+        '<button class="dp-btn" onclick="answerDecisionPoint2(\'yes\')">Yes, I would</button>' +
+        '<button class="dp-btn" onclick="answerDecisionPoint2(\'no\')">No, I wouldn\'t</button>' +
+        '<button class="dp-btn" onclick="answerDecisionPoint2(\'maybe\')">Still not sure</button>' +
+      '</div>' +
+    '</div>';
+}
+
+function answerDecisionPoint2(choice) {
+  _d2Answer = choice;
+  var el = document.getElementById('decision-point-2');
+  if (!el) return;
+  var comparisonHtml = '';
+  if (_d1Answer) {
+    var key = _d1Answer + '-' + choice;
+    var msg = _DP_COMPARISON[key] || '';
+    var changed = _d1Answer !== choice;
+    comparisonHtml =
+      '<div class="dp-comparison ' + (changed ? 'dp-changed' : 'dp-consistent') + '">' +
+        '<div class="dp-comparison-label">' + (changed ? 'Your view changed' : 'Consistent view') + '</div>' +
+        '<div class="dp-comparison-track">' +
+          '<span class="dp-track-item">' + escHtml(_DP_LABELS[_d1Answer]) + '</span>' +
+          '<span class="dp-track-arrow">→</span>' +
+          '<span class="dp-track-item dp-track-final">' + escHtml(_DP2_LABELS[choice]) + '</span>' +
+        '</div>' +
+        '<div class="dp-comparison-msg">' + escHtml(msg) + '</div>' +
+      '</div>';
+  }
+  el.innerHTML =
+    '<div class="dp-answered">' +
+      '<span class="dp-answered-label">After the details</span>' +
+      '<span class="dp-answered-choice">' + escHtml(_DP2_LABELS[choice]) + '</span>' +
+    '</div>' +
+    comparisonHtml;
+}
+
+function answerFactorQ(btn, score) {
+  var container = btn.closest('.factor-micro-q');
+  if (!container || container.classList.contains('fq-done')) return;
+  container.classList.add('fq-done');
+  var correctText = score >= 7 ? 'Stronger' : score <= 3 ? 'Weaker' : 'Neutral';
+  var chosen = btn.textContent.trim();
+  var isCorrect = chosen === correctText;
+  container.querySelectorAll('.fq-btn').forEach(function(b) {
+    b.disabled = true;
+    if (b.textContent.trim() === correctText) b.classList.add('fq-correct');
+    else if (b === btn && !isCorrect) b.classList.add('fq-wrong');
+  });
+  var fb = document.createElement('div');
+  fb.className = 'fq-feedback ' + (isCorrect ? 'fq-fb-correct' : 'fq-fb-wrong');
+  fb.textContent = isCorrect
+    ? 'Correct — StockIQ scores this ' + score + '/10, a ' + (score >= 7 ? 'positive' : score >= 4 ? 'mixed' : 'negative') + ' signal.'
+    : 'StockIQ scores this ' + score + '/10 — a ' + correctText.toLowerCase() + ' signal. ' + (score >= 7 ? 'This factor is working in the stock\'s favor.' : score <= 3 ? 'This is dragging the score down.' : 'This factor is neither helping nor hurting much.');
+  container.appendChild(fb);
+}
+// ── END ACTIVE LEARNING ────────────────────────────────────────────────────
+
 function toggleScoreWhy(btn) {
   var item = btn.closest('.score-item');
   if (!item) return;
@@ -2306,7 +2423,15 @@ function scoreBar(label, score, tooltip) {
   let deepExp = _WHY_EXPLANATIONS[label] || '';
   // Use deep explanation if available, otherwise fall back to the data-specific sentence
   let panelContent = deepExp || (tooltip ? tooltip.what : '');
-  let whatHtml = panelContent ? "<div class='score-why'>" + panelContent + "</div>" : "";
+  var microQHtml = "<div class='factor-micro-q'>" +
+    "<div class='factor-micro-prompt'>Stronger or weaker signal for this stock?</div>" +
+    "<div class='factor-micro-btns'>" +
+      "<button class='fq-btn' onclick='answerFactorQ(this," + score + ")'>Stronger</button>" +
+      "<button class='fq-btn' onclick='answerFactorQ(this," + score + ")'>Neutral</button>" +
+      "<button class='fq-btn' onclick='answerFactorQ(this," + score + ")'>Weaker</button>" +
+    "</div>" +
+  "</div>";
+  let whatHtml = panelContent ? "<div class='score-why'>" + panelContent + microQHtml + "</div>" : "";
   let verdictHtml = tooltip ? "<span class='score-verdict " + verdictClass + "'>" + verdictText + " — " + tooltip.verdict + "</span>" : "";
   let whyBtn = "<button class='score-why-btn' onclick='toggleScoreWhy(this)'>Why?</button>";
   let valueHtml = (tooltip && tooltip.value && tooltip.value !== '—') ? "<span class='score-item-value'>" + tooltip.value + "</span>" : "";

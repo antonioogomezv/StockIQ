@@ -7990,3 +7990,218 @@ h2 {
 }
 
 /* ── END BUY THESIS ────────────────────────────────────────────────── */
+
+/* ── ACTIVE LEARNING — DECISION POINTS ────────────────────────────── */
+
+.dp-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  margin: 16px 0;
+}
+
+.dp-eyebrow {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.dp-question {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 14px;
+  line-height: 1.4;
+}
+
+.dp-btns {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dp-btn {
+  flex: 1;
+  min-width: 90px;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 9px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.dp-btn:hover {
+  border-color: var(--accent-blue, #3b82f6);
+  background: color-mix(in oklch, var(--accent-blue, #3b82f6) 6%, var(--surface));
+}
+
+/* Answered state */
+.dp-answered {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin: 16px 0 4px;
+}
+
+.dp-answered-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.dp-answered-choice {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-blue, #3b82f6);
+}
+
+.dp-answered-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  flex: 1;
+  text-align: right;
+}
+
+/* Comparison block */
+.dp-comparison {
+  padding: 16px;
+  border-radius: 12px;
+  margin-top: 8px;
+}
+
+.dp-changed {
+  background: color-mix(in oklch, #7c3aed 8%, var(--card-bg));
+  border: 1px solid color-mix(in oklch, #7c3aed 25%, transparent);
+}
+
+.dp-consistent {
+  background: color-mix(in oklch, #16a34a 8%, var(--card-bg));
+  border: 1px solid color-mix(in oklch, #16a34a 25%, transparent);
+}
+
+.dp-comparison-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.dp-comparison-track {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.dp-track-item {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 10px;
+}
+
+.dp-track-final {
+  color: var(--text);
+}
+
+.dp-track-arrow {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.dp-comparison-msg {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+/* ── ACTIVE LEARNING — FACTOR MICRO-QUESTION ───────────────────────── */
+
+.factor-micro-q {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.factor-micro-prompt {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.factor-micro-btns {
+  display: flex;
+  gap: 6px;
+}
+
+.fq-btn {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.fq-btn:hover:not(:disabled) {
+  border-color: var(--accent-blue, #3b82f6);
+  color: var(--accent-blue, #3b82f6);
+}
+
+.fq-btn.fq-correct {
+  background: color-mix(in oklch, #16a34a 12%, transparent);
+  border-color: #16a34a;
+  color: #16a34a;
+  font-weight: 700;
+}
+
+.fq-btn.fq-wrong {
+  background: color-mix(in oklch, #dc2626 10%, transparent);
+  border-color: #dc2626;
+  color: #dc2626;
+}
+
+.fq-feedback {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+
+.fq-fb-correct {
+  background: color-mix(in oklch, #16a34a 8%, transparent);
+  color: #16a34a;
+}
+
+.fq-fb-wrong {
+  background: color-mix(in oklch, #d97706 8%, transparent);
+  color: #d97706;
+}
+
+/* ── END ACTIVE LEARNING ────────────────────────────────────────────── */
