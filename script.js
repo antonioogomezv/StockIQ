@@ -1318,7 +1318,7 @@ function displayData(data) {
   let changeColor = changeAmt >= 0 ? "#128257" : "#dc2626";
   let changeArrow = changeAmt >= 0 ? "▲" : "▼";
   let changePill = prevClose > 0
-    ? "<span class='price-change-pill' style='background:" + (changeAmt >= 0 ? "rgba(22,163,74,0.12)" : "rgba(220,38,38,0.12)") + ";color:" + changeColor + ";'>" +
+    ? "<span class='price-change-pill' style='background:" + (changeAmt >= 0 ? "rgba(18,130,87,0.12)" : "rgba(220,38,38,0.12)") + ";color:" + changeColor + ";'>" +
       changeArrow + " " + changeSign + fmt$(Math.abs(changeAmt)) + " (" + changeSign + changePct.toFixed(2) + "%)" +
       "</span>"
     : "";
@@ -1825,7 +1825,7 @@ function renderEarningsCard(nextEarningsDate, lastEarnings, companyName) {
   } else if (daysUntil === 1) {
     urgencyColor = '#dc2626'; countdownText = 'Tomorrow'; urgencyBg = 'rgba(220,38,38,0.08)';
   } else if (daysUntil <= 7) {
-    urgencyColor = '#e07510'; countdownText = 'In ' + daysUntil + ' days'; urgencyBg = 'rgba(217,119,6,0.08)';
+    urgencyColor = '#e07510'; countdownText = 'In ' + daysUntil + ' days'; urgencyBg = 'rgba(224,117,16,0.08)';
   } else if (daysUntil <= 30) {
     urgencyColor = 'var(--accent-blue)'; countdownText = 'In ' + daysUntil + ' days'; urgencyBg = 'rgba(14,165,233,0.07)';
   } else {
@@ -2210,10 +2210,10 @@ function renderScoreExplainer(score) {
   var el = document.getElementById('score-explainer-card');
   if (!el) return;
   var ranges = [
-    { min: 85, max: 100, color: '#128257', label: 'Exceptional', desc: 'Top-tier fundamentals across nearly every pillar. Very few stocks reach this level.' },
-    { min: 70, max: 84,  color: '#22c55e', label: 'Strong',      desc: 'Solid business quality and safety. Well-run company with manageable risk.' },
-    { min: 55, max: 69,  color: '#e07510', label: 'Watch',       desc: 'Some positives, but notable concerns. Worth monitoring before acting.' },
-    { min: 40, max: 54,  color: '#f97316', label: 'Weak',        desc: 'Multiple problem areas. Needs significant improvement before showing strength.' },
+    { min: 85, max: 100, color: '#0a6642', label: 'Exceptional', desc: 'Top-tier fundamentals across nearly every pillar. Very few stocks reach this level.' },
+    { min: 70, max: 84,  color: '#128257', label: 'Strong',      desc: 'Solid business quality and safety. Well-run company with manageable risk.' },
+    { min: 55, max: 69,  color: '#c17d08', label: 'Watch',       desc: 'Some positives, but notable concerns. Worth monitoring before acting.' },
+    { min: 40, max: 54,  color: '#c4430f', label: 'Weak',        desc: 'Multiple problem areas. Needs significant improvement before showing strength.' },
     { min: 0,  max: 39,  color: '#dc2626', label: 'Risky',       desc: 'Major red flags across pillars. High risk — research very carefully.' },
   ];
   var current = ranges.find(function(r) { return score >= r.min && score <= r.max; });
@@ -2658,8 +2658,8 @@ function renderPriceChart(prices, dates, volumes, ohlc) {
   var canvas = document.getElementById('priceChart');
   var ctx = canvas.getContext('2d');
   var gradientFill = ctx.createLinearGradient(0, 0, 0, canvas.offsetHeight || 240);
-  gradientFill.addColorStop(0, isUp ? 'rgba(22,163,74,0.18)' : 'rgba(220,38,38,0.18)');
-  gradientFill.addColorStop(1, isUp ? 'rgba(22,163,74,0.00)' : 'rgba(220,38,38,0.00)');
+  gradientFill.addColorStop(0, isUp ? 'rgba(18,130,87,0.18)' : 'rgba(220,38,38,0.18)');
+  gradientFill.addColorStop(1, isUp ? 'rgba(18,130,87,0.00)' : 'rgba(220,38,38,0.00)');
 
   var datasets = [
     {
@@ -2693,7 +2693,7 @@ function renderPriceChart(prices, dates, volumes, ohlc) {
       type: 'line',
       label: 'Prev Close',
       data: prices.map(function() { return chartPrevClose; }),
-      borderColor: 'rgba(217,119,6,0.55)',
+      borderColor: 'rgba(224,117,16,0.55)',
       borderWidth: 1,
       borderDash: [5, 4],
       pointRadius: 0,
@@ -2758,7 +2758,7 @@ function renderCandlestickChart(ohlcData, dates, volumes) {
     return [Math.min(d.o, d.c), Math.max(d.o, d.c)];
   });
   var colors = ohlcData.map(function(d) {
-    return d.c >= d.o ? 'rgba(22,163,74,0.9)' : 'rgba(220,38,38,0.9)';
+    return d.c >= d.o ? 'rgba(18,130,87,0.9)' : 'rgba(220,38,38,0.9)';
   });
   var maxVol = volumes.length > 0 ? Math.max.apply(null, volumes) : 1;
 
@@ -2944,7 +2944,7 @@ function getRiskProfileWarning(beta, totalScore) {
   } else if (totalScore >= 50) {
     stockLabel = "Moderate"; stockColor = "#e07510";
   } else if (totalScore >= 35) {
-    stockLabel = "Speculative"; stockColor = "#f97316";
+    stockLabel = "Speculative"; stockColor = "#c4430f";
   } else {
     stockLabel = "High Risk"; stockColor = "#dc2626";
   }
@@ -6038,7 +6038,7 @@ function _showWizardPreview(picks, budget, profile, today) {
   var profileColor = {
     Aggressive: '#f59e0b',
     Balanced:   '#3b82f6',
-    Conservative: '#22c55e'
+    Conservative: '#128257'
   }[profile] || '#3b82f6';
 
   var perStock = budget / picks.length;
@@ -6054,7 +6054,7 @@ function _showWizardPreview(picks, budget, profile, today) {
   var picksHtml = picks.map(function(p) {
     var name = nameMap[p.ticker] || p.ticker;
     var shares = p.price > 0 ? (perStock / p.price).toFixed(2) : '—';
-    var scoreColor = p.score >= 65 ? '#22c55e' : p.score >= 50 ? '#f59e0b' : '#ef4444';
+    var scoreColor = p.score >= 65 ? '#128257' : p.score >= 50 ? '#c17d08' : '#dc2626';
     return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">' +
       '<div>' +
         '<div style="font-size:14px;font-weight:700;">' + p.ticker + ' <span style="font-size:12px;font-weight:400;color:var(--text-muted);">· ' + escHtml(name) + '</span></div>' +
@@ -7143,7 +7143,7 @@ function renderHoldingsChart() {
   // Color based on whether the line ends above or below where it started in this view
   let isUp = pcts[pcts.length - 1] >= 0;
   let lineColor = isUp ? '#128257' : '#dc2626';
-  let fillColor = isUp ? 'rgba(22,163,74,0.08)' : 'rgba(220,38,38,0.08)';
+  let fillColor = isUp ? 'rgba(18,130,87,0.08)' : 'rgba(220,38,38,0.08)';
 
   if (holdingsChartInstance) holdingsChartInstance.destroy();
   holdingsChartInstance = new Chart(canvas.getContext('2d'), {
@@ -7303,7 +7303,7 @@ function renderPortfolioLineChart() {
   let pcts   = history.map(function(h) { return base > 0 ? parseFloat(((h.value - base) / base * 100).toFixed(2)) : 0; });
   let isUp   = pcts[pcts.length - 1] >= 0;
   let lineColor = isUp ? '#128257' : '#dc2626';
-  let fillColor = isUp ? 'rgba(22,163,74,0.06)' : 'rgba(220,38,38,0.06)';
+  let fillColor = isUp ? 'rgba(18,130,87,0.06)' : 'rgba(220,38,38,0.06)';
 
   function buildChart(spyPcts) {
     if (portfolioLineChartInstance) portfolioLineChartInstance.destroy();
@@ -7589,7 +7589,7 @@ function getStreak() {
 var BADGE_TIERS = {
   bronze: { label: 'Bronze', color: '#cd7f32', bg: 'rgba(205,127,50,0.12)', glow: 'rgba(205,127,50,0.3)' },
   silver: { label: 'Silver', color: '#94a3b8', bg: 'rgba(148,163,184,0.12)', glow: 'rgba(148,163,184,0.3)' },
-  gold:   { label: 'Gold',   color: '#e07510', bg: 'rgba(217,119,6,0.12)',   glow: 'rgba(217,119,6,0.35)' }
+  gold:   { label: 'Gold',   color: '#e07510', bg: 'rgba(224,117,16,0.12)',   glow: 'rgba(224,117,16,0.35)' }
 };
 
 var BADGE_DEFINITIONS = [
