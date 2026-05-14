@@ -6667,7 +6667,7 @@ function openSellModal(ticker, currentPrice, totalShares) {
     let color = realizedGain >= 0 ? '#16a34a' : '#dc2626';
     let remaining = totalSh - sh;
     preview.innerHTML = '<span style="color:' + color + ';font-weight:600;">' +
-      (realizedGain >= 0 ? '+' : '') + '$' + realizedGain.toFixed(2) + ' (' + (realizedPct >= 0 ? '+' : '') + realizedPct.toFixed(1) + '%)</span>' +
+      fmtSigned$(realizedGain) + ' (' + (realizedPct >= 0 ? '+' : '') + realizedPct.toFixed(1) + '%)</span>' +
       '<span style="color:var(--text-muted);margin-left:10px;">' + (remaining > 0 ? remaining.toFixed(remaining % 1 === 0 ? 0 : 2) + ' shares remaining' : 'Full position closed') + '</span>';
   }
   document.getElementById('sell-shares-' + ticker).addEventListener('input', updatePreview);
@@ -6724,9 +6724,9 @@ function confirmSell(ticker, totalShares) {
 
   if (item.lots.length === 0) {
     portfolio = portfolio.filter(function(i) { return i.ticker !== ticker; });
-    showToast(ticker + ' fully sold — ' + (realizedGain >= 0 ? '+' : '') + '$' + realizedGain.toFixed(2) + ' realized');
+    showToast(ticker + ' fully sold — ' + fmtSigned$(realizedGain) + ' realized');
   } else {
-    showToast('Sold ' + sh + ' shares of ' + ticker + ' — ' + (realizedGain >= 0 ? '+' : '') + '$' + realizedGain.toFixed(2) + ' realized');
+    showToast('Sold ' + sh + ' shares of ' + ticker + ' — ' + fmtSigned$(realizedGain) + ' realized');
   }
 
   all[id].stocks = portfolio;
@@ -6752,14 +6752,14 @@ function renderClosedPositions() {
       return '<div class="closed-row">' +
         '<div class="closed-row-left">' +
           '<div class="closed-row-ticker">' + escHtml(c.ticker) + '</div>' +
-          '<div class="closed-row-detail">' + c.sharesSold + ' shares · bought $' + (c.avgCost ? c.avgCost.toFixed(2) : '—') + ' → sold $' + c.sellPrice.toFixed(2) + ' · ' + escHtml(c.date) + '</div>' +
+          '<div class="closed-row-detail">' + c.sharesSold + ' shares · bought ' + (c.avgCost ? fmt$(c.avgCost) : '—') + ' → sold ' + fmt$(c.sellPrice) + ' · ' + escHtml(c.date) + '</div>' +
         '</div>' +
-        '<div class="closed-row-gain" style="color:' + gc + ';">' + (c.realizedGain >= 0 ? '+' : '') + '$' + c.realizedGain.toFixed(2) + '</div>' +
+        '<div class="closed-row-gain" style="color:' + gc + ';">' + fmtSigned$(c.realizedGain) + '</div>' +
       '</div>';
     }).join('');
   }
   if (totalEl) {
-    totalEl.innerHTML = 'Total Realized: <span style="color:' + totalColor + ';">' + (totalRealized >= 0 ? '+' : '') + '$' + totalRealized.toFixed(2) + '</span>';
+    totalEl.innerHTML = 'Total Realized: <span style="color:' + totalColor + ';">' + fmtSigned$(totalRealized) + '</span>';
   }
 }
 
