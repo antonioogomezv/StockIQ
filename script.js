@@ -899,10 +899,10 @@ function calculateRSI(prices, period) {
 }
 
 function getScoreTier(s) {
-  return s >= 85 ? { color: '#16a34a', label: 'Exceptional' }
-       : s >= 70 ? { color: '#22c55e', label: 'Strong' }
-       : s >= 55 ? { color: '#d97706', label: 'Watch' }
-       : s >= 40 ? { color: '#f97316', label: 'Weak' }
+  return s >= 85 ? { color: '#0a6642', label: 'Exceptional' }
+       : s >= 70 ? { color: '#128257', label: 'Strong' }
+       : s >= 55 ? { color: '#c17d08', label: 'Watch' }
+       : s >= 40 ? { color: '#c4430f', label: 'Weak' }
        :           { color: '#dc2626', label: 'Risky' };
 }
 
@@ -1030,26 +1030,26 @@ function calculateScore(changePct, week52High, price, pe, metrics, qualScore, rs
 
 function buildSignalChips(pe, margin, growth, beta, rsi, ma50, price) {
   var chips = [];
-  if (margin > 20) chips.push({ icon: "↑", color: "#16a34a", label: "Strong margins" });
+  if (margin > 20) chips.push({ icon: "↑", color: "#128257", label: "Strong margins" });
   else if (margin < 0) chips.push({ icon: "↓", color: "#dc2626", label: "Losing money" });
-  else if (margin > 5) chips.push({ icon: "→", color: "#d97706", label: "Thin margins" });
+  else if (margin > 5) chips.push({ icon: "→", color: "#e07510", label: "Thin margins" });
 
-  if (growth > 15) chips.push({ icon: "↑", color: "#16a34a", label: "Fast growth" });
+  if (growth > 15) chips.push({ icon: "↑", color: "#128257", label: "Fast growth" });
   else if (growth < 0) chips.push({ icon: "↓", color: "#dc2626", label: "Shrinking sales" });
-  else chips.push({ icon: "→", color: "#d97706", label: "Slow growth" });
+  else chips.push({ icon: "→", color: "#e07510", label: "Slow growth" });
 
-  if (pe > 0 && pe < 20) chips.push({ icon: "↑", color: "#16a34a", label: "Cheap P/E" });
+  if (pe > 0 && pe < 20) chips.push({ icon: "↑", color: "#128257", label: "Cheap P/E" });
   else if (pe > 35) chips.push({ icon: "↓", color: "#dc2626", label: "Expensive P/E" });
-  else if (pe > 0) chips.push({ icon: "→", color: "#d97706", label: "Fair P/E" });
+  else if (pe > 0) chips.push({ icon: "→", color: "#e07510", label: "Fair P/E" });
 
-  if (rsi !== null && rsi < 30) chips.push({ icon: "↑", color: "#16a34a", label: "Oversold" });
+  if (rsi !== null && rsi < 30) chips.push({ icon: "↑", color: "#128257", label: "Oversold" });
   else if (rsi !== null && rsi > 70) chips.push({ icon: "↓", color: "#dc2626", label: "Overbought" });
 
-  if (beta < 1) chips.push({ icon: "↑", color: "#16a34a", label: "Low risk" });
+  if (beta < 1) chips.push({ icon: "↑", color: "#128257", label: "Low risk" });
   else if (beta > 1.5) chips.push({ icon: "↓", color: "#dc2626", label: "High risk" });
 
   if (ma50 !== null) {
-    if (price > ma50) chips.push({ icon: "↑", color: "#16a34a", label: "Uptrend" });
+    if (price > ma50) chips.push({ icon: "↑", color: "#128257", label: "Uptrend" });
     else chips.push({ icon: "↓", color: "#dc2626", label: "Downtrend" });
   }
 
@@ -1072,32 +1072,32 @@ function buildScoreExplainer(_bd, pe, margin, growth, beta, rsi, _ma50) {
   let lines = [];
 
   // Profit margin
-  if (margin > 20) lines.push({ icon: "↑", color: "#16a34a", text: "Strong profit margins (" + margin.toFixed(1) + "%) — keeps more of every dollar earned" });
-  else if (margin > 5) lines.push({ icon: "→", color: "#d97706", text: "Moderate profit margins (" + margin.toFixed(1) + "%) — decent but room to improve" });
+  if (margin > 20) lines.push({ icon: "↑", color: "#128257", text: "Strong profit margins (" + margin.toFixed(1) + "%) — keeps more of every dollar earned" });
+  else if (margin > 5) lines.push({ icon: "→", color: "#e07510", text: "Moderate profit margins (" + margin.toFixed(1) + "%) — decent but room to improve" });
   else if (margin < 0) lines.push({ icon: "↓", color: "#dc2626", text: "Negative profit margins (" + margin.toFixed(1) + "%) — currently losing money" });
-  else lines.push({ icon: "→", color: "#d97706", text: "Thin profit margins (" + margin.toFixed(1) + "%) — not much profit per dollar of sales" });
+  else lines.push({ icon: "→", color: "#e07510", text: "Thin profit margins (" + margin.toFixed(1) + "%) — not much profit per dollar of sales" });
 
   // Revenue growth
-  if (growth > 15) lines.push({ icon: "↑", color: "#16a34a", text: "Strong revenue growth (+" + growth.toFixed(1) + "% YoY) — business is expanding fast" });
-  else if (growth > 0) lines.push({ icon: "→", color: "#d97706", text: "Moderate revenue growth (+" + growth.toFixed(1) + "% YoY) — steady but not explosive" });
+  if (growth > 15) lines.push({ icon: "↑", color: "#128257", text: "Strong revenue growth (+" + growth.toFixed(1) + "% YoY) — business is expanding fast" });
+  else if (growth > 0) lines.push({ icon: "→", color: "#e07510", text: "Moderate revenue growth (+" + growth.toFixed(1) + "% YoY) — steady but not explosive" });
   else lines.push({ icon: "↓", color: "#dc2626", text: "Revenue shrinking (" + growth.toFixed(1) + "% YoY) — sales are declining" });
 
   // P/E ratio
-  if (pe > 0 && pe < 15) lines.push({ icon: "↑", color: "#16a34a", text: "Low P/E ratio (" + pe.toFixed(1) + ") — may be undervalued relative to earnings" });
-  else if (pe > 0 && pe < 30) lines.push({ icon: "→", color: "#d97706", text: "Average P/E ratio (" + pe.toFixed(1) + ") — fairly priced for current earnings" });
+  if (pe > 0 && pe < 15) lines.push({ icon: "↑", color: "#128257", text: "Low P/E ratio (" + pe.toFixed(1) + ") — may be undervalued relative to earnings" });
+  else if (pe > 0 && pe < 30) lines.push({ icon: "→", color: "#e07510", text: "Average P/E ratio (" + pe.toFixed(1) + ") — fairly priced for current earnings" });
   else if (pe > 30) lines.push({ icon: "↓", color: "#dc2626", text: "High P/E ratio (" + pe.toFixed(1) + ") — priced for high future growth, adds risk" });
   else if (pe < 0) lines.push({ icon: "↓", color: "#dc2626", text: "Negative P/E — company is currently unprofitable" });
 
   // RSI
   if (rsi !== null) {
-    if (rsi < 30) lines.push({ icon: "↑", color: "#16a34a", text: "RSI " + rsi + " — oversold, possible rebound ahead" });
+    if (rsi < 30) lines.push({ icon: "↑", color: "#128257", text: "RSI " + rsi + " — oversold, possible rebound ahead" });
     else if (rsi > 70) lines.push({ icon: "↓", color: "#dc2626", text: "RSI " + rsi + " — overbought, may pull back soon" });
     else lines.push({ icon: "→", color: "#64748b", text: "RSI " + rsi + " — neutral momentum, no extreme signals" });
   }
 
   // Beta (risk)
-  if (beta < 1) lines.push({ icon: "↑", color: "#16a34a", text: "Low beta (" + beta.toFixed(2) + ") — less volatile than the market" });
-  else if (beta < 1.5) lines.push({ icon: "→", color: "#d97706", text: "Beta " + beta.toFixed(2) + " — moves similarly to the overall market" });
+  if (beta < 1) lines.push({ icon: "↑", color: "#128257", text: "Low beta (" + beta.toFixed(2) + ") — less volatile than the market" });
+  else if (beta < 1.5) lines.push({ icon: "→", color: "#e07510", text: "Beta " + beta.toFixed(2) + " — moves similarly to the overall market" });
   else lines.push({ icon: "↓", color: "#dc2626", text: "High beta (" + beta.toFixed(2) + ") — more volatile than the market, bigger swings" });
 
   let rows = lines.map(function(l) {
@@ -1124,7 +1124,7 @@ function buildPillarSummary(pillars) {
   var html = "<div class='pillar-summary'>";
   items.forEach(function(item) {
     var p = pillars[item.key];
-    var color = p.score >= 70 ? '#16a34a' : p.score >= 50 ? '#d97706' : '#dc2626';
+    var color = p.score >= 70 ? '#128257' : p.score >= 50 ? '#e07510' : '#dc2626';
     var grade = p.score >= 85 ? 'A' : p.score >= 70 ? 'B' : p.score >= 55 ? 'C' : p.score >= 40 ? 'D' : 'F';
     html += "<div class='pillar-tile'>" +
       "<div class='pillar-score' style='color:" + color + ";'>" + p.score + "<span class='pillar-grade'>" + grade + "</span></div>" +
@@ -1169,7 +1169,7 @@ function buildScoreHistoryBars(ticker, currentScore) {
   let curr = history[history.length - 1];
   let diff = currentScore - prev.score;
   let arrow = diff > 0 ? "▲" : diff < 0 ? "▼" : "—";
-  let color = diff > 0 ? "#16a34a" : diff < 0 ? "#dc2626" : "#64748b";
+  let color = diff > 0 ? "#128257" : diff < 0 ? "#dc2626" : "#64748b";
   let label = diff > 0 ? "improving" : diff < 0 ? "declining" : "unchanged";
 
   // Build "what changed" diff if both entries have breakdown data
@@ -1198,9 +1198,9 @@ function buildScoreHistoryBars(ticker, currentScore) {
         top.map(function(c) {
           let up = c.delta > 0;
           return "<div class='score-history-diff-row'>" +
-            "<span class='diff-arrow' style='color:" + (up ? "#16a34a" : "#dc2626") + ";'>" + (up ? "↑" : "↓") + "</span>" +
+            "<span class='diff-arrow' style='color:" + (up ? "#128257" : "#dc2626") + ";'>" + (up ? "↑" : "↓") + "</span>" +
             "<span class='diff-name'>" + c.name + "</span>" +
-            "<span class='diff-delta' style='color:" + (up ? "#16a34a" : "#dc2626") + ";'>" + (up ? "+" : "") + c.delta + " pts</span>" +
+            "<span class='diff-delta' style='color:" + (up ? "#128257" : "#dc2626") + ";'>" + (up ? "+" : "") + c.delta + " pts</span>" +
           "</div>";
         }).join("") +
       "</div>";
@@ -1208,7 +1208,7 @@ function buildScoreHistoryBars(ticker, currentScore) {
   }
 
   let bars = history.map(function(h) {
-    let barColor = h.score >= 65 ? "#16a34a" : h.score >= 50 ? "#d97706" : "#dc2626";
+    let barColor = h.score >= 65 ? "#128257" : h.score >= 50 ? "#e07510" : "#dc2626";
     let height = Math.max(20, (h.score / 100) * 60);
     return "<div style='display:flex;flex-direction:column;align-items:center;gap:4px;'>" +
       "<div style='font-size:10px;color:#64748b;'>" + h.score + "</div>" +
@@ -1220,8 +1220,8 @@ function buildScoreHistoryBars(ticker, currentScore) {
     trend: "<span style='color:" + color + ";font-weight:600;font-size:12px;'>" + arrow + " " + Math.abs(diff) + " pts since " + prev.date + " — " + label + "</span>",
     bars: "<div style='display:flex;align-items:flex-end;gap:8px;margin-top:8px;padding:10px;background:var(--surface2);border-radius:10px;'>" + bars + "</div>" +
           "<div style='display:flex;gap:12px;margin-top:6px;font-size:10px;color:var(--text-muted);'>" +
-          "<span><span style='color:#16a34a;font-weight:700;'>■</span> Strong 65+</span>" +
-          "<span><span style='color:#d97706;font-weight:700;'>■</span> Watch 50–64</span>" +
+          "<span><span style='color:#128257;font-weight:700;'>■</span> Strong 65+</span>" +
+          "<span><span style='color:#e07510;font-weight:700;'>■</span> Watch 50–64</span>" +
           "<span><span style='color:#dc2626;font-weight:700;'>■</span> Risky &lt;50</span>" +
           "</div>",
     diff: diffHtml
@@ -1315,7 +1315,7 @@ function displayData(data) {
   let logoHtml = profile.logo ? "<img src='" + escHtml(profile.logo) + "' class='stock-logo'>" : "";
   let changeAmt = price - prevClose;
   let changeSign = changeAmt >= 0 ? "+" : "";
-  let changeColor = changeAmt >= 0 ? "#16a34a" : "#dc2626";
+  let changeColor = changeAmt >= 0 ? "#128257" : "#dc2626";
   let changeArrow = changeAmt >= 0 ? "▲" : "▼";
   let changePill = prevClose > 0
     ? "<span class='price-change-pill' style='background:" + (changeAmt >= 0 ? "rgba(22,163,74,0.12)" : "rgba(220,38,38,0.12)") + ";color:" + changeColor + ";'>" +
@@ -1710,7 +1710,7 @@ function renderFundamentals(f) {
   let lastEarningsVal = '—';
   if (f.lastEarnings && f.lastEarnings.actual != null) {
     let beat = f.lastEarnings.estimate != null ? (f.lastEarnings.actual >= f.lastEarnings.estimate ? "Beat" : "Missed") : null;
-    let beatColor = beat === "Beat" ? "#16a34a" : "#dc2626";
+    let beatColor = beat === "Beat" ? "#128257" : "#dc2626";
     lastEarningsVal = "$" + f.lastEarnings.actual.toFixed(2) +
       (beat ? " <span style='color:" + beatColor + ";font-weight:700;font-size:11px;'>" + beat + "</span>" : "");
   }
@@ -1719,8 +1719,8 @@ function renderFundamentals(f) {
   var zVal = '—', zColor = 'var(--text)', zLabel = '';
   if (f.zScore !== null && f.zScore !== undefined) {
     zVal = f.zScore.toFixed(2);
-    if (f.zScore >= 3)      { zColor = '#16a34a'; zLabel = 'Safe'; }
-    else if (f.zScore >= 1.81) { zColor = '#d97706'; zLabel = 'Grey Zone'; }
+    if (f.zScore >= 3)      { zColor = '#128257'; zLabel = 'Safe'; }
+    else if (f.zScore >= 1.81) { zColor = '#e07510'; zLabel = 'Grey Zone'; }
     else                    { zColor = '#dc2626'; zLabel = 'Distress'; }
     zVal = '<span style="color:' + zColor + ';font-weight:700;">' + zVal + '</span><span style="font-size:11px;color:' + zColor + ';margin-left:4px;">(' + zLabel + ')</span>';
   }
@@ -1782,7 +1782,7 @@ function renderDividendCard(divs, el) {
   var futureDiv = divs.find(function(d) { return d.exDate && d.exDate > new Date().toISOString().split('T')[0]; });
   if (futureDiv) {
     var daysTo = Math.round((new Date(futureDiv.exDate + 'T12:00:00') - new Date()) / 86400000);
-    var urgColor = daysTo <= 7 ? '#d97706' : 'var(--text-muted)';
+    var urgColor = daysTo <= 7 ? '#e07510' : 'var(--text-muted)';
     nextExEl = '<div class="div-next-ex">Next ex-date: <strong>' +
       new Date(futureDiv.exDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
       '</strong> <span style="color:' + urgColor + ';font-size:11px;">(' + (daysTo === 0 ? 'Today' : daysTo === 1 ? 'Tomorrow' : 'In ' + daysTo + 'd') + ')</span>' +
@@ -1825,7 +1825,7 @@ function renderEarningsCard(nextEarningsDate, lastEarnings, companyName) {
   } else if (daysUntil === 1) {
     urgencyColor = '#dc2626'; countdownText = 'Tomorrow'; urgencyBg = 'rgba(220,38,38,0.08)';
   } else if (daysUntil <= 7) {
-    urgencyColor = '#d97706'; countdownText = 'In ' + daysUntil + ' days'; urgencyBg = 'rgba(217,119,6,0.08)';
+    urgencyColor = '#e07510'; countdownText = 'In ' + daysUntil + ' days'; urgencyBg = 'rgba(217,119,6,0.08)';
   } else if (daysUntil <= 30) {
     urgencyColor = 'var(--accent-blue)'; countdownText = 'In ' + daysUntil + ' days'; urgencyBg = 'rgba(14,165,233,0.07)';
   } else {
@@ -1837,7 +1837,7 @@ function renderEarningsCard(nextEarningsDate, lastEarnings, companyName) {
     var beat = lastEarnings.estimate != null
       ? (lastEarnings.actual >= lastEarnings.estimate ? 'Beat' : 'Missed')
       : null;
-    var beatColor = beat === 'Beat' ? '#16a34a' : '#dc2626';
+    var beatColor = beat === 'Beat' ? '#128257' : '#dc2626';
     lastHtml = '<div class="earnings-last">' +
       '<span class="earnings-last-label">Last quarter:</span> ' +
       '<span class="earnings-last-val">$' + lastEarnings.actual.toFixed(2) + ' EPS</span>' +
@@ -2210,9 +2210,9 @@ function renderScoreExplainer(score) {
   var el = document.getElementById('score-explainer-card');
   if (!el) return;
   var ranges = [
-    { min: 85, max: 100, color: '#16a34a', label: 'Exceptional', desc: 'Top-tier fundamentals across nearly every pillar. Very few stocks reach this level.' },
+    { min: 85, max: 100, color: '#128257', label: 'Exceptional', desc: 'Top-tier fundamentals across nearly every pillar. Very few stocks reach this level.' },
     { min: 70, max: 84,  color: '#22c55e', label: 'Strong',      desc: 'Solid business quality and safety. Well-run company with manageable risk.' },
-    { min: 55, max: 69,  color: '#d97706', label: 'Watch',       desc: 'Some positives, but notable concerns. Worth monitoring before acting.' },
+    { min: 55, max: 69,  color: '#e07510', label: 'Watch',       desc: 'Some positives, but notable concerns. Worth monitoring before acting.' },
     { min: 40, max: 54,  color: '#f97316', label: 'Weak',        desc: 'Multiple problem areas. Needs significant improvement before showing strength.' },
     { min: 0,  max: 39,  color: '#dc2626', label: 'Risky',       desc: 'Major red flags across pillars. High risk — research very carefully.' },
   ];
@@ -2456,7 +2456,7 @@ function toggleScoreWhy(btn) {
 }
 
 function scoreBar(label, score, tooltip) {
-  let color = score >= 7 ? "#16a34a" : score >= 4 ? "#d97706" : "#dc2626";
+  let color = score >= 7 ? "#128257" : score >= 4 ? "#e07510" : "#dc2626";
   let verdictClass = score >= 7 ? "good" : score >= 4 ? "mid" : "bad";
   let verdictText = score >= 7 ? "Strong" : score >= 4 ? "Average" : "Weak";
   let width = (score / 10) * 100;
@@ -2652,7 +2652,7 @@ function renderPriceChart(prices, dates, volumes, ohlc) {
   var theme = getChartTheme();
 
   var isUp = prices.length > 0 && prices[prices.length - 1] >= prices[0];
-  var lineColor = isUp ? '#16a34a' : '#dc2626';
+  var lineColor = isUp ? '#128257' : '#dc2626';
   var maxVol = volumes.length > 0 ? Math.max.apply(null, volumes) : 1;
 
   var canvas = document.getElementById('priceChart');
@@ -2786,7 +2786,7 @@ function renderCandlestickChart(ohlcData, dates, volumes) {
         var yLow  = chart.scales.yPrice.getPixelForValue(d.l);
         var yBodyTop    = Math.min(bar.y, bar.base);
         var yBodyBottom = Math.max(bar.y, bar.base);
-        ctx.strokeStyle = d.c >= d.o ? '#16a34a' : '#dc2626';
+        ctx.strokeStyle = d.c >= d.o ? '#128257' : '#dc2626';
         ctx.lineWidth = 1.5;
         ctx.beginPath(); ctx.moveTo(x, yHigh); ctx.lineTo(x, yBodyTop); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(x, yBodyBottom); ctx.lineTo(x, yLow); ctx.stroke();
@@ -2910,22 +2910,22 @@ function getSectorContext(industry, pe, margin, growth, beta) {
 
   if (pe > 0 && avg.pe) {
     let diff = (((pe - avg.pe) / avg.pe) * 100).toFixed(0);
-    let color = diff > 20 ? "#dc2626" : diff > 0 ? "#d97706" : "#16a34a";
+    let color = diff > 20 ? "#dc2626" : diff > 0 ? "#e07510" : "#128257";
     rows += "<div class='sector-row'><span class='sector-label'>P/E Ratio</span><span class='sector-val'>" + pe.toFixed(1) + "</span><span class='sector-vs'>vs avg " + avg.pe + "</span><span class='sector-verdict' style='color:" + color + ";'>" + Math.abs(diff) + "% " + (diff > 0 ? "more expensive" : "cheaper") + " than peers</span></div>";
   }
   if (margin !== 0 && avg.margin) {
     let diff = (margin - avg.margin).toFixed(1);
-    let color = diff >= 0 ? "#16a34a" : "#dc2626";
+    let color = diff >= 0 ? "#128257" : "#dc2626";
     rows += "<div class='sector-row'><span class='sector-label'>Profit Margin</span><span class='sector-val'>" + margin.toFixed(1) + "%</span><span class='sector-vs'>vs avg " + avg.margin + "%</span><span class='sector-verdict' style='color:" + color + ";'>" + Math.abs(diff) + "% " + (diff >= 0 ? "above" : "below") + " average</span></div>";
   }
   if (growth !== 0 && avg.growth) {
     let diff = (growth - avg.growth).toFixed(1);
-    let color = diff >= 0 ? "#16a34a" : "#dc2626";
+    let color = diff >= 0 ? "#128257" : "#dc2626";
     rows += "<div class='sector-row'><span class='sector-label'>Revenue Growth</span><span class='sector-val'>" + growth.toFixed(1) + "%</span><span class='sector-vs'>vs avg " + avg.growth + "%</span><span class='sector-verdict' style='color:" + color + ";'>Growing " + Math.abs(diff) + "% " + (diff >= 0 ? "faster than" : "slower than") + " peers</span></div>";
   }
   if (beta > 0 && avg.beta) {
     let diff = (beta - avg.beta).toFixed(2);
-    let color = diff <= 0 ? "#16a34a" : "#d97706";
+    let color = diff <= 0 ? "#128257" : "#e07510";
     rows += "<div class='sector-row'><span class='sector-label'>Risk (Beta)</span><span class='sector-val'>" + beta.toFixed(2) + "</span><span class='sector-vs'>vs avg " + avg.beta + "</span><span class='sector-verdict' style='color:" + color + ";'>" + Math.abs(diff) + " " + (diff <= 0 ? "less volatile" : "more volatile") + " than peers</span></div>";
   }
   if (!rows) return "";
@@ -2938,11 +2938,11 @@ function getRiskProfileWarning(beta, totalScore) {
   // Classify the stock itself
   let stockLabel, stockColor;
   if (totalScore >= 70 && beta <= 1.2) {
-    stockLabel = "Defensive Growth"; stockColor = "#16a34a";
+    stockLabel = "Defensive Growth"; stockColor = "#128257";
   } else if (totalScore >= 65) {
     stockLabel = "Aggressive Growth"; stockColor = "#0ea5e9";
   } else if (totalScore >= 50) {
-    stockLabel = "Moderate"; stockColor = "#d97706";
+    stockLabel = "Moderate"; stockColor = "#e07510";
   } else if (totalScore >= 35) {
     stockLabel = "Speculative"; stockColor = "#f97316";
   } else {
@@ -3419,7 +3419,7 @@ function _cmpStockHeader(d) {
   var logoHtml = d.logo
     ? "<img src='" + escHtml(d.logo) + "' class='cmp-logo' onerror=\"this.style.display='none'\">"
     : "<div class='cmp-logo cmp-logo-placeholder'>" + escHtml(d.ticker.slice(0,2)) + "</div>";
-  var changeColor = (d.changePct || 0) >= 0 ? '#16a34a' : '#dc2626';
+  var changeColor = (d.changePct || 0) >= 0 ? '#128257' : '#dc2626';
   var changeStr = d.changePct != null ? ((d.changePct >= 0 ? '+' : '') + d.changePct.toFixed(2) + '%') : '';
   return "<div class='cmp-col-header'>" +
     logoHtml +
@@ -3704,11 +3704,11 @@ function renderWatchlist() {
 
   // Render immediately with loading placeholders for prices
   function buildRow(item, price, changePct) {
-    let scoreColor = item.score >= 65 ? "#16a34a" : item.score >= 50 ? "#d97706" : "#dc2626";
+    let scoreColor = item.score >= 65 ? "#128257" : item.score >= 50 ? "#e07510" : "#dc2626";
     let signal = item.score >= 65 ? "Strong" : item.score >= 50 ? "Watch" : "Risky";
     let priceHtml = price == null
       ? "<span class='wl-price'>—</span>"
-      : "<span class='wl-price'>" + fmt$(price) + "</span><span class='wl-change' style='color:" + (changePct >= 0 ? "#16a34a" : "#dc2626") + ";'>" + (changePct >= 0 ? "+" : "") + changePct.toFixed(2) + "%</span>";
+      : "<span class='wl-price'>" + fmt$(price) + "</span><span class='wl-change' style='color:" + (changePct >= 0 ? "#128257" : "#dc2626") + ";'>" + (changePct >= 0 ? "+" : "") + changePct.toFixed(2) + "%</span>";
     let hist = buildScoreHistoryBars(item.ticker, item.score);
     let histDrawer = hist.bars
       ? "<div class='wl-history-drawer' id='wl-hist-" + item.ticker + "' style='display:none;'>" +
@@ -4787,7 +4787,7 @@ function renderTrending(data) {
   if (data.length === 0) { list.innerHTML = prefix + '<div class="trending-loading">No matches.</div>'; return; }
   list.innerHTML = prefix + data.map(function(r) {
     let up = r.changePct >= 0;
-    let color = up ? '#16a34a' : '#dc2626';
+    let color = up ? '#128257' : '#dc2626';
     let sign = up ? '+' : '';
     let initials = r.symbol.substring(0, 2).toUpperCase();
     let bigMover = Math.abs(r.changePct) > 5;
@@ -4903,7 +4903,7 @@ function loadMarketOverview() {
       var arrow = changePct >= 0 ? "▲" : "▼";
       var sign = changePct >= 0 ? "+" : "";
       var changeStr = arrow + " " + sign + changePct.toFixed(2) + "%";
-      var changeColor = changePct >= 0 ? "#16a34a" : "#dc2626";
+      var changeColor = changePct >= 0 ? "#128257" : "#dc2626";
       _updateTickerEl('[data-mid="' + index.priceKey + '"]', priceStr, null);
       _updateTickerEl('[data-mid="' + index.changeKey + '"]', changeStr, changeColor);
     });
@@ -4915,7 +4915,7 @@ function loadMarketOverview() {
       var arrow = changePct >= 0 ? "▲" : "▼";
       var sign = changePct >= 0 ? "+" : "";
       var changeStr = arrow + " " + sign + changePct.toFixed(2) + "%";
-      var changeColor = changePct >= 0 ? "#16a34a" : "#dc2626";
+      var changeColor = changePct >= 0 ? "#128257" : "#dc2626";
       _updateTickerEl('[data-wlprice="' + item.ticker + '"]', priceStr, null);
       _updateTickerEl('[data-wlchange="' + item.ticker + '"]', changeStr, changeColor);
     });
@@ -5007,7 +5007,7 @@ function renderSectorAbout(name, changePct) {
   if (!m) { el.style.display = 'none'; return; }
 
   var up = changePct >= 0;
-  var color = changePct === 0 ? 'var(--text-muted)' : (up ? 'var(--accent-green, #16a34a)' : '#dc2626');
+  var color = changePct === 0 ? 'var(--text-muted)' : (up ? 'var(--accent-green, #128257)' : '#dc2626');
   var sign = up ? '+' : '';
   var perfText = changePct !== 0 ? "<span style='color:" + color + ";font-weight:600;'>" + sign + changePct.toFixed(2) + "% today</span>" : '<span style="color:var(--text-muted);">Market closed</span>';
 
@@ -5087,7 +5087,7 @@ function showSectorStocks(name) {
       var price = q.price || 0;
       var dp = q.changePct || 0;
       var up = dp >= 0;
-      var color = up ? 'var(--accent-green, #16a34a)' : '#dc2626';
+      var color = up ? 'var(--accent-green, #128257)' : '#dc2626';
       row.querySelector('.sector-stock-price').textContent = price > 0 ? fmt$(price) : '—';
       var chgEl = row.querySelector('.sector-stock-chg');
       chgEl.textContent = price > 0 ? (up ? '+' : '') + dp.toFixed(2) + '%' : '—';
@@ -5146,7 +5146,7 @@ function renderSectors(data) {
   let maxAbs = Math.max.apply(null, data.map(function(s) { return Math.abs(s.changePct); })) || 1;
   let html = data.map(function(s) {
     let up = s.changePct >= 0;
-    let color = allZero ? 'var(--text-muted)' : (up ? '#16a34a' : '#dc2626');
+    let color = allZero ? 'var(--text-muted)' : (up ? '#128257' : '#dc2626');
     let sign = up ? '+' : '';
     let barWidth = allZero ? 50 : Math.round((Math.abs(s.changePct) / maxAbs) * 100);
     let changeLabel = allZero ? '—' : sign + s.changePct.toFixed(2) + '%';
@@ -6417,8 +6417,8 @@ function renderPortfolio() {
     let totalGain = totalValue - totalCost;
     let totalGainPct = totalCost > 0 ? ((totalGain / totalCost) * 100) : 0;
     let avgScore = scores.length > 0 ? Math.round(scores.reduce(function(a, b) { return a + b; }, 0) / scores.length) : null;
-    let gainColor = totalGain >= 0 ? '#16a34a' : '#dc2626';
-    let dayColor = totalDayChange >= 0 ? '#16a34a' : '#dc2626';
+    let gainColor = totalGain >= 0 ? '#128257' : '#dc2626';
+    let dayColor = totalDayChange >= 0 ? '#128257' : '#dc2626';
     document.getElementById('port-total-value').textContent = fmt$(totalValue);
     let costEl = document.getElementById('port-total-cost');
     if (costEl) costEl.textContent = 'Cost ' + fmt$(totalCost);
@@ -6438,7 +6438,7 @@ function renderPortfolio() {
     let realizedCard = document.getElementById('port-realized-card');
     if (realizedEl) {
       realizedEl.textContent = fmtSigned$(totalRealized);
-      realizedEl.style.color = totalRealized >= 0 ? '#16a34a' : '#dc2626';
+      realizedEl.style.color = totalRealized >= 0 ? '#128257' : '#dc2626';
     }
     if (realizedCard) { realizedCard.classList.remove('metric-up','metric-down'); realizedCard.classList.add(totalRealized >= 0 ? 'metric-up' : 'metric-down'); }
     let gainCard = document.getElementById('port-gain-card');
@@ -6453,10 +6453,10 @@ function renderPortfolio() {
     if (best && worst) {
       document.getElementById('port-best-ticker').textContent = best.ticker;
       document.getElementById('port-best-gain').textContent = fmtSigned$(best.gain) + ' · ' + (best.gainPct >= 0 ? '+' : '') + best.gainPct.toFixed(1) + '%';
-      document.getElementById('port-best-gain').style.color = best.gain >= 0 ? '#16a34a' : '#dc2626';
+      document.getElementById('port-best-gain').style.color = best.gain >= 0 ? '#128257' : '#dc2626';
       document.getElementById('port-worst-ticker').textContent = worst.ticker;
       document.getElementById('port-worst-gain').textContent = fmtSigned$(worst.gain) + ' · ' + (worst.gainPct >= 0 ? '+' : '') + worst.gainPct.toFixed(1) + '%';
-      document.getElementById('port-worst-gain').style.color = worst.gain >= 0 ? '#16a34a' : '#dc2626';
+      document.getElementById('port-worst-gain').style.color = worst.gain >= 0 ? '#128257' : '#dc2626';
     }
     if (failedTickers.length > 0) {
       showToast('Prices unavailable for ' + failedTickers.join(', ') + ' — showing cost basis instead.');
@@ -6539,10 +6539,10 @@ function renderPortfolio() {
       if (!benchEl) return;
       if (!bench) { benchEl.style.display = 'none'; return; }
       let youVsSpy = totalGainPct - bench.spyReturn;
-      let vsColor = youVsSpy >= 0 ? '#16a34a' : '#dc2626';
+      let vsColor = youVsSpy >= 0 ? '#128257' : '#dc2626';
       let vsText = youVsSpy >= 0 ? '↑ Beating the market' : '↓ Behind the market';
-      let youColor = totalGainPct >= 0 ? '#16a34a' : '#dc2626';
-      let spyColor = bench.spyReturn >= 0 ? '#16a34a' : '#dc2626';
+      let youColor = totalGainPct >= 0 ? '#128257' : '#dc2626';
+      let spyColor = bench.spyReturn >= 0 ? '#128257' : '#dc2626';
       benchEl.innerHTML =
         '<span class="port-bench-label">vs S&P 500 since ' + bench.since + '</span>' +
         '<span class="port-bench-stat" style="color:' + youColor + ';">You ' + (totalGainPct >= 0 ? '+' : '') + totalGainPct.toFixed(1) + '%</span>' +
@@ -6685,7 +6685,7 @@ function openSellModal(ticker, currentPrice, totalShares) {
     }
     let avgCostSold = sh > 0 ? weightedCost / sh : 0;
     let realizedPct = avgCostSold > 0 ? ((sp - avgCostSold) / avgCostSold * 100) : 0;
-    let color = realizedGain >= 0 ? '#16a34a' : '#dc2626';
+    let color = realizedGain >= 0 ? '#128257' : '#dc2626';
     let remaining = totalSh - sh;
     preview.innerHTML = '<span style="color:' + color + ';font-weight:600;">' +
       fmtSigned$(realizedGain) + ' (' + (realizedPct >= 0 ? '+' : '') + realizedPct.toFixed(1) + '%)</span>' +
@@ -6764,12 +6764,12 @@ function renderClosedPositions() {
   if (closed.length === 0) { el.style.display = 'none'; return; }
   el.style.display = 'block';
   let totalRealized = closed.reduce(function(sum, c) { return sum + c.realizedGain; }, 0);
-  let totalColor = totalRealized >= 0 ? '#16a34a' : '#dc2626';
+  let totalColor = totalRealized >= 0 ? '#128257' : '#dc2626';
   let listEl = document.getElementById('closed-positions-list');
   let totalEl = document.getElementById('closed-positions-total');
   if (listEl) {
     listEl.innerHTML = closed.slice().reverse().map(function(c) {
-      let gc = c.realizedGain >= 0 ? '#16a34a' : '#dc2626';
+      let gc = c.realizedGain >= 0 ? '#128257' : '#dc2626';
       return '<div class="closed-row">' +
         '<div class="closed-row-left">' +
           '<div class="closed-row-ticker">' + escHtml(c.ticker) + '</div>' +
@@ -6838,7 +6838,7 @@ function renderPortfolioEarningsCalendar(tickers) {
 
     // Soonest event — shown in the collapsed header
     var soonest = upcoming[0];
-    var soonestColor = soonest.daysAway === 0 ? '#dc2626' : soonest.daysAway <= 7 ? '#d97706' : 'var(--text-muted)';
+    var soonestColor = soonest.daysAway === 0 ? '#dc2626' : soonest.daysAway <= 7 ? '#e07510' : 'var(--text-muted)';
     var soonestText = soonest.daysAway === 0 ? 'Today' : soonest.daysAway === 1 ? 'Tomorrow' : 'In ' + soonest.daysAway + 'd';
 
     // Preserve open/closed state across re-renders
@@ -6856,7 +6856,7 @@ function renderPortfolioEarningsCalendar(tickers) {
       '</div>' +
       '<div class="port-earnings-list" id="port-earnings-list" style="display:' + (wasOpen ? 'flex' : 'none') + ';">' +
       upcoming.map(function(e) {
-        var urgColor = e.daysAway === 0 ? '#dc2626' : e.daysAway <= 7 ? '#d97706' : 'var(--text-muted)';
+        var urgColor = e.daysAway === 0 ? '#dc2626' : e.daysAway <= 7 ? '#e07510' : 'var(--text-muted)';
         var countText = e.daysAway === 0 ? 'Today' : e.daysAway === 1 ? 'Tomorrow' : 'In ' + e.daysAway + 'd';
         var dateStr = new Date(e.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         return '<div class="port-earnings-row" onclick="quickSearch(\'' + escHtml(e.ticker) + '\')">' +
@@ -6900,8 +6900,8 @@ function renderPortfolioRows(data) {
   }
   list.innerHTML = '<div class="port-stock-header"><div>Stock</div><div>Mkt Value</div><div class="hide-mobile">Cost</div><div class="hide-mobile">Unrealized G/L</div><div class="hide-mobile">Day Change</div><div>Signal</div></div>' +
     data.map(function(s) {
-      let gc = s.gain >= 0 ? '#16a34a' : '#dc2626';
-      let dc = s.dayChangeAmt >= 0 ? '#16a34a' : '#dc2626';
+      let gc = s.gain >= 0 ? '#128257' : '#dc2626';
+      let dc = s.dayChangeAmt >= 0 ? '#128257' : '#dc2626';
       let hasMultiple = s.lots && s.lots.length > 1;
       let lotsHtml = '';
       if (s.lots) {
@@ -6911,7 +6911,7 @@ function renderPortfolioRows(data) {
           let lotValue = s.currentPrice * lot.shares;
           let lotGain = lotValue - lotCost;
           let lotGainPct = lotCost > 0 ? ((lotGain / lotCost) * 100) : 0;
-          let lotGc = lotGain >= 0 ? '#16a34a' : '#dc2626';
+          let lotGc = lotGain >= 0 ? '#128257' : '#dc2626';
           return '<div class="port-lot-row">' +
             '<div class="port-lot-info">' +
               '<span class="port-lot-num">Lot ' + (i + 1) + '</span>' +
@@ -7060,13 +7060,13 @@ function renderSectorAllocation(stockData, totalValue) {
   var numHoldings = stockData.length;
   var grade, gradeColor, gradeNote;
   if (numSectors >= 4 && topPct < 50 && numHoldings >= 5) {
-    grade = 'A'; gradeColor = '#16a34a';
+    grade = 'A'; gradeColor = '#128257';
     gradeNote = 'Well diversified — spread across ' + numSectors + ' sectors.';
   } else if (numSectors >= 3 && topPct < 65) {
-    grade = 'B'; gradeColor = '#16a34a';
+    grade = 'B'; gradeColor = '#128257';
     gradeNote = 'Decent spread. Consider adding stocks from other sectors.';
   } else if (numSectors >= 2 && topPct < 80) {
-    grade = 'C'; gradeColor = '#d97706';
+    grade = 'C'; gradeColor = '#e07510';
     gradeNote = 'Moderate concentration. A bad week in ' + sectors[0].name + ' could hurt significantly.';
   } else {
     grade = 'D'; gradeColor = '#dc2626';
@@ -7142,7 +7142,7 @@ function renderHoldingsChart() {
   let pcts = filtered.map(function(h) { return base > 0 ? ((h.value - base) / base * 100) : 0; });
   // Color based on whether the line ends above or below where it started in this view
   let isUp = pcts[pcts.length - 1] >= 0;
-  let lineColor = isUp ? '#16a34a' : '#dc2626';
+  let lineColor = isUp ? '#128257' : '#dc2626';
   let fillColor = isUp ? 'rgba(22,163,74,0.08)' : 'rgba(220,38,38,0.08)';
 
   if (holdingsChartInstance) holdingsChartInstance.destroy();
@@ -7302,7 +7302,7 @@ function renderPortfolioLineChart() {
   let labels = history.map(function(h) { return h.date; });
   let pcts   = history.map(function(h) { return base > 0 ? parseFloat(((h.value - base) / base * 100).toFixed(2)) : 0; });
   let isUp   = pcts[pcts.length - 1] >= 0;
-  let lineColor = isUp ? '#16a34a' : '#dc2626';
+  let lineColor = isUp ? '#128257' : '#dc2626';
   let fillColor = isUp ? 'rgba(22,163,74,0.06)' : 'rgba(220,38,38,0.06)';
 
   function buildChart(spyPcts) {
@@ -7398,7 +7398,7 @@ function renderPortfolioChart(stockData, totalValue) {
   if (validStocks.length === 0) { section.style.display = 'none'; return; }
   section.style.display = 'block';
 
-  let palette = ['#16a34a','#0ea5e9','#d97706','#dc2626','#a29bfe','#fd79a8','#55efc4','#fdcb6e'];
+  let palette = ['#128257','#0ea5e9','#e07510','#dc2626','#a29bfe','#fd79a8','#55efc4','#fdcb6e'];
   let labels  = validStocks.map(function(s) { return s.ticker; });
   let values  = validStocks.map(function(s) { return s.value; });
   let colors  = validStocks.map(function(_, i) { return palette[i % palette.length]; });
@@ -7589,7 +7589,7 @@ function getStreak() {
 var BADGE_TIERS = {
   bronze: { label: 'Bronze', color: '#cd7f32', bg: 'rgba(205,127,50,0.12)', glow: 'rgba(205,127,50,0.3)' },
   silver: { label: 'Silver', color: '#94a3b8', bg: 'rgba(148,163,184,0.12)', glow: 'rgba(148,163,184,0.3)' },
-  gold:   { label: 'Gold',   color: '#d97706', bg: 'rgba(217,119,6,0.12)',   glow: 'rgba(217,119,6,0.35)' }
+  gold:   { label: 'Gold',   color: '#e07510', bg: 'rgba(217,119,6,0.12)',   glow: 'rgba(217,119,6,0.35)' }
 };
 
 var BADGE_DEFINITIONS = [
@@ -7715,7 +7715,7 @@ var AVATAR_GRADIENTS = [
   { id: 'ocean',    label: 'Ocean',    g: 'linear-gradient(135deg,#0284c7,#38bdf8)' },
   { id: 'violet',   label: 'Violet',   g: 'linear-gradient(135deg,#7c3aed,#a78bfa)' },
   { id: 'rose',     label: 'Rose',     g: 'linear-gradient(135deg,#e11d48,#fb7185)' },
-  { id: 'amber',    label: 'Amber',    g: 'linear-gradient(135deg,#d97706,#fbbf24)' },
+  { id: 'amber',    label: 'Amber',    g: 'linear-gradient(135deg,#e07510,#fbbf24)' },
   { id: 'indigo',   label: 'Indigo',   g: 'linear-gradient(135deg,#4338ca,#818cf8)' },
   { id: 'teal',     label: 'Teal',     g: 'linear-gradient(135deg,#0f766e,#2dd4bf)' },
   { id: 'crimson',  label: 'Crimson',  g: 'linear-gradient(135deg,#b91c1c,#f87171)' },
@@ -7977,7 +7977,7 @@ function renderLeaderboardEntries(entries, bodyId, myRankId) {
     var isMe = e.uid === uid;
     var rank = medals[i] || ('#' + (i + 1));
     var sign = e.returnPct >= 0 ? '+' : '';
-    var retColor = e.returnPct >= 0 ? '#16a34a' : '#dc2626';
+    var retColor = e.returnPct >= 0 ? '#128257' : '#dc2626';
     return '<div class="lb-row' + (isMe ? ' lb-row-me' : '') + '" data-idx="' + i + '" onclick="openPublicProfileModal(\'profile\',' + i + ')" style="cursor:pointer;">' +
       '<span class="lb-rank">' + rank + '</span>' +
       '<span class="lb-name">' + escHtml(e.displayName || 'Investor') + (isMe ? ' <span class="lb-you-badge">You</span>' : '') + '</span>' +
@@ -8018,7 +8018,7 @@ function renderChallengeSection() {
     if (lbSection) lbSection.style.display = 'block';
 
     var TIER_LABELS = { beginner: 'Beginner', intermediate: 'Intermediate', advanced: 'Advanced' };
-    var TIER_COLORS = { beginner: '#16a34a', intermediate: '#0284c7', advanced: '#7c3aed' };
+    var TIER_COLORS = { beginner: '#128257', intermediate: '#0284c7', advanced: '#7c3aed' };
 
     container.innerHTML = challenges.map(function(c) {
       var hasJoined = Object.values(all).some(function(p) { return p.challengeId === c.id; });
@@ -8083,7 +8083,7 @@ function renderAdminChallengeList(challenges) {
     listEl.innerHTML = '<div class="lb-empty">No challenges yet.</div>';
     return;
   }
-  var STATUS_COLOR = { draft: '#64748b', active: '#16a34a', ended: '#dc2626' };
+  var STATUS_COLOR = { draft: '#64748b', active: '#128257', ended: '#dc2626' };
   listEl.innerHTML = challenges.map(function(c) {
     var color = STATUS_COLOR[c.status] || '#64748b';
     var startStr = c.startDate ? new Date(c.startDate.seconds * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
@@ -8143,7 +8143,7 @@ function adminToggleResults(id) {
         '</div>' +
         entries.map(function(e, i) {
           var sign = e.returnPct >= 0 ? '+' : '';
-          var retColor = e.returnPct >= 0 ? '#16a34a' : '#dc2626';
+          var retColor = e.returnPct >= 0 ? '#128257' : '#dc2626';
           var rank = medals[i] || ('#' + (i + 1));
           var holdingsHtml = '';
           if (e.holdings && e.holdings.length > 0) {
@@ -8419,7 +8419,7 @@ function _renderMiniLeaderboard(challengeId, containerEl) {
       var rowsHtml = top3.map(function(e, i) {
         var isMe = e.uid === uid;
         var sign = e.returnPct >= 0 ? '+' : '';
-        var retColor = e.returnPct >= 0 ? '#16a34a' : '#dc2626';
+        var retColor = e.returnPct >= 0 ? '#128257' : '#dc2626';
         return '<div class="lb-row' + (isMe ? ' lb-row-me' : '') + '" data-source="mini" data-idx="' + i + '" onclick="openPublicProfileModal(\'mini\',' + i + ')" style="cursor:pointer;">' +
           '<span class="lb-rank">' + medals[i] + '</span>' +
           '<span class="lb-name">' + escHtml(e.displayName || 'Investor') + (isMe ? ' <span class="lb-you-badge">You</span>' : '') + '</span>' +
@@ -8464,7 +8464,7 @@ function openPublicProfileModal(source, idx) {
   var hue = (name.charCodeAt(0) * 37 + ((name.charCodeAt(1) || 0) * 13)) % 360;
   var avatarStyle = 'background:linear-gradient(135deg,hsl(' + hue + ',65%,55%),hsl(' + ((hue + 40) % 360) + ',75%,45%));';
   var sign = entry.returnPct >= 0 ? '+' : '';
-  var retColor = entry.returnPct >= 0 ? '#16a34a' : '#dc2626';
+  var retColor = entry.returnPct >= 0 ? '#128257' : '#dc2626';
   var overlay = document.createElement('div');
   overlay.id = 'public-profile-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:3000;display:flex;align-items:center;justify-content:center;padding:24px;';
