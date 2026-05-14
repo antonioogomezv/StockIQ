@@ -4006,6 +4006,99 @@ footer {
 }
 #onboarding-skip-tour:hover { color: var(--text); transform: none; }
 
+/* Onboarding slide 3 — stock picker chips */
+.ob-stock-chips {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 14px;
+}
+.ob-stock-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 8px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  box-shadow: none;
+}
+.ob-stock-chip:hover { border-color: var(--accent-green); background: rgba(22,163,74,0.06); transform: none; }
+.ob-chip-ticker {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-green);
+}
+.ob-chip-name {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* First-portfolio sticky banner */
+#first-portfolio-banner {
+  position: fixed;
+  bottom: 0;
+  left: 0; right: 0;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.12);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  padding-bottom: max(14px, env(safe-area-inset-bottom));
+}
+#fpb-inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+#fpb-text {
+  font-size: 13px;
+  color: var(--text-muted);
+  flex: 1;
+  min-width: 0;
+  line-height: 1.4;
+}
+#fpb-text strong { color: var(--text); }
+#fpb-btn {
+  background: var(--accent-green);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 9px 16px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  box-shadow: none;
+  transition: background 0.15s;
+}
+#fpb-btn:hover { background: #15803d; transform: none; }
+#fpb-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px;
+  flex-shrink: 0;
+  box-shadow: none;
+  line-height: 1;
+  transition: color 0.12s;
+}
+#fpb-close:hover { color: var(--text); transform: none; }
+
 @media (max-width: 640px) {
   .screener-cards { grid-template-columns: 1fr; }
   .screener-goal-btn { font-size: 12px; padding: 7px 12px; }

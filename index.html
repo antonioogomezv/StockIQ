@@ -213,9 +213,15 @@
       </div>
 
       <div class="onboarding-card" data-step="2">
-        <div class="onboarding-card-icon"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></div>
-        <div class="onboarding-card-title">Stuck on a term?</div>
-        <div class="onboarding-card-desc">Tap the gold Learn Terms button anytime to look up P/E ratio, Beta, RSI, and more — explained in plain English with real-world examples. It's always there when you need it.</div>
+        <div class="onboarding-card-icon"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg></div>
+        <div class="onboarding-card-title">Start your paper portfolio</div>
+        <div class="onboarding-card-desc">Pick a company you've heard of. Analyze it and add it — no real money, just practice.</div>
+        <div class="ob-stock-chips">
+          <button class="ob-stock-chip" onclick="pickOnboardingStock('AAPL')"><span class="ob-chip-ticker">AAPL</span><span class="ob-chip-name">Apple</span></button>
+          <button class="ob-stock-chip" onclick="pickOnboardingStock('TSLA')"><span class="ob-chip-ticker">TSLA</span><span class="ob-chip-name">Tesla</span></button>
+          <button class="ob-stock-chip" onclick="pickOnboardingStock('GOOGL')"><span class="ob-chip-ticker">GOOGL</span><span class="ob-chip-name">Google</span></button>
+          <button class="ob-stock-chip" onclick="pickOnboardingStock('NFLX')"><span class="ob-chip-ticker">NFLX</span><span class="ob-chip-name">Netflix</span></button>
+        </div>
       </div>
 
     </div>
@@ -1583,5 +1589,15 @@
     navigator.serviceWorker.register('/sw.js').catch(function() {});
   }
 </script>
+
+<!-- FIRST PORTFOLIO BANNER -->
+<div id="first-portfolio-banner" style="display:none;" role="complementary" aria-label="Add to portfolio prompt">
+  <div id="fpb-inner">
+    <div id="fpb-text">Add <strong id="fpb-company">this stock</strong> to your paper portfolio to start tracking it</div>
+    <button id="fpb-btn" onclick="quickAddToPortfolio()">Add to portfolio →</button>
+  </div>
+  <button id="fpb-close" onclick="dismissFirstPortfolioBanner()" aria-label="Dismiss">✕</button>
+</div>
+
 </body>
 </html>

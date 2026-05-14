@@ -33,6 +33,7 @@ function isMarketOpen() {
 
 let _toastTimer = null;
 let _undoFn = null;
+var _showFirstPortfolioBanner = false;
 
 // ── XP PROGRESSIVE LEARNING SYSTEM ────────────────────────────────────────
 var _userXP = 0;
@@ -1486,6 +1487,11 @@ function displayData(data) {
 
   renderScoreExplainer(totalScore);
   renderNewsSection(news, ticker, companyName);
+
+  if (_showFirstPortfolioBanner) {
+    _showFirstPortfolioBanner = false;
+    showFirstPortfolioBanner(companyName);
+  }
 }
 
 function renderQuizCTA(ticker, companyName, pe, beta, margin, growth, rsi, totalScore, currentRatio) {
@@ -2078,6 +2084,31 @@ function dismissOnboarding() {
     setTimeout(function() { overlay.style.display = 'none'; overlay.classList.remove('onboarding-exit'); }, 300);
   }
   localStorage.setItem('onboarding-done', '1');
+}
+
+function pickOnboardingStock(ticker) {
+  localStorage.setItem('tour-done', '1');
+  var overlay = document.getElementById('onboarding-overlay');
+  if (overlay) overlay.style.display = 'none';
+  showTab('analyze');
+  var mainInput = document.getElementById('stock-input');
+  if (mainInput) mainInput.value = ticker;
+  _showFirstPortfolioBanner = true;
+  searchStock();
+}
+
+function showFirstPortfolioBanner(name) {
+  if (localStorage.getItem('first-portfolio-done')) return;
+  var el = document.getElementById('first-portfolio-banner');
+  var nameEl = document.getElementById('fpb-company');
+  if (!el) return;
+  if (nameEl) nameEl.textContent = name;
+  el.style.display = 'flex';
+}
+
+function dismissFirstPortfolioBanner() {
+  var el = document.getElementById('first-portfolio-banner');
+  if (el) el.style.display = 'none';
 }
 
 // ── QUICK TICKERS ──────────────────────────────────────────────────────────
@@ -3204,7 +3235,7 @@ function onboardingStep(dir) {
   let prevBtn = document.getElementById('onboarding-prev');
   let nextBtn = document.getElementById('onboarding-next');
   if (prevBtn) prevBtn.style.visibility = _obStep === 0 ? 'hidden' : 'visible';
-  if (nextBtn) nextBtn.textContent = _obStep === _obTotal - 1 ? "Let's Go →" : 'Next →';
+  if (nextBtn) nextBtn.textContent = _obStep === _obTotal - 1 ? "Browse on my own →" : 'Next →';
   if (_obStep === _obTotal - 1 && dir > 0) {
     // Auto-advance to finish on second tap of last step's Next
     nextBtn.onclick = function() { finishOnboarding(); nextBtn.onclick = function() { onboardingStep(1); }; };
@@ -6257,6 +6288,11 @@ function _doAddToPortfolio() {
   document.getElementById('port-date').value = '';
   clearThesisSelection();
   addXP(5); // +5 XP for adding to portfolio
+  if (!localStorage.getItem('first-portfolio-done')) {
+    localStorage.setItem('first-portfolio-done', '1');
+    dismissFirstPortfolioBanner();
+    showToast('Your portfolio has started!');
+  }
   renderPortfolio();
 }
 
