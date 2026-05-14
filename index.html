@@ -983,17 +983,20 @@
 
         <div id="explanation-simple" style="display:none;"></div>
 
-        <!-- FUNDAMENTALS -->
-        <div id="company-about" style="display:none;"></div>
-        <div id="fundamentals-card" style="display:none;"></div>
-        <div id="dividend-card" style="display:none;"></div>
-        <div id="etf-holdings-card" style="display:none;"></div>
-        <div id="earnings-card" style="display:none;"></div>
-        <button type="button" id="show-details-btn" onclick="toggleDetails()" style="display:none;">Show Full Analysis</button>
-        <div id="explanation" style="display:none;">—</div>
-        <!-- DECISION POINT 2 — after reading the details -->
-        <div id="decision-point-2" style="display:none;"></div>
-        <div id="quiz-cta" style="display:none;"></div>
+        <button type="button" id="show-details-btn" onclick="toggleDetails()" style="display:none;">Full Analysis</button>
+
+        <!-- DEEP DIVE: company info + fundamentals + score breakdown — hidden until user taps Full Analysis -->
+        <div id="deep-dive-section" style="display:none;">
+          <div id="company-about"></div>
+          <div id="fundamentals-card"></div>
+          <div id="dividend-card"></div>
+          <div id="etf-holdings-card"></div>
+          <div id="earnings-card"></div>
+          <div id="explanation">—</div>
+          <!-- DECISION POINT 2 — after reading the details -->
+          <div id="decision-point-2"></div>
+          <div id="quiz-cta"></div>
+        </div>
       </div>
 
       <div id="news-section" style="display:none;">
@@ -1128,6 +1131,7 @@
                 <div style="position:relative;flex:1;">
                   <input type="number" id="port-price" placeholder="Buy price $" style="width:100%;" aria-label="Buy price in dollars">
                   <span id="port-price-loading" style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--text-muted);">...</span>
+                  <span style="position:absolute;right:8px;bottom:-16px;font-size:10px;color:var(--text-muted);pointer-events:none;">USD</span>
                 </div>
               </div>
               <button type="button" class="port-prefill-btn" id="port-use-price-btn" onclick="prefillCurrentPrice()" style="display:none;">Use today's price →</button>

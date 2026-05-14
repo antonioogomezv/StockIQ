@@ -114,6 +114,12 @@ function _unlockBreakdownAfterQuiz() {
     var factorHeading = "<div class='pillar-section-label' style='margin-top:20px;'>14 FACTORS</div>";
     expEl.innerHTML = heading + ps + factorHeading + expEl.innerHTML;
   }
+  // Open the deep-dive section so the unlocked breakdown is visible
+  var ddSection = document.getElementById('deep-dive-section');
+  if (ddSection) ddSection.style.display = 'block';
+  expEl.style.display = 'block';
+  var detailsBtn = document.getElementById('show-details-btn');
+  if (detailsBtn) detailsBtn.innerHTML = "Full Analysis <span style='float:right;'>▴</span>";
   showDecisionPoint2(currentName);
 }
 
@@ -771,6 +777,10 @@ function searchStock() {
   if (ctxTerms) ctxTerms.style.display = 'none';
   let newsSection = document.getElementById('news-section');
   if (newsSection) newsSection.style.display = 'none';
+  var ddSection = document.getElementById('deep-dive-section');
+  if (ddSection) ddSection.style.display = 'none';
+  var detailsBtn = document.getElementById('show-details-btn');
+  if (detailsBtn) detailsBtn.style.display = 'none';
 
   if (cache[query]) { displayData(cache[query]); return; }
 
@@ -1369,7 +1379,9 @@ function displayData(data) {
   document.getElementById("explanation-simple").innerHTML = "";
 
   var detailsBtn = document.getElementById("show-details-btn");
-  if (detailsBtn) { detailsBtn.innerHTML = "Score Breakdown <span style='float:right;'>▾</span>"; detailsBtn.style.display = "block"; }
+  if (detailsBtn) { detailsBtn.innerHTML = "Full Analysis <span style='float:right;'>▾</span>"; detailsBtn.style.display = "block"; }
+  var ddSection = document.getElementById("deep-dive-section");
+  if (ddSection) ddSection.style.display = "none";
 
   document.getElementById("explanation").style.display = "none";
 
@@ -1446,6 +1458,12 @@ function displayData(data) {
         var factorHeading = "<div class='pillar-section-label' style='margin-top:20px;'>14 FACTORS</div>";
         expEl.innerHTML = heading + ps + factorHeading + expEl.innerHTML;
       }
+      // Auto-open deep-dive so pillars + D2 are immediately visible for returning users
+      var ddSection = document.getElementById('deep-dive-section');
+      if (ddSection) ddSection.style.display = 'block';
+      expEl.style.display = 'block';
+      var detailsBtn = document.getElementById('show-details-btn');
+      if (detailsBtn) detailsBtn.innerHTML = "Full Analysis <span style='float:right;'>▴</span>";
       showDecisionPoint2(companyName);
     }
   })();
@@ -2976,15 +2994,18 @@ function getRiskProfileWarning(beta, totalScore) {
 }
 
 function toggleDetails() {
-  let details = document.getElementById("explanation");
+  let section = document.getElementById("deep-dive-section");
+  let explanation = document.getElementById("explanation");
   let btn = document.getElementById("show-details-btn");
-  if (!details || !btn) return;
-  if (details.style.display === "none") {
-    details.style.display = "block";
-    btn.innerHTML = "Score Breakdown <span style='float:right;'>▴</span>";
+  if (!section || !btn) return;
+  let isOpen = section.style.display !== "none";
+  if (!isOpen) {
+    section.style.display = "block";
+    if (explanation) explanation.style.display = "block";
+    btn.innerHTML = "Full Analysis <span style='float:right;'>▴</span>";
   } else {
-    details.style.display = "none";
-    btn.innerHTML = "Score Breakdown <span style='float:right;'>▾</span>";
+    section.style.display = "none";
+    btn.innerHTML = "Full Analysis <span style='float:right;'>▾</span>";
   }
 }
 
@@ -6628,7 +6649,7 @@ function openSellModal(ticker, currentPrice, totalShares) {
         '<input type="number" id="sell-shares-' + ticker + '" placeholder="e.g. 5" max="' + totalShares + '" step="any">' +
       '</div>' +
       '<div class="sell-modal-field">' +
-        '<label>Sell price $</label>' +
+        '<label>Sell price <span style="font-size:10px;color:var(--text-muted);font-weight:400;">USD</span></label>' +
         '<input type="number" id="sell-price-' + ticker + '" placeholder="' + currentPrice.toFixed(2) + '" value="' + currentPrice.toFixed(2) + '" step="any">' +
       '</div>' +
     '</div>' +
