@@ -9127,427 +9127,784 @@ var DAILY_LESSONS = [
     title: "You already own stocks — you just don't know it yet",
     concept: 'What Is a Stock?',
     duration: '2 min',
+    relatedTicker: 'AAPL',
     story: [
       "Every time you use an iPhone, drink a Coca-Cola, or order from Amazon, you're interacting with a public company. A public company is one that has sold pieces of itself to anyone who wants to buy. Those pieces are called stocks — or shares.",
       "When you buy one share of Apple, you literally own a tiny fraction of every iPhone factory, every App Store dollar, every Mac sold worldwide. You're not lending them money — you own a slice of the business.",
       "This matters because as the business grows and earns more money, your slice becomes more valuable. People who bought Apple in 2010 at around $10 per share (adjusted for splits) now have shares worth $200+. The business got bigger, and so did their slice."
     ],
     insight: "A stock is ownership, not a bet. When you buy stock, you become a co-owner of that company's future.",
-    quiz: {
-      question: 'What does buying a share of a company actually mean?',
-      options: ["You're lending the company money", "You own a small piece of the company", "You're guaranteed a fixed return each year"],
-      correct: 1,
-      explanation: "Buying a share makes you a part-owner, not a lender. Bonds are how you lend money to a company. Stocks make you an owner — your return depends on how well the business does."
-    }
+    quiz: [
+      {
+        question: 'What does buying a share of a company actually mean?',
+        options: ["You're lending the company money", "You own a small piece of the company", "You're guaranteed a fixed return each year"],
+        correct: 1,
+        explanation: "Buying a share makes you a part-owner, not a lender. Bonds are how you lend money to a company. Stocks make you an owner — your return depends on how well the business does."
+      },
+      {
+        question: 'Apple has 15 billion shares outstanding and its stock trades at $200. What is Apple\'s market cap?',
+        options: ['$200 billion', '$3 trillion', '$200 per share means it\'s expensive'],
+        correct: 1,
+        explanation: "Market cap = shares × price = 15 billion × $200 = $3 trillion. This is the total value the market places on the entire company — and why share price alone tells you almost nothing about size."
+      },
+      {
+        question: 'What makes stock ownership fundamentally different from a savings account?',
+        options: ['Stocks are guaranteed to grow', 'Your return depends on how well the business performs, not a fixed interest rate', 'Stocks pay interest every month'],
+        correct: 1,
+        explanation: "Stocks give you ownership and upside tied to business performance — no guarantee, but unlimited potential if the company thrives. A savings account pays fixed interest regardless of any company's results."
+      }
+    ]
   },
   {
     id: 'compounding',
     title: "Compounding: the math that makes patient investors rich",
     concept: 'Compounding',
     duration: '3 min',
+    relatedTicker: 'MSFT',
     story: [
       "Start with $10,000. Earn 10% per year. After year 1: $11,000. After year 2: $12,100 — not $12,000, because you earned 10% on the $1,000 you earned last year too. After 30 years at 10%: $174,494. You put in $10,000 and ended with $174,000.",
       "The brutal truth about compounding: it's slow at first and explosively fast later. The last 10 years of that 30-year example generate more growth than the first 20 years combined. The math rewards patience above almost everything else.",
       "This is why starting young matters more than contributing more later. Ten years of compounding at 25 is worth more than twenty years of compounding at 40. Time is the one ingredient money can't buy."
     ],
     insight: "Compounding is earning returns on your returns. The earlier you start, the more time your money has to multiply. Rule of 72: divide 72 by your annual return to find how many years to double your money.",
-    quiz: {
-      question: "Using the Rule of 72, how many years does it take to double your money at 9% annual returns?",
-      options: ['About 4 years', 'About 8 years', 'About 18 years'],
-      correct: 1,
-      explanation: "Rule of 72: 72 ÷ 9 = 8 years. At 9% annual growth, your money doubles every 8 years. A $10,000 investment grows to $20,000 in 8 years, $40,000 in 16, $80,000 in 24 — just from compounding."
-    }
+    quiz: [
+      {
+        question: "Using the Rule of 72, how many years does it take to double your money at 9% annual returns?",
+        options: ['About 4 years', 'About 8 years', 'About 18 years'],
+        correct: 1,
+        explanation: "Rule of 72: 72 ÷ 9 = 8 years. At 9% annual growth, your money doubles every 8 years. A $10,000 investment grows to $20,000 in 8 years, $40,000 in 16, $80,000 in 24 — just from compounding."
+      },
+      {
+        question: "Ana starts investing $5,000 at age 25. Carlos starts at age 35. Both invest the same amount, earn 8%, and stop at 65. Who ends up with more?",
+        options: ['Carlos — he invested smarter and later', 'Ana — 10 more years of compounding creates a gap money alone cannot close', 'They end up with the same amount'],
+        correct: 1,
+        explanation: "Ana's 40 years at 8% grows $5,000 to roughly $108,000. Carlos's 30 years reaches about $50,000. The 10-year head start more than doubles the outcome — compounding is exponential, not linear."
+      },
+      {
+        question: "Your investment returns 6% per year. Using the Rule of 72, how many years until it quadruples (doubles twice)?",
+        options: ['12 years', '24 years', '36 years'],
+        correct: 1,
+        explanation: "72 ÷ 6 = 12 years to double once. To quadruple, you need two doublings: 12 + 12 = 24 years. Each doubling takes the same time — which is why starting early has such an outsized effect."
+      }
+    ]
   },
   {
     id: 'inflation',
     title: "Your money is shrinking right now — even in a savings account",
     concept: 'Inflation',
     duration: '2 min',
+    relatedTicker: 'KO',
     story: [
       "In 2014, a cup of coffee cost about 25 pesos at a typical café. By 2024, the same cup costs 55 pesos or more. The coffee didn't change. Your money did. That's inflation: the slow, steady increase in prices that means your money buys less over time.",
       "If inflation runs at 4% per year — close to Mexico's long-term average — $100,000 pesos today will have the purchasing power of only $67,000 pesos in 10 years. You didn't spend it. It didn't disappear. But it quietly lost a third of its value.",
       "A savings account paying 2% while inflation runs 4% is actually losing money in real terms. This is the core reason people invest: not to get rich overnight, but to at least keep pace with — and ideally beat — the rising cost of everything."
     ],
     insight: "Inflation erodes the purchasing power of cash over time. Stocks have historically averaged 7–10% annual returns — well above long-term inflation — which is why investing is the standard tool for protecting purchasing power.",
-    quiz: {
-      question: "Inflation is 5% this year. Your savings account pays 2%. After one year, your money has...",
-      options: ["Grown in real value", "Lost purchasing power", "Stayed exactly the same"],
-      correct: 1,
-      explanation: "Even though your account balance went up 2%, the things you want to buy got 5% more expensive. In real terms, your money lost 3% of its purchasing power. Beating inflation is the first job of any investment."
-    }
+    quiz: [
+      {
+        question: "Inflation is 5% this year. Your savings account pays 2%. After one year, your money has...",
+        options: ["Grown in real value", "Lost purchasing power", "Stayed exactly the same"],
+        correct: 1,
+        explanation: "Even though your account balance went up 2%, the things you want to buy got 5% more expensive. In real terms, your money lost 3% of its purchasing power. Beating inflation is the first job of any investment."
+      },
+      {
+        question: "Why have stocks historically been the preferred tool for fighting inflation?",
+        options: ['Stocks are risk-free', 'Stocks have averaged 7–10% annual returns, well above long-term inflation', 'The government guarantees stocks beat inflation'],
+        correct: 1,
+        explanation: "Stocks represent ownership of businesses that can raise prices, expand, and grow earnings over time. Their returns have historically outpaced inflation significantly. Cash in low-yield accounts cannot keep up."
+      },
+      {
+        question: "If inflation runs at 4% per year, roughly how long until your cash loses half its purchasing power?",
+        options: ['About 10 years', 'About 18 years', 'Never — your cash amount stays the same'],
+        correct: 1,
+        explanation: "Rule of 72 applied to inflation: 72 ÷ 4% = 18 years for purchasing power to halve. Your balance doesn't shrink — but what it buys does. This is the silent cost of holding too much cash long-term."
+      }
+    ]
   },
   {
     id: 'market-cap',
     title: "Market cap: the real price of a company",
     concept: 'Market Cap',
     duration: '2 min',
+    relatedTicker: 'NVDA',
     story: [
       "A stock price alone is almost meaningless for comparing companies. Apple at $200 per share and a small company at $200 per share are not equally valuable. The metric that matters for comparison is market capitalization.",
       "Market cap = stock price × total shares outstanding. Apple at $200/share × 15 billion shares = $3 trillion market cap. A small company at $200/share × 1 million shares = $200 million market cap. Same stock price, 15,000x difference in actual size.",
       "Categories: Mega cap ($200B+) — household names like Apple, Microsoft. Large cap ($10B–$200B). Mid cap ($2B–$10B). Small cap (under $2B) — historically higher risk but higher potential reward."
     ],
     insight: "Market cap = Price × Shares. It's the total value the market assigns to a company. Always use market cap — not stock price alone — to compare company sizes and understand what you're actually buying.",
-    quiz: {
-      question: 'Stock A: $5/share × 1 billion shares. Stock B: $500/share × 1 million shares. Which is bigger by market cap?',
-      options: ['Stock A — $5 billion market cap', 'Stock B — $500 million market cap', "They're equal"],
-      correct: 0,
-      explanation: "Stock A: $5 × 1B = $5B. Stock B: $500 × 1M = $500M. Stock A is 10x larger despite a much lower share price. Market cap is what matters, not share price alone."
-    }
+    quiz: [
+      {
+        question: 'Stock A: $5/share × 1 billion shares. Stock B: $500/share × 1 million shares. Which is bigger by market cap?',
+        options: ['Stock A — $5 billion market cap', 'Stock B — $500 million market cap', "They're equal"],
+        correct: 0,
+        explanation: "Stock A: $5 × 1B = $5B. Stock B: $500 × 1M = $500M. Stock A is 10x larger despite a much lower share price. Market cap is what matters, not share price alone."
+      },
+      {
+        question: 'A company has 10 million shares. Today\'s stock price is $30. What is the market cap?',
+        options: ['$30 million', '$300 million', '$3 billion'],
+        correct: 1,
+        explanation: "Market cap = shares × price = 10 million × $30 = $300 million. This is the total price tag the market assigns to the entire company."
+      },
+      {
+        question: "A company's stock price drops 20%, but no new shares are issued or retired. What happens to its market cap?",
+        options: ["Nothing — market cap only changes when shares are issued", "It drops 20% as well — price and market cap move proportionally", "Market cap increases because shares are now cheaper to buy"],
+        correct: 1,
+        explanation: "Market cap = shares × price. If shares are unchanged but price drops 20%, market cap drops 20% too. A falling market cap means investors collectively value the company less."
+      }
+    ]
   },
   {
     id: 'sp500',
     title: 'The S&P 500: the scorecard of the American economy',
     concept: 'Market Indices',
     duration: '2 min',
+    relatedTicker: 'SPY',
     story: [
       "When people say 'the market went up 1% today,' they almost always mean the S&P 500 went up 1%. The S&P 500 is an index — a curated list of 500 large American companies weighted by market cap. Apple, Microsoft, Amazon, NVIDIA, and Berkshire Hathaway are among the largest.",
       "It's not 500 random companies. A committee selects them based on size, trading volume, and financial health. Companies get added when they grow large enough and removed when they shrink or go bankrupt. Tesla was added in 2020.",
       "If you own stocks, your portfolio's performance is almost always measured against the S&P 500. A 12% portfolio return sounds great — unless the S&P 500 returned 20% that same year."
     ],
     insight: "The S&P 500 tracks 500 large US companies weighted by market cap — the standard benchmark for US stock market performance. The Dow Jones tracks only 30 companies; the NASDAQ focuses on technology.",
-    quiz: {
-      question: 'Your portfolio returned 8% this year. The S&P 500 returned 15%. What does this mean?',
-      options: ['You lost money this year', 'You made money but underperformed the market benchmark', 'Your portfolio is perfectly positioned'],
-      correct: 1,
-      explanation: "8% is a positive return — you made money. But relative to the benchmark, you underperformed by 7%. Professionals are judged not just by absolute return, but by how they performed vs. the market."
-    }
+    quiz: [
+      {
+        question: 'Your portfolio returned 8% this year. The S&P 500 returned 15%. What does this mean?',
+        options: ['You lost money this year', 'You made money but underperformed the market benchmark', 'Your portfolio is perfectly positioned'],
+        correct: 1,
+        explanation: "8% is a positive return — you made money. But relative to the benchmark, you underperformed by 7%. Professionals are judged not just by absolute return, but by how they performed vs. the market."
+      },
+      {
+        question: "The S&P 500 is weighted by market cap. What does this mean in practice?",
+        options: ['All 500 companies have equal influence', 'Larger companies like Apple have far more influence on the index than smaller ones', 'Only the top 10 companies actually matter'],
+        correct: 1,
+        explanation: "Market cap weighting means Apple (3T+) has far more influence on the S&P 500 than a $10B company. This better reflects the actual economic weight of each company in the US economy."
+      },
+      {
+        question: "The Dow Jones tracks 30 companies. The S&P 500 tracks 500. Which is the more widely used benchmark for the overall US stock market?",
+        options: ['The Dow — 30 iconic companies is enough', 'The S&P 500 — 500 companies across all major sectors gives broader, more representative coverage', 'Both are equally representative'],
+        correct: 1,
+        explanation: "The S&P 500 is the standard benchmark because its breadth across 500 companies and all major industries gives a more complete picture of US market performance than 30 blue chips alone."
+      }
+    ]
   },
   {
     id: 'risk-tolerance',
     title: 'Risk tolerance: know yourself before you know any stock',
     concept: 'Risk Tolerance',
     duration: '3 min',
+    relatedTicker: 'TSLA',
     story: [
       "Two investors both see their portfolio drop 30% in a bear market. Investor A stays calm, buys more of their best positions at lower prices, and does nothing else. Investor B panics, sells everything, locks in the loss, and swears off stocks forever. Same market, completely different outcomes.",
       "Risk tolerance has two components: capacity (how much loss can your financial situation handle?) and temperament (how much loss can your emotional state handle?). Both matter — and they're often different numbers for the same person.",
       "Most investors overestimate their risk tolerance in bull markets and discover their real tolerance only during bear markets. The best investors are honest about this before they invest, not after."
     ],
     insight: "Risk tolerance = how much loss you can handle without making bad decisions. Financial capacity (income, timeline, obligations) and emotional temperament both matter. Know yours before you build a portfolio.",
-    quiz: {
-      question: "A 22-year-old with stable income, no debt, and won't need the money for 20 years — what risk profile fits them?",
-      options: ["Conservative — they're young and inexperienced", "Aggressive — high capacity and long time horizon absorb volatility", "Depends only on their feelings about loss"],
-      correct: 1,
-      explanation: "Young investors with stable income and long time horizons have high capacity for risk — short-term crashes are recoverable over 20 years. Their financial situation supports more aggressive positioning."
-    }
+    quiz: [
+      {
+        question: "A 22-year-old with stable income, no debt, and won't need the money for 20 years — what risk profile fits them?",
+        options: ["Conservative — they're young and inexperienced", "Aggressive — high capacity and long time horizon absorb volatility", "Depends only on their feelings about loss"],
+        correct: 1,
+        explanation: "Young investors with stable income and long time horizons have high capacity for risk — short-term crashes are recoverable over 20 years. Their financial situation supports more aggressive positioning."
+      },
+      {
+        question: "Why do most investors only discover their real risk tolerance during a bear market?",
+        options: ['Because bear markets are when the stock market stops working correctly', 'Gains feel comfortable — only watching real losses reveals whether you can stay calm and not panic-sell', 'Bear markets are too rare to matter for most investors'],
+        correct: 1,
+        explanation: "It's easy to say you're comfortable with risk when your portfolio is up. Real risk tolerance is revealed when you're watching savings drop 30% — that's when emotion overrides plans, which is why honest self-assessment before investing matters."
+      },
+      {
+        question: "You need the money in 2 years for a house purchase. What risk level is appropriate?",
+        options: ['Aggressive — 2 years is long enough to recover', 'Conservative — a short time horizon means little time to recover from a loss', 'High-beta stocks to maximize gains before purchase'],
+        correct: 1,
+        explanation: "If you need the money in 2 years, a bear market could permanently damage your buying power. Short time horizons demand conservative positioning — there's no time to wait for recovery."
+      }
+    ]
   },
   {
     id: 'diversification',
     title: "Diversification: the only free lunch in investing",
     concept: 'Diversification',
     duration: '2 min',
+    relatedTicker: 'SPY',
     story: [
       "Nobel Prize winner Harry Markowitz called diversification 'the only free lunch in investing.' If you put all your money in one stock and it drops 50%, your portfolio drops 50%. But if you spread across 10 different stocks in different industries, a 50% drop in one only costs you 5% of your total portfolio.",
       "The magic: diversification reduces risk without necessarily reducing your expected return. Two stocks that tend to move in opposite directions offset each other's volatility — their average return stays similar, but the ride is smoother.",
       "Over-diversification is real too. Owning 200 individual stocks means your portfolio basically becomes the market. Most professional investors find 20–30 stocks across different sectors gives meaningful diversification without becoming unmanageable."
     ],
     insight: "Diversification reduces risk by spreading investments across companies, sectors, and asset types. 15–25 stocks in different sectors eliminates most single-stock risk — and the next lesson shows the easiest way to achieve this automatically.",
-    quiz: {
-      question: 'You have $10,000. Which approach is better diversified?',
-      options: ["$10,000 in one tech stock you believe in strongly", "$3,000 tech, $3,000 healthcare, $2,000 consumer goods, $2,000 international", "Both are equally good"],
-      correct: 1,
-      explanation: "Spreading across sectors reduces the impact of any single stock or sector crashing. If tech collapses, healthcare and consumer goods holdings are likely unaffected. Diversification is the simplest risk management tool available."
-    }
+    quiz: [
+      {
+        question: 'You have $10,000. Which approach is better diversified?',
+        options: ["$10,000 in one tech stock you believe in strongly", "$3,000 tech, $3,000 healthcare, $2,000 consumer goods, $2,000 international", "Both are equally good"],
+        correct: 1,
+        explanation: "Spreading across sectors reduces the impact of any single stock or sector crashing. If tech collapses, healthcare and consumer goods holdings are likely unaffected. Diversification is the simplest risk management tool available."
+      },
+      {
+        question: "You own 30 different airline stocks. Why is this NOT true diversification?",
+        options: ['30 is too few stocks', 'All airlines move with the same factors — fuel prices, travel demand, recessions — they rise and fall together', 'Airlines are a safe industry to concentrate in'],
+        correct: 1,
+        explanation: "True diversification means owning investments that don't all move together. Airlines are correlated — the same economic events hit them simultaneously. Real diversification spreads across uncorrelated industries."
+      },
+      {
+        question: "After how many uncorrelated stocks does adding more provide little additional risk reduction?",
+        options: ['5–10 stocks', '15–25 stocks across different sectors', '100+ stocks — more is always better'],
+        correct: 1,
+        explanation: "Research shows 15–25 uncorrelated stocks eliminate most single-stock risk. Beyond ~25, additional diversification delivers diminishing returns — your portfolio essentially becomes the market without the simplicity of an index fund."
+      }
+    ]
   },
   {
     id: 'index-funds',
     title: "One purchase. 500 companies. The investment most experts recommend for beginners.",
     concept: 'Index Funds & ETFs',
     duration: '3 min',
+    relatedTicker: 'SPY',
     story: [
       "You just learned that spreading across 15-25 stocks eliminates most single-stock risk. But what if you don't want to research 25 individual companies? What if there were a way to own them all at once?",
       "An index fund buys every stock in an index — like the S&P 500 — automatically. One purchase gives you proportional ownership of all 500 companies. Your investment rises and falls with the entire market, not any single stock.",
       "An ETF (Exchange-Traded Fund) works the same way but trades on stock exchanges like a regular stock. Research consistently shows most professional stock-pickers underperform a simple S&P 500 index fund over 10+ years. This is why most financial educators recommend index funds as the foundation of any beginner portfolio."
     ],
     insight: "Index funds and ETFs give you instant diversification across hundreds of companies with one purchase. Low-cost, simple, and historically difficult even for professionals to beat. A strong starting point for any beginner.",
-    quiz: {
-      question: "An ETF that tracks the S&P 500 gives you exposure to...",
-      options: ["One company's stock", "A basket of 500 large US company stocks", "Only technology companies"],
-      correct: 1,
-      explanation: "An S&P 500 ETF holds proportional shares in all 500 companies in the index. One purchase instantly diversifies you across technology, healthcare, consumer goods, finance, and more."
-    }
+    quiz: [
+      {
+        question: "An ETF that tracks the S&P 500 gives you exposure to...",
+        options: ["One company's stock", "A basket of 500 large US company stocks", "Only technology companies"],
+        correct: 1,
+        explanation: "An S&P 500 ETF holds proportional shares in all 500 companies in the index. One purchase instantly diversifies you across technology, healthcare, consumer goods, finance, and more."
+      },
+      {
+        question: "Research shows most professional stock-pickers underperform the S&P 500 over 10+ years. Why?",
+        options: ['Professional investors are inexperienced', 'Fees, trading costs, and the difficulty of consistently outpicking a market that reflects all public information', 'The S&P 500 is artificially inflated'],
+        correct: 1,
+        explanation: "Even skilled professionals face compounding headwinds: management fees (often 1%+), trading costs, and the near-impossibility of consistently beating a market that already reflects all available information. Most fail to clear these hurdles over a decade."
+      },
+      {
+        question: "An S&P 500 ETF charges 0.03% per year. An actively managed fund charges 1.2%. On $10,000 over 30 years at 8% returns, the fee difference costs you approximately...",
+        options: ['About $300 total', 'About $8,000 or more', 'Both are essentially the same'],
+        correct: 1,
+        explanation: "Fees compound against you just like returns compound for you. Over 30 years, the 1.17% annual difference on $10,000 growing at 8% costs roughly $8,000–$10,000 in foregone wealth. This is why Warren Buffett publicly recommends low-cost index funds for most investors."
+      }
+    ]
   },
   {
     id: 'bull-bear',
     title: 'Bull vs. bear: what markets feel like from the inside',
     concept: 'Market Cycles',
     duration: '2 min',
+    relatedTicker: 'SPY',
     story: [
       "Markets move in cycles. A bull market is a period of rising prices — generally 20%+ gains from a recent low. A bear market is the opposite: 20%+ decline from a recent high. Both are normal, even if bear markets feel like disasters.",
       "Since 1928, the S&P 500 has experienced 26 bear markets. The average bear lasts 9.6 months and loses about 36%. The average bull that follows lasts several years and more than recovers those losses. The math works heavily in favor of staying invested.",
       "The hardest part isn't the math — it's the psychology. During a bear market, every headline is catastrophic. The investors who do well aren't the ones who predicted the bottom. They're the ones who stayed invested while everyone else panicked."
     ],
     insight: "Bull market = 20%+ gains. Bear market = 20%+ losses. The cycle repeats. Long-term investors who stay invested through bear markets capture the bull markets that always follow.",
-    quiz: {
-      question: 'The market drops 25% over 8 months. This is best described as...',
-      options: ['A market correction (10–20% drop)', 'A bear market (20%+ drop)', 'A recession (economic contraction)'],
-      correct: 1,
-      explanation: "A bear market is a 20%+ decline from recent highs. A correction is 10–20%. A recession is an economic concept (two quarters of negative GDP growth) — related to, but separate from, a bear market."
-    }
+    quiz: [
+      {
+        question: 'The market drops 25% over 8 months. This is best described as...',
+        options: ['A market correction (10–20% drop)', 'A bear market (20%+ drop)', 'A recession (economic contraction)'],
+        correct: 1,
+        explanation: "A bear market is a 20%+ decline from recent highs. A correction is 10–20%. A recession is an economic concept (two quarters of negative GDP growth) — related to, but separate from, a bear market."
+      },
+      {
+        question: "Since 1928, every bear market has eventually been followed by a full recovery and new highs. What does this suggest for long-term investors?",
+        options: ['Sell everything during bear markets to avoid losses', 'Staying invested through the full cycle captures the recovery — selling locks in the loss', 'Bear markets are unpredictable and unavoidable so investing is too risky'],
+        correct: 1,
+        explanation: "The S&P 500 has averaged ~10% annual returns over the long term despite 26 bear markets. Each recovery brought new highs. Staying invested captured the full cycle — selling during a bear locks in losses and misses the rebound."
+      },
+      {
+        question: "During a severe bear market, you see your portfolio down 35%. The historically best — but psychologically hardest — action is...",
+        options: ['Sell everything and wait for the bottom to be confirmed', 'Stay invested or keep buying — trying to time the recovery means missing the fastest days', 'Move everything into gold or cash'],
+        correct: 1,
+        explanation: "Studies show investors who try to time the market typically miss the best days of recovery, which often cluster right after the worst days. Staying invested through the full cycle produces the best outcomes for most long-term investors."
+      }
+    ]
   },
   {
     id: 'dca',
     title: "Dollar-cost averaging: why timing the market usually fails",
     concept: 'Dollar-Cost Averaging',
     duration: '3 min',
+    relatedTicker: 'AMZN',
     story: [
       "Every investor wants to buy at the bottom and sell at the top. The problem: nobody consistently knows when those moments are — not even the professionals. Research shows most active fund managers underperform simple index funds over 10-year periods.",
       "Dollar-cost averaging (DCA) is the alternative. Instead of picking the perfect moment, you invest a fixed amount at regular intervals. When prices are high, your fixed amount buys fewer shares. When prices are low, it buys more. Your average cost ends up lower than if you'd tried to time it.",
       "Most beginner investors who paused to 'wait for the right moment' ended up waiting forever and missing years of growth. The market doesn't wait for your comfort level."
     ],
     insight: "Dollar-cost averaging = invest a fixed amount regularly, regardless of price. It removes timing risk, lowers your average cost over time, and removes the emotional burden of trying to predict the market.",
-    quiz: {
-      question: 'You invest $500/month. Month 1: shares cost $50 (buy 10). Month 2: shares cost $25 (buy 20). What is your average cost per share?',
-      options: ['$37.50', '$33.33', '$25.00'],
-      correct: 1,
-      explanation: "You spent $1,000 total and own 30 shares. Average cost = $1,000 ÷ 30 = $33.33. Notice it's below the $37.50 simple average — DCA naturally lowers your average cost when prices fluctuate."
-    }
+    quiz: [
+      {
+        question: 'You invest $500/month. Month 1: shares cost $50 (buy 10). Month 2: shares cost $25 (buy 20). What is your average cost per share?',
+        options: ['$37.50', '$33.33', '$25.00'],
+        correct: 1,
+        explanation: "You spent $1,000 total and own 30 shares. Average cost = $1,000 ÷ 30 = $33.33. Notice it's below the $37.50 simple average — DCA naturally lowers your average cost when prices fluctuate."
+      },
+      {
+        question: "You planned to invest $1,000 this month but the market just dropped 20%. The DCA approach says...",
+        options: ["Wait — don't buy a falling market", "Invest as planned — you're now buying 20% more shares than last month's price", "Double your investment to take advantage of the dip"],
+        correct: 1,
+        explanation: "DCA means investing regardless of price direction. A market drop isn't a reason to pause — it means your fixed amount buys MORE shares at a lower price. This is how DCA naturally lowers your average cost over time."
+      },
+      {
+        question: "Why is DCA particularly powerful for investors who want to avoid emotional decision-making?",
+        options: ["It doesn't work with volatile markets", "The automatic schedule removes the need to predict market timing, which most people fail at anyway", "It guarantees a profit every month"],
+        correct: 1,
+        explanation: "DCA's main psychological value: you never have to decide 'is today a good day to invest?' The decision is already made. This removes the paralysis that causes many investors to wait forever for a 'perfect moment' — which rarely comes."
+      }
+    ]
   },
   {
     id: 'pe-ratio',
     title: "What Warren Buffett saw in Coca-Cola's P/E that others missed",
     concept: 'P/E Ratio',
     duration: '3 min',
+    relatedTicker: 'AAPL',
     story: [
       "In 1988, Warren Buffett bought $1 billion worth of Coca-Cola stock. Wall Street thought he was overpaying. The P/E ratio — price divided by earnings — was around 14, which seemed high for a 'boring' beverage company.",
       "But Buffett saw something else. He looked at Coca-Cola's brand, its global distribution, and its ability to raise prices every year without losing customers. He calculated that earnings would keep growing, making the current P/E look cheap in hindsight.",
       "By 2000, Coca-Cola's value — including dividends reinvested — had grown roughly 8 to 10 times. Understanding what P/E meant helped Buffett see value where others saw an overpriced soft drink company."
     ],
     insight: "P/E ratio tells you how much the market pays for $1 of a company's profit. A P/E of 20 means investors pay $20 for each $1 of earnings. Compare it to the industry average to judge if it's expensive or cheap.",
-    quiz: {
-      question: 'A stock has a P/E of 30. This means investors are paying...',
-      options: ["$30 in dividends per share per year", "$30 for every $1 of company earnings", "30% more than the stock is worth"],
-      correct: 1,
-      explanation: "P/E = Price ÷ Earnings per share. A P/E of 30 means you pay $30 for each $1 the company earns annually. Whether that's expensive depends on the company's growth rate and industry."
-    }
+    quiz: [
+      {
+        question: 'A stock has a P/E of 30. This means investors are paying...',
+        options: ["$30 in dividends per share per year", "$30 for every $1 of company earnings", "30% more than the stock is worth"],
+        correct: 1,
+        explanation: "P/E = Price ÷ Earnings per share. A P/E of 30 means you pay $30 for each $1 the company earns annually. Whether that's expensive depends on the company's growth rate and industry."
+      },
+      {
+        question: "A company earns $4 per share and the stock trades at $60. What is the P/E ratio?",
+        options: ['15', '24', '240'],
+        correct: 0,
+        explanation: "P/E = Stock Price ÷ Earnings Per Share = $60 ÷ $4 = 15. This company trades at 15 times its annual earnings. Whether that's cheap or expensive depends on its growth rate and what peers trade at."
+      },
+      {
+        question: "Stock A has P/E 8. Stock B has P/E 45. Which is definitely the better buy?",
+        options: ['Stock A — lower P/E always means cheaper and safer', 'Neither is definitively better — you need growth rates and industry context', 'Stock B — higher P/E means the market sees more value'],
+        correct: 1,
+        explanation: "A low P/E might mean cheap — or it might mean slow/declining growth. A high P/E might mean overvalued — or justified by strong future growth. P/E only makes sense compared to the company's growth rate and its industry peers."
+      }
+    ]
   },
   {
     id: 'revenue-growth',
     title: 'Revenue growth: the number that separates thriving from surviving',
     concept: 'Revenue Growth',
     duration: '2 min',
+    relatedTicker: 'NVDA',
     story: [
       "Revenue is simply how much money a company brings in from selling its products or services. Revenue growth tells you whether that number is going up, down, or sideways compared to the same period last year.",
       "Netflix growing revenue 20% year over year means it's earning 20% more than it did a year ago — a company expanding fast. A retailer with -5% revenue growth is shrinking: fewer customers, lower prices, or both.",
       "Growth rate context matters enormously. Amazon growing 15% is impressive given its size. A small company growing 15% might be underperforming. Always ask: how fast should this company be growing given its size and industry?"
     ],
     insight: "Revenue growth shows if a business is actually expanding. Above 10% is generally healthy. Above 20% is fast growth. Negative revenue growth is a serious warning sign that needs explanation.",
-    quiz: {
-      question: 'Company A earned $100M last year. This year they earned $120M. What is their revenue growth rate?',
-      options: ['12%', '20%', '120%'],
-      correct: 1,
-      explanation: "Revenue growth = (New − Old) ÷ Old = ($120M − $100M) ÷ $100M = 20%. The company grew revenue by 20% year over year."
-    }
+    quiz: [
+      {
+        question: 'Company A earned $100M last year. This year they earned $120M. What is their revenue growth rate?',
+        options: ['12%', '20%', '120%'],
+        correct: 1,
+        explanation: "Revenue growth = (New − Old) ÷ Old = ($120M − $100M) ÷ $100M = 20%. The company grew revenue by 20% year over year."
+      },
+      {
+        question: "Two companies both grow revenue 15% this year: Amazon (massive) and a small startup. Who is performing better relative to expectations?",
+        options: ['Amazon — bigger company means more impressive growth', 'The startup — 15% is the bare minimum for a small company', 'Context matters — Amazon growing 15% on $600B is remarkable; a startup at 15% might be underperforming for its stage'],
+        correct: 2,
+        explanation: "Growth rates must be evaluated relative to company size and stage. Amazon growing 15% on hundreds of billions in revenue is extraordinary. A startup growing 15% may actually be too slow for its early stage — context is everything."
+      },
+      {
+        question: "A company grew revenue 30% annually for 3 years. This year it grew only 12%. What should you investigate?",
+        options: ['12% is bad — sell immediately', 'Any growth is positive — 12% is still growing so nothing to worry about', 'Is this deceleration temporary (macro headwinds) or structural (competition, market saturation)?'],
+        correct: 2,
+        explanation: "A sharp deceleration from 30% to 12% warrants deeper analysis. It could be macro headwinds, increasing competition, or early signs of market saturation. Strong investors don't just look at the number — they ask why it changed."
+      }
+    ]
   },
   {
     id: 'profit-margin',
     title: 'Profit margin: the difference between a great business and a good one',
     concept: 'Profit Margin',
     duration: '3 min',
+    relatedTicker: 'AAPL',
     story: [
       "Two companies both earn $1 billion in revenue. Company A keeps $300 million as profit. Company B keeps $30 million. Same revenue, 10x difference in profit. Why? Profit margin.",
       "Microsoft has a profit margin above 35% — for every $100 it earns, it keeps $35. Grocery stores like Walmart operate on margins under 3%. They sell enormous volume but keep almost nothing per dollar. Apple sits around 25%, with a mix of hardware and high-margin software.",
       "High margins generally mean the company has pricing power — customers pay a premium without shopping around. Low margins mean the business must execute perfectly to stay profitable and has little room for error."
     ],
     insight: "Profit margin = profit ÷ revenue. It tells you how much of every peso of sales the company actually keeps. 20%+ is excellent. 5–10% is average for most industries. Negative margin means the company is currently losing money.",
-    quiz: {
-      question: 'A company earns $500M in revenue and keeps $75M as profit. What is its profit margin?',
-      options: ['7.5%', '15%', '75%'],
-      correct: 1,
-      explanation: "Profit margin = $75M ÷ $500M = 15%. For every $100 in revenue, the company keeps $15 as profit. That's a solid margin for most industries."
-    }
+    quiz: [
+      {
+        question: 'A company earns $500M in revenue and keeps $75M as profit. What is its profit margin?',
+        options: ['7.5%', '15%', '75%'],
+        correct: 1,
+        explanation: "Profit margin = $75M ÷ $500M = 15%. For every $100 in revenue, the company keeps $15 as profit. That's a solid margin for most industries."
+      },
+      {
+        question: "Microsoft has 35% profit margin. Walmart has 2.5%. Walmart earns far more total revenue. Which is the better business?",
+        options: ['Walmart — it earns more total dollars', 'Microsoft — high margins always mean a superior business model', 'Both models work differently — margin tells you how efficiently each revenue dollar converts to profit, not which is better'],
+        correct: 2,
+        explanation: "High margin doesn't automatically mean better. Walmart's volume model makes it enormously profitable in total dollars. Microsoft's 35% margin means each revenue dollar is far more valuable. Different models, each valid — margin tells you the efficiency story, not the whole story."
+      },
+      {
+        question: "A company has 5% profit margin. A direct competitor does the same work with 20% margin. What does this difference likely indicate?",
+        options: ['The competitor is cheating customers', 'The competitor has stronger pricing power, lower costs, or a more efficient business model', 'The company with 5% margin will catch up automatically'],
+        correct: 1,
+        explanation: "A 4× difference in margin usually means one company has stronger pricing power or lower operating costs — a structural advantage called a 'moat' that's often difficult for competitors to replicate."
+      }
+    ]
   },
   {
     id: 'roe',
     title: "ROE: the number Warren Buffett checks before anything else",
     concept: 'ROE',
     duration: '3 min',
+    relatedTicker: 'AAPL',
     story: [
       "Return on Equity (ROE) is Warren Buffett's favorite metric. It answers one question: for every dollar shareholders have invested in this company, how many cents of profit does it generate?",
       "An ROE of 20% means the company generates $0.20 of profit for every $1.00 of shareholder equity. That's excellent. An ROE of 5% means poor use of capital. Some companies like Apple show extremely high ROE because years of share buybacks have reduced the equity base, making each remaining dollar of equity work harder.",
       "Why does Buffett love it? High ROE means the company can grow without constantly raising more money from investors. A business earning 25% ROE can fund its own growth from profits — it doesn't need to keep issuing new stock and shrinking each shareholder's ownership slice."
     ],
     insight: "ROE = Net Income ÷ Shareholder Equity. It measures how efficiently management uses investor money. Above 15% is good. Above 20% is excellent. Buffett rarely buys companies with consistent ROE below 15%.",
-    quiz: {
-      question: 'A company has $100M in shareholder equity and earns $25M in profit. What is ROE?',
-      options: ['4%', '25%', '75%'],
-      correct: 1,
-      explanation: "ROE = $25M ÷ $100M = 25%. For every $100 shareholders invested, the company earned $25 in profit. That's an excellent ROE by any standard."
-    }
+    quiz: [
+      {
+        question: 'A company has $100M in shareholder equity and earns $25M in profit. What is ROE?',
+        options: ['4%', '25%', '75%'],
+        correct: 1,
+        explanation: "ROE = $25M ÷ $100M = 25%. For every $100 shareholders invested, the company earned $25 in profit. That's an excellent ROE by any standard."
+      },
+      {
+        question: "Apple's ROE has exceeded 100% for several years. How is this mathematically possible?",
+        options: ["Apple is reporting inflated profits", "Apple's massive share buybacks have reduced shareholder equity so much that the ratio exceeds 100%", "ROE above 100% is impossible"],
+        correct: 1,
+        explanation: "Apple has spent hundreds of billions buying back its own shares, which shrinks shareholder equity on the balance sheet. With a very small equity denominator, even large profits produce ROE above 100%. It signals exceptional capital efficiency."
+      },
+      {
+        question: "Two companies in the same industry: Company A has ROE 8%, Company B has ROE 22%. All else equal, which shows better management efficiency?",
+        options: ['Company A — lower is safer and more conservative', 'Company B — higher ROE means more profit per dollar of shareholder capital', "They're the same — ROE doesn't measure efficiency"],
+        correct: 1,
+        explanation: "ROE directly measures how well management converts shareholder investment into profit. In the same industry, Company B at 22% vs Company A at 8% is nearly 3× more efficient at turning equity into profit — a significant competitive advantage."
+      }
+    ]
   },
   {
     id: 'dividend',
     title: 'Dividends: getting paid just for showing up',
     concept: 'Dividend Yield',
     duration: '2 min',
+    relatedTicker: 'KO',
     story: [
       "Some companies pay their shareholders a portion of profits every quarter, just for owning the stock. This payment is called a dividend. If you own 100 shares of a company that pays $2 per share annually, you receive $200 per year — without selling a single share.",
       "The dividend yield puts this in perspective: annual dividend divided by the stock price. A stock at $100 paying $4 in annual dividends has a 4% yield — meaningful income, often better than many savings accounts.",
       "Not all companies pay dividends. Young, fast-growing companies reinvest all profits back into expansion. Mature, stable companies pay generous dividends because their growth has slowed. Neither is better — it depends on your goal: income now or growth later."
     ],
     insight: "Dividend yield = Annual Dividend ÷ Stock Price. A 3–5% yield is healthy for income investing. Very high yields (8%+) can signal the stock price has collapsed — always check if the dividend is sustainable before assuming it's a bargain.",
-    quiz: {
-      question: 'A stock trades at $50 and pays $2 per share per year. What is the dividend yield?',
-      options: ['2%', '4%', '25%'],
-      correct: 1,
-      explanation: "Dividend yield = $2 ÷ $50 = 4%. For every $100 invested, you receive $4 annually in dividends — on top of any price appreciation."
-    }
+    quiz: [
+      {
+        question: 'A stock trades at $50 and pays $2 per share per year. What is the dividend yield?',
+        options: ['2%', '4%', '25%'],
+        correct: 1,
+        explanation: "Dividend yield = $2 ÷ $50 = 4%. For every $100 invested, you receive $4 annually in dividends — on top of any price appreciation."
+      },
+      {
+        question: "A company's dividend yield was 3% last month. Today it's 8% — but the company announced no dividend increase. What most likely happened?",
+        options: ['The company tripled its dividend quietly', 'The stock price likely collapsed, making the same dividend a higher percentage of the new lower price', "Dividend yield doesn't change unless the company changes the dividend"],
+        correct: 1,
+        explanation: "Yield = dividend ÷ price. If the dividend stays constant but the stock price drops sharply, yield rises automatically. A 'high yield' that appeared from a price collapse is called a yield trap — always investigate why the price fell before assuming it's a bargain."
+      },
+      {
+        question: "You receive $4/year per share in dividends. The stock price also appreciates 7% per year. What is your total annual return?",
+        options: ['7% — only price changes count as returns', '4% — only dividends count as returns', 'Total return includes both — dividend income plus price appreciation'],
+        correct: 2,
+        explanation: "Total return = dividend income + price appreciation. A stock paying 4% dividends while growing 7% in price delivers ~11% total return. Both components are real wealth creation — many beginners miss this when focusing only on the price chart."
+      }
+    ]
   },
   {
     id: 'debt-ratio',
     title: 'Debt: when borrowing is smart and when it is dangerous',
     concept: 'Debt Ratio',
     duration: '3 min',
+    relatedTicker: 'T',
     story: [
       "All companies borrow money. That's not inherently bad — if you can borrow at 4% interest and invest it at 15% returns, debt is your friend. The question is how much is too much.",
       "The debt-to-equity ratio compares how much a company has borrowed to how much shareholders actually own. A ratio of 0.5 means for every $1 of equity, there's $0.50 of debt — manageable. A ratio of 3.0 means debt is 3× equity — aggressive.",
       "Debt becomes dangerous when revenue drops. During the 2008 financial crisis, many companies with very high debt ratios went bankrupt when revenue fell just 20–30% — because interest payments don't stop even when business slows."
     ],
     insight: "High debt amplifies both gains and losses. Under 1.0 debt-to-equity is generally safe. Above 2.0 raises questions. Always check if the company's earnings comfortably cover its interest payments.",
-    quiz: {
-      question: 'A company has $400M in total debt and $200M in shareholder equity. What is the debt-to-equity ratio?',
-      options: ['0.5', '2.0', '4.0'],
-      correct: 1,
-      explanation: "Debt-to-equity = $400M ÷ $200M = 2.0. For every $1 of equity, there's $2 of debt. On the higher end — not necessarily dangerous depending on industry, but worth investigating further."
-    }
+    quiz: [
+      {
+        question: 'A company has $400M in total debt and $200M in shareholder equity. What is the debt-to-equity ratio?',
+        options: ['0.5', '2.0', '4.0'],
+        correct: 1,
+        explanation: "Debt-to-equity = $400M ÷ $200M = 2.0. For every $1 of equity, there's $2 of debt. On the higher end — not necessarily dangerous depending on industry, but worth investigating further."
+      },
+      {
+        question: "Two companies both have 2.0 debt-to-equity. Company A is a utility with stable regulated revenue. Company B is a startup with unpredictable income. Which faces more risk?",
+        options: ['Company A — utilities always struggle with debt', 'Company B — unpredictable revenue makes debt payments harder to cover consistently', 'They face exactly the same risk — same D/E, same risk'],
+        correct: 1,
+        explanation: "Debt risk is about ability to pay, not just the ratio. A utility with stable cash flows can service 2.0 D/E comfortably. A startup with volatile revenue faces genuine distress risk at the same number. Always assess debt relative to cash flow stability."
+      },
+      {
+        question: "A company took on heavy debt to expand aggressively. Revenue is growing 25% annually and interest coverage is strong. This debt is...",
+        options: ['Always dangerous regardless of context', 'Potentially smart — borrowing cheaply to fund high-return growth is good capital allocation', 'Irrelevant — only equity matters to investors'],
+        correct: 1,
+        explanation: "Borrowing at 5% to generate 25% revenue growth is excellent capital allocation. The danger emerges when revenue drops or interest rates rise. Strong interest coverage and growing revenue make debt manageable — even beneficial."
+      }
+    ]
   },
   {
     id: 'current-ratio',
     title: "Current ratio: can the company pay its bills next month?",
     concept: 'Current Ratio',
     duration: '2 min',
+    relatedTicker: 'AAPL',
     story: [
       "Imagine running a business. You have $100,000 in your bank account and $80,000 in bills due this month. You're fine. Now imagine you have $100,000 in money customers owe you but won't pay for 90 days, and $120,000 in bills due this month. You're in trouble — even though you're technically owed more than you owe.",
       "The current ratio measures exactly this for companies. It divides current assets (cash and things that convert to cash within a year) by current liabilities (bills due within a year).",
       "A ratio of 1.5 means for every $1 of short-term bills, the company has $1.50 to cover them. Below 1.0 is a red flag. Between 1.5–2.0 is healthy. Very high ratios (5+) may mean the company is sitting on too much idle cash it could be using better."
     ],
     insight: "Current ratio = Current Assets ÷ Current Liabilities. It measures short-term financial health. Below 1.0 is dangerous. 1.5–2.0 is healthy. Shows if the company can cover its bills without selling long-term assets.",
-    quiz: {
-      question: 'A company has $300M in current assets and $150M in current liabilities. What is the current ratio?',
-      options: ['0.5', '1.5', '2.0'],
-      correct: 2,
-      explanation: "Current ratio = $300M ÷ $150M = 2.0. The company has $2 in short-term assets for every $1 of short-term debt — a solid position."
-    }
+    quiz: [
+      {
+        question: 'A company has $300M in current assets and $150M in current liabilities. What is the current ratio?',
+        options: ['0.5', '1.5', '2.0'],
+        correct: 2,
+        explanation: "Current ratio = $300M ÷ $150M = 2.0. The company has $2 in short-term assets for every $1 of short-term debt — a solid position."
+      },
+      {
+        question: "Why is a current ratio of 0.8 considered a warning sign?",
+        options: ["It means the company isn't profitable", "It means short-term liabilities exceed short-term assets — the company may struggle to cover upcoming bills", "A current ratio below 1.0 is illegal"],
+        correct: 1,
+        explanation: "Current ratio below 1.0 means the company owes more in the near term than it has available to pay. This creates liquidity risk — it may need to borrow, sell assets, or restructure to meet upcoming obligations."
+      },
+      {
+        question: "A grocery chain has a current ratio of 0.6, but pays suppliers in 30 days and collects cash immediately from customers. Is this necessarily a red flag?",
+        options: ['Yes — any ratio below 1.0 is dangerous regardless of business model', "No — grocery chains collect cash before paying suppliers, so low current ratios are normal for the model", 'Current ratio only applies to manufacturing companies'],
+        correct: 1,
+        explanation: "Context matters. Grocery stores collect cash immediately but pay suppliers on 30–60 day terms — they naturally run low current ratios. It's a feature of their business cycle, not a weakness. Always interpret financial ratios within industry norms."
+      }
+    ]
   },
   {
     id: '52-week',
     title: 'The 52-week range: price context you actually need',
     concept: '52-Week Range',
     duration: '2 min',
+    relatedTicker: 'TSLA',
     story: [
       "Without context, a stock price tells you almost nothing. $50 per share — is that cheap or expensive? You can't know without knowing where it's been. The 52-week high and low give you that context.",
       "If a stock's 52-week range is $40–$120 and it's currently trading at $45, that's important: it was worth $120 less than a year ago, and now it's near its yearly low. That could mean opportunity (market panic) or disaster (the business actually deteriorated).",
       "Investor Peter Lynch looked for strong companies trading near their 52-week lows — cases where the market had repriced them below their fundamental value. A low price is only a bargain if the business itself hasn't changed."
     ],
     insight: "52-week position tells you where the stock sits relative to its recent history. Near the high = strong momentum. Near the low = either opportunity or deterioration — check the fundamentals to decide which.",
-    quiz: {
-      question: "A stock's 52-week range is $30–$90. It currently trades at $32. What should you do first?",
-      options: ["Buy immediately — it's near the yearly low", "Avoid it — it's clearly a bad stock", "Check the fundamentals to understand why it fell so much"],
-      correct: 2,
-      explanation: "A price near the 52-week low doesn't automatically make it cheap. Investigate: has the business changed? Did earnings collapse? Is it a market overreaction? Context is everything."
-    }
+    quiz: [
+      {
+        question: "A stock's 52-week range is $30–$90. It currently trades at $32. What should you do first?",
+        options: ["Buy immediately — it's near the yearly low", "Avoid it — it's clearly a bad stock", "Check the fundamentals to understand why it fell so much"],
+        correct: 2,
+        explanation: "A price near the 52-week low doesn't automatically make it cheap. Investigate: has the business changed? Did earnings collapse? Is it a market overreaction? Context is everything."
+      },
+      {
+        question: "A stock hits a new 52-week high. What does this tell you?",
+        options: ['The stock is guaranteed to keep rising', 'The stock has strong recent momentum — but fundamentals still need to justify the price', 'The stock is definitely overvalued and you should sell'],
+        correct: 1,
+        explanation: "A new 52-week high shows strong positive momentum — investors are more confident than they've been all year. But momentum alone isn't a reason to buy. The underlying business needs to justify the new price level."
+      },
+      {
+        question: "Why did Peter Lynch specifically look for strong companies near their 52-week LOWS?",
+        options: ['Because all stocks near their low are guaranteed to recover', 'Strong companies temporarily repriced near lows — due to market overreaction — can offer the best value opportunities', '52-week lows signal stocks headed to zero'],
+        correct: 1,
+        explanation: "Lynch's insight: the market sometimes overreacts to bad news, sending strong businesses to unreasonably low prices. A good company near its 52-week low — for temporary rather than structural reasons — can be a significant value opportunity. The skill is distinguishing the two."
+      }
+    ]
   },
   {
     id: 'altman-z',
     title: 'The bankruptcy detector: how to spot trouble before it hits',
     concept: 'Altman Z-Score',
     duration: '3 min',
+    relatedTicker: 'AAPL',
     story: [
       "In 1968, NYU professor Edward Altman created a formula that predicts whether a company is headed toward bankruptcy. Using just 5 financial ratios, he could predict corporate bankruptcy up to 2 years in advance with over 70% accuracy for public companies.",
       "The formula combines measures of working capital, profitability, leverage, and asset efficiency into a single number. For most publicly traded companies: above 3.0 means safe zone. Between 1.8 and 3.0 is the gray area. Below 1.8 is the danger zone.",
       "Altman tested it on companies that later went bankrupt, and it correctly flagged most of them years before the collapse. Companies like Enron and Lehman Brothers had declining Z-Scores long before they failed — the warning was visible for those who looked."
     ],
     insight: "Altman Z-Score above 3.0 = financially safe zone. Between 1.8–3.0 = watch carefully. Below 1.8 = elevated financial distress risk. StockIQ uses Z-Score as one of the 14 factors in the stock health score.",
-    quiz: {
-      question: 'A company has an Altman Z-Score of 1.4. What does this indicate?',
-      options: ['The company is extremely profitable', 'The company is in the safe zone financially', 'The company shows elevated financial distress risk'],
-      correct: 2,
-      explanation: "A Z-Score below 1.8 puts a company in the distress zone — elevated risk of financial difficulty. It doesn't guarantee bankruptcy, but it's a serious warning that deserves deeper investigation."
-    }
+    quiz: [
+      {
+        question: 'A company has an Altman Z-Score of 1.4. What does this indicate?',
+        options: ['The company is extremely profitable', 'The company is in the safe zone financially', 'The company shows elevated financial distress risk'],
+        correct: 2,
+        explanation: "A Z-Score below 1.8 puts a company in the distress zone — elevated risk of financial difficulty. It doesn't guarantee bankruptcy, but it's a serious warning that deserves deeper investigation."
+      },
+      {
+        question: "Enron and Lehman Brothers both had declining Z-Scores years before their collapses. What does this illustrate?",
+        options: ['Z-Score is not useful for real investment analysis', 'Financial ratios can signal deterioration years before a crisis becomes visible in headlines', 'Their collapses were completely unpredictable'],
+        correct: 1,
+        explanation: "Enron's Z-Score had been deteriorating for years before the scandal broke publicly. Investors who tracked quantitative signals had early warning. This is exactly what systematic financial analysis is designed to catch — patterns that precede visible problems."
+      },
+      {
+        question: "The Altman Z-Score was originally built for public manufacturing companies in 1968. Why is this limitation important to know?",
+        options: ["It means the Z-Score is completely useless today", "Applying it to banks, startups, or service companies may produce misleading results — different business models have different financial structures", "1968 financial data is identical to today's"],
+        correct: 1,
+        explanation: "The original model uses financial ratios from manufacturing balance sheets. Banks hold massive debt by design. Tech companies have minimal physical assets. Applying a 1968 manufacturing formula to a 2024 SaaS startup without adjustment can produce a misleading Z-Score."
+      }
+    ]
   },
   {
     id: 'earnings-reports',
     title: "Earnings day: why a great company's stock can drop 10% overnight",
     concept: 'Earnings Reports',
     duration: '2 min',
+    relatedTicker: 'MSFT',
     story: [
       "Every three months, every public company must publish exactly how much money they made. These quarterly earnings reports are the biggest scheduled events in the stock market — and the hours after a report drops can be intense.",
       "Here's the paradox: a company can announce record profits and still see its stock drop 15%. How? Because the market already expected those profits. Investors had priced in $5.00 of earnings per share. The company delivered $4.80. That 20-cent shortfall — called a 'miss' — triggers a selloff.",
       "When a company 'beats' expectations, the stock typically jumps. When it 'misses,' it falls. What matters isn't just what happened — it's what happened versus what investors expected."
     ],
     insight: "Earnings reports are quarterly profit disclosures every public company must file. Stock prices react to whether results beat or miss analyst expectations — not just whether profits were up or down in absolute terms.",
-    quiz: {
-      question: "A company expected to earn $2.00 per share instead earns $1.85. What likely happens?",
-      options: ["Stock price rises — they still made money", "Stock price likely drops — they missed expectations", "Nothing changes — the market only cares about annual results"],
-      correct: 1,
-      explanation: "The market prices in expected results in advance. When reality comes in below those expectations — even if the company was still profitable — disappointment often drives the stock down. This is an earnings 'miss.'"
-    }
+    quiz: [
+      {
+        question: "A company expected to earn $2.00 per share instead earns $1.85. What likely happens?",
+        options: ["Stock price rises — they still made money", "Stock price likely drops — they missed expectations", "Nothing changes — the market only cares about annual results"],
+        correct: 1,
+        explanation: "The market prices in expected results in advance. When reality comes in below those expectations — even if the company was still profitable — disappointment often drives the stock down. This is an earnings 'miss.'"
+      },
+      {
+        question: "A company announces 25% profit growth. The stock drops 12%. What most likely happened?",
+        options: ['The market made a mistake — 25% profit growth should always be rewarded', 'Analysts had expected 35%+ growth — the 25% result was a miss against high expectations', 'Earnings never actually affect stock prices'],
+        correct: 1,
+        explanation: "The market prices forward expectations, not past results. If analysts expected 35% and the company delivered 25%, that's a 'miss' — even though profit grew. Expectations, not absolute numbers, move stock prices."
+      },
+      {
+        question: "On an earnings call, what does 'guidance' refer to?",
+        options: ["The advice management gives individual investors about buying the stock", "Management's official forecast for the company's performance in coming quarters", "A legal warning that the stock might lose value"],
+        correct: 1,
+        explanation: "Guidance is management's own projection for future revenue, earnings, and growth. It's often the most watched part of an earnings call — investors aren't just judging what happened, they're re-evaluating what will happen. Strong guidance can move stock prices more than the current quarter's results."
+      }
+    ]
   },
   {
     id: 'beta',
     title: 'Beta: why some stocks keep you up at night',
     concept: 'Beta',
     duration: '2 min',
+    relatedTicker: 'TSLA',
     story: [
       "Imagine two stocks. One moves up 10% when the market rises 10%, and down 10% when the market falls. The other jumps 20% when the market rises 10% — and crashes 20% when it falls. The second stock is more volatile. In finance, this is measured by Beta.",
       "Beta of 1.0 means the stock moves exactly with the market. Beta of 2.0 means it moves twice as much — both up and down. Beta of 0.5 means it moves half as much. Utility companies often have Beta under 0.5. High-growth tech can reach Beta of 2+.",
       "There's no universally good or bad beta — only the beta that matches your situation. Investing money you won't need for 10 years? High-beta growth might be fine. Investing savings you might need next year? High beta is real risk."
     ],
     insight: "Beta measures how much a stock swings vs. the overall market. Below 1.0 = calmer than the market. Above 1.0 = more volatile. Know your beta before you sleep on your portfolio.",
-    quiz: {
-      question: 'The market drops 10% in a day. A stock with Beta of 1.5 would drop approximately...',
-      options: ['5%', '10%', '15%'],
-      correct: 2,
-      explanation: "Beta 1.5 means the stock moves 1.5x the market. Market drops 10% → this stock typically drops ~15%. The same applies upward — it gains more when markets rise too."
-    }
+    quiz: [
+      {
+        question: 'The market drops 10% in a day. A stock with Beta of 1.5 would drop approximately...',
+        options: ['5%', '10%', '15%'],
+        correct: 2,
+        explanation: "Beta 1.5 means the stock moves 1.5x the market. Market drops 10% → this stock typically drops ~15%. The same applies upward — it gains more when markets rise too."
+      },
+      {
+        question: "Utility companies often have Beta around 0.4. What does this mean for investors?",
+        options: ['Utility stocks are very risky investments', 'They move far less than the overall market — lower upside but cushioned during market crashes', 'Beta of 0.4 signals the company is in financial distress'],
+        correct: 1,
+        explanation: "A Beta of 0.4 means the stock typically moves 40% as much as the market. In a 10% market drop, it might fall only 4%. This predictability makes low-beta stocks attractive for risk-averse investors or those nearing retirement."
+      },
+      {
+        question: "An investor holds a high-beta portfolio and earns 40% during a bull market. In the next bear market, the portfolio drops 45%. What should they have understood about beta?",
+        options: ['Beta only matters in bear markets — ignore it during bull runs', 'Beta works both ways — the amplification that boosted gains also amplifies losses', 'High-beta portfolios automatically recover faster after crashes'],
+        correct: 1,
+        explanation: "Beta is symmetric. A 2.0 Beta stock that doubles your gains in a bull market also doubles your losses in a bear market. Investors who chase high-beta returns in good times are often unprepared for the magnitude of losses when the cycle reverses."
+      }
+    ]
   },
   {
     id: 'rsi',
     title: 'RSI: when a stock moves too far too fast',
     concept: 'RSI',
     duration: '3 min',
+    relatedTicker: 'NVDA',
     story: [
       "The Relative Strength Index (RSI) is a number between 0 and 100 that measures the speed and size of a stock's recent price moves. Think of it as a reading of momentum pressure — not where the price should be, but how forcefully it's been moving.",
       "RSI above 70 typically means a stock has risen fast and may be 'overbought' — buyers have pushed it up faster than fundamentals justify. RSI below 30 means it's 'oversold' — sellers may have pushed it down too fast, and a bounce could follow.",
       "RSI is a tool, not a prediction. Strong stocks can stay overbought for months during rising markets. RSI tells you where momentum is — you still need fundamentals to know if the business is actually worth owning."
     ],
     insight: "RSI between 30–70 = normal range. Above 70 = potentially overbought (rose too fast). Below 30 = potentially oversold (fell too fast). Use alongside fundamentals, not as a standalone signal.",
-    quiz: {
-      question: 'A stock has an RSI of 78. What does this most likely indicate?',
-      options: ['The stock is undervalued and a great buy', 'The stock may have risen too fast and could be overbought', 'The stock is about to go bankrupt'],
-      correct: 1,
-      explanation: "RSI above 70 suggests the stock has risen quickly and may be overbought. It's a caution signal, not a guarantee of decline. Always check the underlying fundamentals too."
-    }
+    quiz: [
+      {
+        question: 'A stock has an RSI of 78. What does this most likely indicate?',
+        options: ['The stock is undervalued and a great buy', 'The stock may have risen too fast and could be overbought', 'The stock is about to go bankrupt'],
+        correct: 1,
+        explanation: "RSI above 70 suggests the stock has risen quickly and may be overbought. It's a caution signal, not a guarantee of decline. Always check the underlying fundamentals too."
+      },
+      {
+        question: "RSI falls to 22. What does this suggest — and what should you do?",
+        options: ['Buy immediately — below 30 is always a guaranteed buy signal', 'The stock may be oversold, but check fundamentals first — a deteriorating business can have low RSI for good reason', 'The company is about to go bankrupt'],
+        correct: 1,
+        explanation: "RSI below 30 signals oversold conditions — sellers may have pushed the price down faster than fundamentals justify. But 'potential rebound' isn't 'guaranteed.' A stock can be cheap AND still declining. RSI tells you about momentum, not business quality."
+      },
+      {
+        question: "A strong stock has had RSI above 75 for three months straight. What does this mean?",
+        options: ['The stock must crash soon — RSI cannot stay this high', 'Strong persistent buying pressure — RSI can stay elevated for extended periods during genuine uptrends', 'RSI is broken if it stays above 70 that long'],
+        correct: 1,
+        explanation: "RSI doesn't reset on a schedule. During strong uptrends in quality companies, RSI can remain elevated for months. This is why traders say 'overbought can become more overbought.' RSI is a caution signal, not a countdown timer."
+      }
+    ]
   },
   {
     id: 'moving-average',
     title: 'Moving average: how to spot trends hiding in the noise',
     concept: 'Moving Average',
     duration: '2 min',
+    relatedTicker: 'SPY',
     story: [
       "Stock prices move up and down every single day. If you stare at daily prices, all you see is noise. A moving average smooths that noise by averaging prices over a set period — 50 trading days, 200 trading days — to reveal the underlying trend.",
       "The 50-day moving average is the average closing price of the last 50 trading days. When the stock price is above it, the recent trend is up. Below it, the trend is down.",
       "Moving averages don't predict the future. They describe the recent past more cleanly. A company with strong fundamentals trading above its 50-day moving average is in an uptrend — useful additional context, not the whole story."
     ],
     insight: "Moving average smooths daily price noise to show the trend. Price above 50-day MA = short-term uptrend. Price below = downtrend. Simple, but useful as one signal among many.",
-    quiz: {
-      question: "A stock's current price is $85. Its 50-day moving average is $72. What does this suggest?",
-      options: ["The stock is in a short-term downtrend", "The stock is trading above its recent average — showing upward momentum", "The stock is overpriced by exactly $13"],
-      correct: 1,
-      explanation: "When price ($85) is above the 50-day MA ($72), the stock is trending upward relative to the last 50 days. A momentum signal — not a buy signal on its own, but a positive indicator."
-    }
+    quiz: [
+      {
+        question: "A stock's current price is $85. Its 50-day moving average is $72. What does this suggest?",
+        options: ["The stock is in a short-term downtrend", "The stock is trading above its recent average — showing upward momentum", "The stock is overpriced by exactly $13"],
+        correct: 1,
+        explanation: "When price ($85) is above the 50-day MA ($72), the stock is trending upward relative to the last 50 days. A momentum signal — not a buy signal on its own, but a positive indicator."
+      },
+      {
+        question: "The 50-day moving average crosses ABOVE the 200-day moving average. Traders call this a 'golden cross.' What does it signal?",
+        options: ['The stock is about to crash', 'Short-term momentum has turned positive relative to the longer-term trend — often viewed as a bullish signal', 'The company is being acquired'],
+        correct: 1,
+        explanation: "A golden cross (50-day crossing above 200-day) suggests short-term momentum is catching up with and surpassing the longer-term trend. Many technical analysts view this as bullish — though always combine with fundamental analysis before acting."
+      },
+      {
+        question: "Why does a moving average always lag behind the current price by definition?",
+        options: ['Moving averages are computed incorrectly by data providers', 'They average past prices — by definition they can only reflect history, not predict what happens next', 'Moving averages move in the opposite direction to price'],
+        correct: 1,
+        explanation: "A 50-day moving average is the average of the LAST 50 days. It can only tell you about the past trend — not the next move. This is the core limitation of all technical indicators: they describe history. The future depends on what happens next."
+      }
+    ]
   }
 ];
 
 var _currentLesson = null;
-
-function getDailyLesson() {
-  var dayIndex = Math.floor(Date.now() / 86400000) % DAILY_LESSONS.length;
-  return DAILY_LESSONS[dayIndex];
-}
+var _currentQuizIndex = 0;
 
 function getCompletedLessons() {
   return JSON.parse(localStorage.getItem('completed-lessons') || '[]');
 }
+
+function getNextLesson() {
+  var completed = getCompletedLessons();
+  for (var i = 0; i < DAILY_LESSONS.length; i++) {
+    if (!completed.includes(DAILY_LESSONS[i].id)) return DAILY_LESSONS[i];
+  }
+  return DAILY_LESSONS[0];
+}
+
+function isLessonUnlocked(index) {
+  if (index === 0) return true;
+  return getCompletedLessons().includes(DAILY_LESSONS[index - 1].id);
+}
+
+// kept for backward compat (xp, challenges etc.)
+function getDailyLesson() { return getNextLesson(); }
 
 function isLessonDoneToday() {
   return localStorage.getItem('lesson-done-date') === new Date().toDateString();
@@ -9563,26 +9920,26 @@ function trackTermViewed(term) {
 }
 
 function renderLearnTab() {
-  var lesson = getDailyLesson();
+  var lesson = getNextLesson();
   var completed = getCompletedLessons();
-  var doneToday = isLessonDoneToday();
   var seenTerms = JSON.parse(localStorage.getItem('seen-terms') || '[]');
   var total = DAILY_LESSONS.length;
+  var allDone = completed.length >= total;
 
   var dailyEl = document.getElementById('learn-daily-section');
   if (dailyEl) {
-    var isDone = completed.includes(lesson.id) && doneToday;
+    var isDone = allDone;
     dailyEl.innerHTML =
-      '<div class="learn-section-label">TODAY\'S LESSON</div>' +
-      '<div class="daily-lesson-card' + (isDone ? ' done' : '') + '"' + (isDone ? '' : ' onclick="openLesson(_currentLesson || getDailyLesson())" style="cursor:pointer;"') + '>' +
+      '<div class="learn-section-label">' + (allDone ? 'ALL LESSONS COMPLETE' : 'NEXT LESSON') + '</div>' +
+      '<div class="daily-lesson-card' + (isDone ? ' done' : '') + '"' + (isDone ? '' : ' onclick="openLesson(getNextLesson())" style="cursor:pointer;"') + '>' +
         '<div class="daily-lesson-top">' +
           '<span class="daily-lesson-concept">' + escHtml(lesson.concept) + '</span>' +
           '<span class="daily-lesson-duration">' + escHtml(lesson.duration) + '</span>' +
         '</div>' +
         '<div class="daily-lesson-title">' + escHtml(lesson.title) + '</div>' +
         (isDone
-          ? '<div class="daily-lesson-done"><span class="lesson-done-badge">✓ Completed today</span></div>'
-          : '<button class="daily-lesson-btn" onclick="openLesson(getDailyLesson())">Start Lesson →</button>'
+          ? '<div class="daily-lesson-done"><span class="lesson-done-badge">✓ All ' + total + ' lessons completed</span></div>'
+          : '<button class="daily-lesson-btn" onclick="openLesson(getNextLesson())">Start Lesson →</button>'
         ) +
       '</div>';
   }
@@ -9612,11 +9969,13 @@ function renderLearnTab() {
       '<div class="lesson-grid">' +
         DAILY_LESSONS.map(function(l, i) {
           var done = completed.includes(l.id);
-          var isToday = l.id === lesson.id;
-          return '<div class="lesson-grid-card' + (done ? ' done' : '') + (isToday ? ' today' : '') + '" onclick="openLesson(DAILY_LESSONS[' + i + '])">' +
+          var unlocked = isLessonUnlocked(i);
+          var isNext = !allDone && l.id === lesson.id;
+          var clickAttr = unlocked ? ' onclick="openLesson(DAILY_LESSONS[' + i + '])" style="cursor:pointer;"' : '';
+          return '<div class="lesson-grid-card' + (done ? ' done' : '') + (isNext ? ' today' : '') + (!unlocked ? ' locked' : '') + '"' + clickAttr + '>' +
             '<div class="lesson-grid-top">' +
               '<span class="lesson-grid-concept">' + escHtml(l.concept) + '</span>' +
-              (done ? '<span class="lesson-grid-check">✓</span>' : (isToday ? '<span class="lesson-grid-today">Today</span>' : '<span class="lesson-grid-dur">' + escHtml(l.duration) + '</span>')) +
+              (done ? '<span class="lesson-grid-check">✓</span>' : (isNext ? '<span class="lesson-grid-today">Next</span>' : (!unlocked ? '<span class="lesson-grid-lock">🔒</span>' : '<span class="lesson-grid-dur">' + escHtml(l.duration) + '</span>'))) +
             '</div>' +
             '<div class="lesson-grid-title">' + escHtml(l.title) + '</div>' +
           '</div>';
@@ -9632,9 +9991,24 @@ function renderLearnTab() {
   }
 }
 
+function _renderQuizQuestion(lesson, idx) {
+  var q = lesson.quiz[idx];
+  var total = lesson.quiz.length;
+  return '<div class="lesson-quiz" id="lesson-quiz-inner">' +
+    '<div class="lesson-quiz-progress">Question ' + (idx + 1) + ' of ' + total + '</div>' +
+    '<div class="lesson-quiz-q">' + escHtml(q.question) + '</div>' +
+    '<div class="lesson-quiz-options">' +
+      q.options.map(function(opt, i) {
+        return '<button class="lesson-quiz-opt" data-idx="' + i + '" onclick="answerLesson(' + i + ')">' + escHtml(opt) + '</button>';
+      }).join('') +
+    '</div>' +
+  '</div>';
+}
+
 function openLesson(lesson) {
   if (!lesson) return;
   _currentLesson = lesson;
+  _currentQuizIndex = 0;
   var existing = document.getElementById('lesson-modal-overlay');
   if (existing) existing.remove();
 
@@ -9658,14 +10032,7 @@ function openLesson(lesson) {
           '<div class="lesson-insight-label">Key takeaway</div>' +
           '<div class="lesson-insight-text">' + escHtml(lesson.insight) + '</div>' +
         '</div>' +
-        '<div class="lesson-quiz" id="lesson-quiz-inner">' +
-          '<div class="lesson-quiz-q">' + escHtml(lesson.quiz.question) + '</div>' +
-          '<div class="lesson-quiz-options">' +
-            lesson.quiz.options.map(function(opt, i) {
-              return '<button class="lesson-quiz-opt" data-idx="' + i + '" onclick="answerLesson(' + i + ')">' + escHtml(opt) + '</button>';
-            }).join('') +
-          '</div>' +
-        '</div>' +
+        _renderQuizQuestion(lesson, 0) +
       '</div>' +
     '</div>';
   document.body.appendChild(overlay);
@@ -9673,9 +10040,10 @@ function openLesson(lesson) {
 
 function answerLesson(chosen) {
   if (!_currentLesson) return;
-  var correct = _currentLesson.quiz.correct;
-  var explanation = _currentLesson.quiz.explanation;
+  var q = _currentLesson.quiz[_currentQuizIndex];
+  var correct = q.correct;
   var isRight = chosen === correct;
+  var isLast = _currentQuizIndex === _currentLesson.quiz.length - 1;
 
   document.querySelectorAll('.lesson-quiz-opt').forEach(function(btn, i) {
     btn.disabled = true;
@@ -9690,10 +10058,70 @@ function answerLesson(chosen) {
   resultEl.innerHTML =
     '<div class="lesson-quiz-result-icon">' + (isRight ? '✓' : '→') + '</div>' +
     '<div class="lesson-quiz-result-label">' + (isRight ? 'Correct!' : 'Not quite —') + '</div>' +
-    '<div class="lesson-quiz-result-exp">' + escHtml(explanation) + '</div>' +
-    '<button class="lesson-complete-btn" onclick="completeLesson(\'' + _currentLesson.id + '\')">Complete lesson →</button>';
+    '<div class="lesson-quiz-result-exp">' + escHtml(q.explanation) + '</div>' +
+    (isLast
+      ? '<button class="lesson-complete-btn" onclick="showLessonCompletion()">See your result →</button>'
+      : '<button class="lesson-complete-btn" onclick="nextLessonQuestion()">Next question →</button>'
+    );
   quizEl.appendChild(resultEl);
   resultEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function nextLessonQuestion() {
+  if (!_currentLesson) return;
+  _currentQuizIndex++;
+  var body = document.getElementById('lesson-modal-body');
+  if (!body) return;
+  var oldQuiz = document.getElementById('lesson-quiz-inner');
+  if (oldQuiz) oldQuiz.remove();
+  var newQuizHtml = _renderQuizQuestion(_currentLesson, _currentQuizIndex);
+  var tmp = document.createElement('div');
+  tmp.innerHTML = newQuizHtml;
+  var newQuiz = tmp.firstChild;
+  newQuiz.style.opacity = '0';
+  newQuiz.style.transform = 'translateY(12px)';
+  body.appendChild(newQuiz);
+  requestAnimationFrame(function() {
+    newQuiz.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
+    newQuiz.style.opacity = '1';
+    newQuiz.style.transform = 'translateY(0)';
+  });
+  newQuiz.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function showLessonCompletion() {
+  var body = document.getElementById('lesson-modal-body');
+  if (!body || !_currentLesson) return;
+  var oldQuiz = document.getElementById('lesson-quiz-inner');
+  if (oldQuiz) oldQuiz.remove();
+
+  var ticker = _currentLesson.relatedTicker;
+  var completionEl = document.createElement('div');
+  completionEl.id = 'lesson-completion-section';
+  completionEl.style.cssText = 'opacity:0;transform:translateY(12px);transition:opacity 0.25s ease,transform 0.25s ease;';
+  completionEl.innerHTML =
+    '<div class="lesson-completion-wrap">' +
+      '<div class="lesson-completion-icon">✓</div>' +
+      '<div class="lesson-completion-title">Quiz complete</div>' +
+      '<div class="lesson-completion-sub">You\'ve finished all 3 questions on ' + escHtml(_currentLesson.concept) + '.</div>' +
+      (ticker
+        ? '<button class="lesson-see-stock-btn" onclick="goToStockFromLesson(\'' + escHtml(ticker) + '\')">See ' + escHtml(ticker) + ' in StockIQ →</button>'
+        : '') +
+      '<button class="lesson-complete-btn" onclick="completeLesson(\'' + escHtml(_currentLesson.id) + '\')">Complete lesson →</button>' +
+    '</div>';
+  body.appendChild(completionEl);
+  requestAnimationFrame(function() {
+    completionEl.style.opacity = '1';
+    completionEl.style.transform = 'translateY(0)';
+  });
+  completionEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function goToStockFromLesson(ticker) {
+  var overlay = document.getElementById('lesson-modal-overlay');
+  if (overlay) overlay.remove();
+  showTab('analyze');
+  quickSearch(ticker);
 }
 
 function completeLesson(lessonId) {
@@ -9703,6 +10131,7 @@ function completeLesson(lessonId) {
     localStorage.setItem('completed-lessons', JSON.stringify(completed));
   }
   localStorage.setItem('lesson-done-date', new Date().toDateString());
+  _currentQuizIndex = 0;
   var overlay = document.getElementById('lesson-modal-overlay');
   if (overlay) overlay.remove();
   renderLearnTab();
