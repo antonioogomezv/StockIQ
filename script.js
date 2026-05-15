@@ -3775,6 +3775,16 @@ function renderWatchlist() {
       let q = quoteMap[item.ticker] || { price: null, changePct: 0 };
       return buildRow(item, q.price, q.changePct);
     }).join("");
+
+    // Auto-save score history for watchlist items once per day
+    var todayLabel = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    watchlist.forEach(function(item) {
+      if (!item.score) return;
+      var hist = JSON.parse(localStorage.getItem('history_score_' + item.ticker) || '[]');
+      if (hist.length === 0 || hist[hist.length - 1].date !== todayLabel) {
+        saveScoreHistory(item.ticker, item.score);
+      }
+    });
   });
 }
 
@@ -3902,7 +3912,12 @@ function toggleAddStockForm() {
   if (!body) return;
   var open = body.style.display !== 'none';
   body.style.display = open ? 'none' : 'block';
-  if (btn) btn.textContent = open ? '+ Add a Stock' : '− Close form';
+  if (btn) btn.textContent = open ? '+ Add Stock' : '− Close';
+  if (!open) {
+    // Auto-fill today's date if the field is empty
+    var dateEl = document.getElementById('port-date');
+    if (dateEl && !dateEl.value) prefillTodayDate();
+  }
 }
 
 function openAddStockForm() {
@@ -6368,6 +6383,8 @@ function renderPortfolio() {
   let summary = document.getElementById('portfolio-summary');
   if (portfolio.length === 0) {
     empty.style.display = 'flex'; list.innerHTML = ''; summary.style.display = 'none';
+    var psBar = document.getElementById('port-summary-bar');
+    if (psBar) psBar.style.display = 'none';
     if (portfolioChartInstance) { portfolioChartInstance.destroy(); portfolioChartInstance = null; }
     let chartSection = document.getElementById('portfolio-chart-section');
     if (chartSection) chartSection.style.display = 'none';
@@ -6421,6 +6438,21 @@ function renderPortfolio() {
     let avgScore = scores.length > 0 ? Math.round(scores.reduce(function(a, b) { return a + b; }, 0) / scores.length) : null;
     let gainColor = totalGain >= 0 ? '#128257' : '#dc2626';
     let dayColor = totalDayChange >= 0 ? '#128257' : '#dc2626';
+
+    // Summary bar
+    var psBar = document.getElementById('port-summary-bar');
+    if (psBar) {
+      psBar.style.display = 'flex';
+      var psInvested = document.getElementById('psb-invested');
+      var psMktval  = document.getElementById('psb-mktval');
+      var psGain    = document.getElementById('psb-gain');
+      var psGainPct = document.getElementById('psb-gain-pct');
+      if (psInvested) psInvested.textContent = fmt$(totalCost);
+      if (psMktval)   psMktval.textContent   = fmt$(totalValue);
+      if (psGain)   { psGain.textContent = fmtSigned$(totalGain); psGain.style.color = gainColor; }
+      if (psGainPct){ psGainPct.textContent = (totalGainPct >= 0 ? '+' : '') + totalGainPct.toFixed(2) + '%'; psGainPct.style.color = gainColor; }
+    }
+
     document.getElementById('port-total-value').textContent = fmt$(totalValue);
     let costEl = document.getElementById('port-total-cost');
     if (costEl) costEl.textContent = 'Cost ' + fmt$(totalCost);

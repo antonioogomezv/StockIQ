@@ -1032,6 +1032,23 @@
       <div id="portfolio-tabs-bar"></div>
       <div id="paper-trading-nudge" style="display:none;margin:12px 0;"></div>
 
+      <!-- Summary bar — 3 key numbers, shown when portfolio has stocks -->
+      <div id="port-summary-bar" style="display:none;">
+        <div class="psb-item">
+          <div class="psb-label">Invested</div>
+          <div class="psb-value" id="psb-invested">—</div>
+        </div>
+        <div class="psb-item">
+          <div class="psb-label">Market Value</div>
+          <div class="psb-value" id="psb-mktval">—</div>
+        </div>
+        <div class="psb-item">
+          <div class="psb-label">Total Gain / Loss</div>
+          <div class="psb-value" id="psb-gain">—</div>
+          <div class="psb-pct" id="psb-gain-pct"></div>
+        </div>
+      </div>
+
       <!-- Holdings Summary — hidden until portfolio has data -->
       <div id="portfolio-summary" style="display:none;">
         <div class="holdings-summary-card">
@@ -1121,7 +1138,7 @@
         <div id="port-left">
 
           <div id="add-stock-form">
-            <button type="button" id="add-stock-toggle" onclick="toggleAddStockForm()" class="add-stock-toggle-btn">+ Add a Stock</button>
+            <button type="button" id="add-stock-toggle" onclick="toggleAddStockForm()" class="add-stock-toggle-btn">+ Add Stock</button>
             <div class="add-form-col" id="add-form-body" style="display:none;">
               <div id="port-ticker-wrap" style="position:relative;">
                 <input type="text" id="port-ticker" placeholder="Ticker (e.g. AAPL)" style="width:100%;" oninput="onPortTickerInput()" onblur="hidePortDropdown()" aria-label="Stock ticker symbol">
@@ -1135,23 +1152,23 @@
                   <span style="position:absolute;right:8px;bottom:-16px;font-size:10px;color:var(--text-muted);pointer-events:none;">USD</span>
                 </div>
               </div>
-              <button type="button" class="port-prefill-btn" id="port-use-price-btn" onclick="prefillCurrentPrice()" style="display:none;">Use today's price →</button>
-              <div style="position:relative;">
-                <input type="date" id="port-date" style="width:100%;" onchange="onPortDateChange()" aria-label="Purchase date">
+              <button type="button" class="port-prefill-btn" id="port-use-price-btn" onclick="prefillCurrentPrice()" style="display:none;">Use current market price →</button>
+              <div class="add-form-date-row">
+                <input type="date" id="port-date" onchange="onPortDateChange()" aria-label="Purchase date">
                 <button type="button" class="port-date-today-btn" onclick="prefillTodayDate()">Today</button>
               </div>
               <div id="thesis-selector">
-                <div class="thesis-prompt">Why are you adding this?</div>
+                <div class="thesis-prompt">Why are you buying? <span class="thesis-optional">(optional)</span></div>
                 <div class="thesis-chips">
-                  <button type="button" class="thesis-chip" data-thesis="value" onclick="selectThesis(this)">Value play</button>
-                  <button type="button" class="thesis-chip" data-thesis="growth" onclick="selectThesis(this)">Growth story</button>
-                  <button type="button" class="thesis-chip" data-thesis="dividend" onclick="selectThesis(this)">Dividend income</button>
-                  <button type="button" class="thesis-chip" data-thesis="trend" onclick="selectThesis(this)">Following a trend</button>
+                  <button type="button" class="thesis-chip" data-thesis="value" onclick="selectThesis(this)">Good value</button>
+                  <button type="button" class="thesis-chip" data-thesis="growth" onclick="selectThesis(this)">Growing fast</button>
+                  <button type="button" class="thesis-chip" data-thesis="dividend" onclick="selectThesis(this)">Pays dividends</button>
+                  <button type="button" class="thesis-chip" data-thesis="trend" onclick="selectThesis(this)">Trending now</button>
                   <button type="button" class="thesis-chip" data-thesis="exploring" onclick="selectThesis(this)">Just exploring</button>
                 </div>
               </div>
               <div id="thesis-challenge" style="display:none;"></div>
-              <button type="button" onclick="addToPortfolio()">Add</button>
+              <button type="button" class="port-add-btn" onclick="addToPortfolio()">Add to Portfolio</button>
             </div>
           </div>
 
