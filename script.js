@@ -6643,6 +6643,7 @@ function openSellModal(ticker, currentPrice, totalShares) {
   let modal = document.createElement('div');
   modal.id = 'sell-modal-' + ticker;
   modal.className = 'sell-modal';
+  let tickerJ = escHtml(JSON.stringify(ticker));
   modal.innerHTML =
     '<div class="sell-modal-title">Sell ' + ticker + '</div>' +
     '<div class="sell-modal-row">' +
@@ -6657,7 +6658,8 @@ function openSellModal(ticker, currentPrice, totalShares) {
     '</div>' +
     '<div id="sell-preview-' + ticker + '" class="sell-preview"></div>' +
     '<div class="sell-modal-actions">' +
-      '<button class="sell-confirm-btn" onclick="confirmSell(' + escHtml(JSON.stringify(ticker)) + ',' + totalShares + ')">Confirm Sale</button>' +
+      '<button class="sell-confirm-btn" onclick="confirmSell(' + tickerJ + ',' + totalShares + ')">Confirm Sale</button>' +
+      '<button class="sell-all-btn" onclick="sellAll(' + tickerJ + ',' + totalShares + ',' + currentPrice + ')">Sell All</button>' +
       '<button class="sell-cancel-btn" onclick="document.getElementById(\'sell-modal-' + ticker + '\').remove()">Cancel</button>' +
     '</div>';
 
@@ -6689,13 +6691,26 @@ function openSellModal(ticker, currentPrice, totalShares) {
     let realizedPct = avgCostSold > 0 ? ((sp - avgCostSold) / avgCostSold * 100) : 0;
     let color = realizedGain >= 0 ? '#128257' : '#dc2626';
     let remaining = totalSh - sh;
-    preview.innerHTML = '<span style="color:' + color + ';font-weight:600;">' +
-      fmtSigned$(realizedGain) + ' (' + (realizedPct >= 0 ? '+' : '') + realizedPct.toFixed(1) + '%)</span>' +
+    let proceeds = sh * sp;
+    preview.innerHTML =
+      '<div style="color:var(--text-muted);font-size:12px;margin-bottom:4px;">You\'ll receive: <strong style="color:var(--text);">' + fmt$(proceeds) + '</strong></div>' +
+      '<span style="color:' + color + ';font-weight:600;">' +
+        fmtSigned$(realizedGain) + ' (' + (realizedPct >= 0 ? '+' : '') + realizedPct.toFixed(1) + '%)</span>' +
       '<span style="color:var(--text-muted);margin-left:10px;">' + (remaining > 0 ? remaining.toFixed(remaining % 1 === 0 ? 0 : 2) + ' shares remaining' : 'Full position closed') + '</span>';
   }
   document.getElementById('sell-shares-' + ticker).addEventListener('input', updatePreview);
   document.getElementById('sell-price-' + ticker).addEventListener('input', updatePreview);
   updatePreview();
+}
+
+function sellAll(ticker, totalShares, currentPrice) {
+  let sharesInput = document.getElementById('sell-shares-' + ticker);
+  let priceInput  = document.getElementById('sell-price-' + ticker);
+  if (!sharesInput || !priceInput) return;
+  // Pre-fill the full quantity and current price, then confirm immediately
+  sharesInput.value = totalShares;
+  if (!parseFloat(priceInput.value)) priceInput.value = currentPrice.toFixed(2);
+  confirmSell(ticker, totalShares);
 }
 
 function confirmSell(ticker, totalShares) {
@@ -6747,7 +6762,8 @@ function confirmSell(ticker, totalShares) {
 
   if (item.lots.length === 0) {
     portfolio = portfolio.filter(function(i) { return i.ticker !== ticker; });
-    showToast(ticker + ' fully sold — ' + fmtSigned$(realizedGain) + ' realized');
+    let proceeds = sh * sp;
+    showToast(ticker + ' fully sold · received ' + fmt$(proceeds) + ' · ' + fmtSigned$(realizedGain) + ' realized');
   } else {
     showToast('Sold ' + sh + ' shares of ' + ticker + ' — ' + fmtSigned$(realizedGain) + ' realized');
   }

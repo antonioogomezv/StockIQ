@@ -6446,6 +6446,22 @@ footer {
   transition: background 0.15s;
 }
 .sell-confirm-btn:hover { background: #dc2626; }
+.sell-all-btn {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1.5px solid #ef4444;
+  background: none;
+  color: #ef4444;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.sell-all-btn:hover {
+  background: #ef4444;
+  color: #fff;
+}
 .sell-cancel-btn {
   padding: 8px 16px;
   border-radius: 8px;
