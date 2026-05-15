@@ -9142,16 +9142,16 @@ var DAILY_LESSONS = [
         explanation: "Buying a share makes you a part-owner, not a lender. Bonds are how you lend money to a company. Stocks make you an owner — your return depends on how well the business does."
       },
       {
-        question: 'Apple has 15 billion shares outstanding and its stock trades at $200. What is Apple\'s market cap?',
-        options: ['$200 billion', '$3 trillion', '$200 per share means it\'s expensive'],
+        question: "Apple's profits doubled this year. You own one share of Apple. What most likely happens to your investment?",
+        options: ["Nothing — individual shareholders don't benefit from company profits", "Your share becomes more valuable as the business you own a piece of grows", "Apple owes you a refund for past losses"],
         correct: 1,
-        explanation: "Market cap = shares × price = 15 billion × $200 = $3 trillion. This is the total value the market places on the entire company — and why share price alone tells you almost nothing about size."
+        explanation: "That's the core of stock ownership — your slice of the business becomes more valuable as the business itself grows. When Apple earns more, shareholders benefit directly."
       },
       {
-        question: 'What makes stock ownership fundamentally different from a savings account?',
-        options: ['Stocks are guaranteed to grow', 'Your return depends on how well the business performs, not a fixed interest rate', 'Stocks pay interest every month'],
+        question: "A company sells shares of itself to the public. Why would it do this?",
+        options: ["To give money away to strangers", "To raise capital from many investors in exchange for ownership stakes in the business", "To avoid paying taxes"],
         correct: 1,
-        explanation: "Stocks give you ownership and upside tied to business performance — no guarantee, but unlimited potential if the company thrives. A savings account pays fixed interest regardless of any company's results."
+        explanation: "When a company 'goes public,' it sells pieces of itself to raise money for growth — factories, hiring, new products. In return, buyers become co-owners who benefit if the business succeeds."
       }
     ]
   },
