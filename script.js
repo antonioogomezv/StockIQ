@@ -9162,9 +9162,9 @@ var DAILY_LESSONS = [
     duration: '3 min',
     relatedTicker: 'MSFT',
     story: [
-      "Start with $10,000. Earn 10% per year. After year 1: $11,000. After year 2: $12,100 — not $12,000, because you earned 10% on the $1,000 you earned last year too. After 30 years at 10%: $174,494. You put in $10,000 and ended with $174,000.",
-      "The brutal truth about compounding: it's slow at first and explosively fast later. The last 10 years of that 30-year example generate more growth than the first 20 years combined. The math rewards patience above almost everything else.",
-      "This is why starting young matters more than contributing more later. Ten years of compounding at 25 is worth more than twenty years of compounding at 40. Time is the one ingredient money can't buy."
+      "Here's a math trick most people learn too late. If you invest $10,000 today at 10% annual returns — and never add another peso — you don't end up with $20,000 after 20 years. You end up with $67,000. After 30 years? $174,000. You added nothing. The money just kept earning returns on its own returns.",
+      "That's compounding. And it's weird because the first years feel slow. Years 1–10 take you from $10,000 to $26,000. Years 20–30 take you from $67,000 to $174,000. The last decade generates more than the entire first two combined. The math rewards patience above almost anything else.",
+      "The brutal implication: starting 10 years earlier matters more than investing three times as much later. A 25-year-old who starts investing beats the 35-year-old who waits — even if the 35-year-old contributes more every month. Time is the one thing money genuinely can't buy."
     ],
     insight: "Compounding is earning returns on your returns. The earlier you start, the more time your money has to multiply. Rule of 72: divide 72 by your annual return to find how many years to double your money.",
     quiz: [
@@ -9360,9 +9360,9 @@ var DAILY_LESSONS = [
     duration: '3 min',
     relatedTicker: 'SPY',
     story: [
-      "You just learned that spreading across 15-25 stocks eliminates most single-stock risk. But what if you don't want to research 25 individual companies? What if there were a way to own them all at once?",
-      "An index fund buys every stock in an index — like the S&P 500 — automatically. One purchase gives you proportional ownership of all 500 companies. Your investment rises and falls with the entire market, not any single stock.",
-      "An ETF (Exchange-Traded Fund) works the same way but trades on stock exchanges like a regular stock. Research consistently shows most professional stock-pickers underperform a simple S&P 500 index fund over 10+ years. This is why most financial educators recommend index funds as the foundation of any beginner portfolio."
+      "Here's the uncomfortable truth: most professional fund managers — people whose entire job is picking stocks — fail to beat the S&P 500 over 10+ years. Not because they're bad at their jobs. Because markets are that efficient, and fees erode whatever small edges they find.",
+      "So what's the simple alternative? Own everything. An index fund automatically buys every stock in an index. One purchase of an S&P 500 ETF gives you proportional ownership of all 500 companies — Apple, Microsoft, Amazon, NVIDIA, and 496 more. If one collapses, 499 others cushion the fall.",
+      "SPY and VOO are the two most popular S&P 500 ETFs, each charging about 0.03% per year — nearly free. Warren Buffett is so convinced by this approach that his will instructs 90% of his estate to go into a low-cost S&P 500 index fund. If it's good enough for Buffett's family, it's worth understanding for yours."
     ],
     insight: "Index funds and ETFs give you instant diversification across hundreds of companies with one purchase. Low-cost, simple, and historically difficult even for professionals to beat. A strong starting point for any beginner.",
     quiz: [
@@ -9393,9 +9393,9 @@ var DAILY_LESSONS = [
     duration: '2 min',
     relatedTicker: 'SPY',
     story: [
-      "Markets move in cycles. A bull market is a period of rising prices — generally 20%+ gains from a recent low. A bear market is the opposite: 20%+ decline from a recent high. Both are normal, even if bear markets feel like disasters.",
-      "Since 1928, the S&P 500 has experienced 26 bear markets. The average bear lasts 9.6 months and loses about 36%. The average bull that follows lasts several years and more than recovers those losses. The math works heavily in favor of staying invested.",
-      "The hardest part isn't the math — it's the psychology. During a bear market, every headline is catastrophic. The investors who do well aren't the ones who predicted the bottom. They're the ones who stayed invested while everyone else panicked."
+      "In March 2020, the stock market crashed 34% in 33 days. The news was apocalyptic. People were selling everything. Then — while the world still felt like it was ending — markets reversed and hit all-time highs by August. If you sold in March, you locked in the loss. If you stayed, you recovered everything and then some.",
+      "Two words describe these extremes. A bull market: prices rise 20%+ from a recent low — optimism is high, growth feels inevitable, everyone looks smart. A bear market: a 20%+ drop from a recent high — headlines are terrible, losses feel permanent, panic sets in. Both happen on a predictable long-term cycle, even when neither feels predictable in the moment.",
+      "Since 1928, the S&P 500 has gone through 26 bear markets. The average bear lasted about 10 months and dropped 36%. The average bull that followed lasted years and recovered all of it — then kept going. The math is clear. The hard part is your emotions while you're in the middle of the fall."
     ],
     insight: "Bull market = 20%+ gains. Bear market = 20%+ losses. The cycle repeats. Long-term investors who stay invested through bear markets capture the bull markets that always follow.",
     quiz: [
@@ -9492,9 +9492,9 @@ var DAILY_LESSONS = [
     duration: '2 min',
     relatedTicker: 'NVDA',
     story: [
-      "Revenue is simply how much money a company brings in from selling its products or services. Revenue growth tells you whether that number is going up, down, or sideways compared to the same period last year.",
-      "Netflix growing revenue 20% year over year means it's earning 20% more than it did a year ago — a company expanding fast. A retailer with -5% revenue growth is shrinking: fewer customers, lower prices, or both.",
-      "Growth rate context matters enormously. Amazon growing 15% is impressive given its size. A small company growing 15% might be underperforming. Always ask: how fast should this company be growing given its size and industry?"
+      "Picture a taco stand. Last year you sold 1,000 tacos at 50 pesos each — 50,000 pesos in revenue. This year you sold 1,200. Revenue grew 20%. Simple enough. Now scale this to a company doing billions — the math is identical, but the implications are enormous.",
+      "Revenue is the top line: total money coming in before any costs. Revenue growth tells you if that number is expanding or contracting. A company growing 20% year over year is winning — more customers, higher prices, or both. A company with negative revenue is losing ground, and you need to understand why before the stock price reflects it.",
+      "Context matters as much as the number itself. A startup at 10% annual revenue growth is probably struggling — early-stage companies should grow 50–100%. Amazon at 10% on $600 billion in revenue is extraordinary. The real question is always: how fast should this company be growing given its size and stage?"
     ],
     insight: "Revenue growth shows if a business is actually expanding. Above 10% is generally healthy. Above 20% is fast growth. Negative revenue growth is a serious warning sign that needs explanation.",
     quiz: [
@@ -9558,9 +9558,9 @@ var DAILY_LESSONS = [
     duration: '3 min',
     relatedTicker: 'AAPL',
     story: [
-      "Return on Equity (ROE) is Warren Buffett's favorite metric. It answers one question: for every dollar shareholders have invested in this company, how many cents of profit does it generate?",
-      "An ROE of 20% means the company generates $0.20 of profit for every $1.00 of shareholder equity. That's excellent. An ROE of 5% means poor use of capital. Some companies like Apple show extremely high ROE because years of share buybacks have reduced the equity base, making each remaining dollar of equity work harder.",
-      "Why does Buffett love it? High ROE means the company can grow without constantly raising more money from investors. A business earning 25% ROE can fund its own growth from profits — it doesn't need to keep issuing new stock and shrinking each shareholder's ownership slice."
+      "Here's a question every smart investor asks before buying a stock: if I give this company a dollar, how many cents does it actually make me? That's what Return on Equity measures. ROE is the most direct test of how well a business uses its shareholders' money.",
+      "An ROE of 20% means for every $100 shareholders have invested, the company earned $20 in profit. Excellent. An ROE of 5% is weak — the company is barely squeezing value from the capital it has. Apple's ROE has exceeded 100% for years — because decades of share buybacks shrank the equity base so much that even large profits produce an extraordinary ratio.",
+      "Warren Buffett says he looks for companies with consistently high ROE because it signals a genuine competitive advantage — a 'moat.' A business that earns 25% ROE year after year funds its own growth from profits. It doesn't need to keep issuing new shares (which dilutes your ownership). A great business, he says, takes care of itself."
     ],
     insight: "ROE = Net Income ÷ Shareholder Equity. It measures how efficiently management uses investor money. Above 15% is good. Above 20% is excellent. Buffett rarely buys companies with consistent ROE below 15%.",
     quiz: [
@@ -9591,9 +9591,9 @@ var DAILY_LESSONS = [
     duration: '2 min',
     relatedTicker: 'KO',
     story: [
-      "Some companies pay their shareholders a portion of profits every quarter, just for owning the stock. This payment is called a dividend. If you own 100 shares of a company that pays $2 per share annually, you receive $200 per year — without selling a single share.",
-      "The dividend yield puts this in perspective: annual dividend divided by the stock price. A stock at $100 paying $4 in annual dividends has a 4% yield — meaningful income, often better than many savings accounts.",
-      "Not all companies pay dividends. Young, fast-growing companies reinvest all profits back into expansion. Mature, stable companies pay generous dividends because their growth has slowed. Neither is better — it depends on your goal: income now or growth later."
+      "You own 100 shares of Coca-Cola. You haven't done anything. You haven't sold. You didn't even check the app. Then one day, 186 pesos shows up in your account — just because you own shares you already had. That's a dividend: a slice of the company's profits paid directly to you, every quarter.",
+      "The dividend yield tells you how much you earn per dollar invested. A 4% yield means every $10,000 you put in pays you $400 per year — before any price gains on the stock itself. Historically, reinvested dividends have accounted for roughly half of total stock market returns. Most beginners ignore this.",
+      "Not every company pays dividends. Young, growing companies like Amazon put every peso back into expansion — more warehouses, more engineers, faster growth. Mature companies like Coca-Cola or AT&T have fewer places to invest aggressively, so they return cash to you instead. Neither approach is better. It depends on whether you want income now or growth later."
     ],
     insight: "Dividend yield = Annual Dividend ÷ Stock Price. A 3–5% yield is healthy for income investing. Very high yields (8%+) can signal the stock price has collapsed — always check if the dividend is sustainable before assuming it's a bargain.",
     quiz: [
@@ -9756,9 +9756,9 @@ var DAILY_LESSONS = [
     duration: '2 min',
     relatedTicker: 'MSFT',
     story: [
-      "Every three months, every public company must publish exactly how much money they made. These quarterly earnings reports are the biggest scheduled events in the stock market — and the hours after a report drops can be intense.",
-      "Here's the paradox: a company can announce record profits and still see its stock drop 15%. How? Because the market already expected those profits. Investors had priced in $5.00 of earnings per share. The company delivered $4.80. That 20-cent shortfall — called a 'miss' — triggers a selloff.",
-      "When a company 'beats' expectations, the stock typically jumps. When it 'misses,' it falls. What matters isn't just what happened — it's what happened versus what investors expected."
+      "In early 2023, Meta announced its best earnings in years — profits up, revenue growing, everything looked great. The stock jumped 23% in one day. A few weeks later, Amazon reported similarly strong results. Its stock fell 5%. Same type of good news, opposite reactions. How?",
+      "Expectations. Markets don't reward good results — they reward results that are better than what was already expected. Before each earnings report, Wall Street analysts publish predictions. The stock price already reflects those predictions. Beat them and the stock jumps. Miss them and it falls — even if profits actually grew.",
+      "Four times a year, every public company publishes an earnings report: revenue, profits, and guidance for next quarter. That forward guidance — management's forecast — is often what moves the stock most. A company can have a perfect quarter and still drop if next quarter's guidance disappoints. Earnings season is where expectations meet reality, and the gap between them is what matters."
     ],
     insight: "Earnings reports are quarterly profit disclosures every public company must file. Stock prices react to whether results beat or miss analyst expectations — not just whether profits were up or down in absolute terms.",
     quiz: [
@@ -9789,9 +9789,9 @@ var DAILY_LESSONS = [
     duration: '2 min',
     relatedTicker: 'TSLA',
     story: [
-      "Imagine two stocks. One moves up 10% when the market rises 10%, and down 10% when the market falls. The other jumps 20% when the market rises 10% — and crashes 20% when it falls. The second stock is more volatile. In finance, this is measured by Beta.",
-      "Beta of 1.0 means the stock moves exactly with the market. Beta of 2.0 means it moves twice as much — both up and down. Beta of 0.5 means it moves half as much. Utility companies often have Beta under 0.5. High-growth tech can reach Beta of 2+.",
-      "There's no universally good or bad beta — only the beta that matches your situation. Investing money you won't need for 10 years? High-beta growth might be fine. Investing savings you might need next year? High beta is real risk."
+      "Tesla and Johnson & Johnson are both in the S&P 500. When the market drops 10%, TSLA might drop 20%. JNJ might drop 4%. When the market rises 10%, TSLA could jump 20% while JNJ barely moves. They're both stocks — but they behave completely differently. That difference is measured by Beta.",
+      "Beta of 1.0 means the stock tracks the market exactly. Beta of 2.0 means it moves twice as much — double the gains in bull markets, double the losses in bear markets. Beta of 0.5 means it moves half as much. Utility and healthcare companies tend toward 0.5. High-growth tech can hit 2.0 or above.",
+      "There's no universally 'right' beta — only the beta that fits your situation. Money you won't touch for 10 years? High beta could work in your favor. Savings you might need in 2 years? High beta is real risk you can't afford. Knowing a stock's beta before you buy it is knowing what kind of ride you're signing up for."
     ],
     insight: "Beta measures how much a stock swings vs. the overall market. Below 1.0 = calmer than the market. Above 1.0 = more volatile. Know your beta before you sleep on your portfolio.",
     quiz: [
@@ -9822,9 +9822,9 @@ var DAILY_LESSONS = [
     duration: '3 min',
     relatedTicker: 'NVDA',
     story: [
-      "The Relative Strength Index (RSI) is a number between 0 and 100 that measures the speed and size of a stock's recent price moves. Think of it as a reading of momentum pressure — not where the price should be, but how forcefully it's been moving.",
-      "RSI above 70 typically means a stock has risen fast and may be 'overbought' — buyers have pushed it up faster than fundamentals justify. RSI below 30 means it's 'oversold' — sellers may have pushed it down too fast, and a bounce could follow.",
-      "RSI is a tool, not a prediction. Strong stocks can stay overbought for months during rising markets. RSI tells you where momentum is — you still need fundamentals to know if the business is actually worth owning."
+      "In late 2021, NVIDIA's stock had been climbing fast — very fast. Its RSI hit 82, signaling that buyers had been pushing the price up harder than usual for weeks. Three months later, the stock had dropped 40%. RSI didn't predict the crash, but it had been waving a yellow flag the whole time.",
+      "RSI — Relative Strength Index — is a 0-to-100 score measuring how fast and how hard a stock has been moving recently. Think of it as a momentum speedometer, not a valuation tool. Above 70: the stock has risen quickly and may be getting ahead of itself — possibly overbought. Below 30: sellers may have pushed it down too fast — possibly oversold, with a bounce likely.",
+      "The key word is 'possibly.' RSI is a caution signal, not a countdown timer. Strong stocks in genuine uptrends can hold above 70 for months — overbought can become more overbought. RSI tells you about speed and momentum. Whether the company is actually worth owning at this price still requires checking the fundamentals."
     ],
     insight: "RSI between 30–70 = normal range. Above 70 = potentially overbought (rose too fast). Below 30 = potentially oversold (fell too fast). Use alongside fundamentals, not as a standalone signal.",
     quiz: [
@@ -9855,9 +9855,9 @@ var DAILY_LESSONS = [
     duration: '2 min',
     relatedTicker: 'SPY',
     story: [
-      "Stock prices move up and down every single day. If you stare at daily prices, all you see is noise. A moving average smooths that noise by averaging prices over a set period — 50 trading days, 200 trading days — to reveal the underlying trend.",
-      "The 50-day moving average is the average closing price of the last 50 trading days. When the stock price is above it, the recent trend is up. Below it, the trend is down.",
-      "Moving averages don't predict the future. They describe the recent past more cleanly. A company with strong fundamentals trading above its 50-day moving average is in an uptrend — useful additional context, not the whole story."
+      "Tesla's daily price chart looks like a seismograph during an earthquake — constant spikes up, spikes down, noise in every direction. If you stare at daily prices, you can't tell if the stock is actually going anywhere. That's the problem moving averages solve: they filter the noise to show you the underlying direction.",
+      "A 50-day moving average is simply the average closing price of the last 50 trading days, updated every day. When today's price is above that average, the stock is trending upward. When it dips below, momentum has shifted. It's like blurring a noisy image until the shape becomes clear.",
+      "Traders watch two key crossovers. The 'golden cross' — the 50-day moving average rises above the 200-day — is historically seen as bullish. The 'death cross' — 50-day falls below 200-day — as bearish. These don't guarantee anything on their own, but millions of traders act on them, which makes them matter enough to understand."
     ],
     insight: "Moving average smooths daily price noise to show the trend. Price above 50-day MA = short-term uptrend. Price below = downtrend. Simple, but useful as one signal among many.",
     quiz: [
