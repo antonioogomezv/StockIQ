@@ -8991,27 +8991,68 @@ function hideAppLoading() {
   setTimeout(function() { el.style.display = 'none'; }, 320);
 }
 
-// If Firebase auth never fires within 10s, show retry
+let _appInitialized = false;
+
+function _initApp() {
+  if (_appInitialized) return;
+  _appInitialized = true;
+  document.getElementById('auth-overlay').style.display = 'none';
+  if (userProfile) {
+    document.getElementById('quiz-overlay').style.display = 'none';
+    updateRiskBadge();
+  } else {
+    openRiskQuiz();
+  }
+  updateStreak();
+  updateMarketStatus();
+  loadMarketOverview();
+  loadTrendingTickers();
+  loadSectors();
+  renderDailyTip();
+  initOnboarding();
+  setInterval(function() { loadTrendingTickers(true); }, 60000);
+  setInterval(function() { loadSectors(); }, 300000);
+  renderWatchlist();
+  renderSearchHistory();
+  showTab('analyze');
+  initTheme();
+  initCurrency();
+  handleUrlParams();
+  initScreener();
+  restoreScreenerState();
+  _appReady = true;
+  refreshXPProgress();
+  hideAppLoading();
+}
+
+// If Firebase auth never fires within 5s, show retry
 let _authTimeout = setTimeout(function() {
   let msgEl = document.getElementById('app-loading-msg');
   let retryEl = document.getElementById('app-loading-retry');
   if (msgEl) msgEl.textContent = 'Taking longer than expected…';
   if (retryEl) retryEl.style.display = 'block';
-}, 10000);
+}, 5000);
 
 auth.onAuthStateChanged(function(user) {
   clearTimeout(_authTimeout);
   if (!user) {
-    // Not logged in — show auth overlay, hide loading screen
     hideAppLoading();
     document.getElementById('auth-overlay').style.display = 'flex';
     document.getElementById('quiz-overlay').style.display = 'none';
     return;
   }
 
-  // Logged in — load user data from Firestore
+  // Fast path: returning user with cached data — show app immediately
+  let cachedUserInfo = localStorage.getItem('user-info');
+  let cachedProfile  = localStorage.getItem('userProfile');
+  if (cachedUserInfo && cachedProfile) {
+    userProfile = JSON.parse(cachedProfile);
+    if (userProfile) userProfile.icon = _profileIcon(userProfile.type);
+    _initApp();
+  }
+
+  // Always sync from Firestore — source of truth, keeps devices in sync
   loadFirestoreUserData(function(data) {
-    // Restore profile info
     if (data.name) {
       localStorage.setItem('user-info', JSON.stringify({
         name: data.name,
@@ -9020,13 +9061,11 @@ auth.onAuthStateChanged(function(user) {
         avatarSeed: data.avatarSeed || ''
       }));
     } else {
-      // First time — set basics from auth
       let name = user.displayName || user.email.split('@')[0];
       localStorage.setItem('user-info', JSON.stringify({ name: name, username: name, email: user.email }));
       saveToFirestore({ name: name, username: name, email: user.email, createdAt: Date.now() });
     }
 
-    // Restore risk profile
     if (data.userProfile) {
       userProfile = data.userProfile;
       localStorage.setItem('userProfile', JSON.stringify(userProfile));
@@ -9035,70 +9074,44 @@ auth.onAuthStateChanged(function(user) {
     }
     if (userProfile) userProfile.icon = _profileIcon(userProfile.type);
 
-    // Restore portfolios — Firestore is source of truth across devices
     if (data.portfolios) {
       localStorage.setItem('portfolios', JSON.stringify(data.portfolios));
       localStorage.setItem('activePortfolioId', data.activePortfolioId || Object.keys(data.portfolios)[0]);
     } else if (!localStorage.getItem('portfolios')) {
-      // Legacy Firestore data — migrate to multi-portfolio format
       let legacyHistory = data.portfolioValueHistory || [];
       migrateToMultiPortfolio(data.portfolio || [], data.closedPositions || [], legacyHistory);
     }
 
-    // Restore watchlist
-    if (data.watchlist) {
-      localStorage.setItem('watchlist', JSON.stringify(data.watchlist));
-    }
-
-    // Restore price alerts and stock notes
+    if (data.watchlist) localStorage.setItem('watchlist', JSON.stringify(data.watchlist));
     if (data.priceAlerts) localStorage.setItem('price-alerts', JSON.stringify(data.priceAlerts));
     if (data.stockNotes) localStorage.setItem('stock-notes', JSON.stringify(data.stockNotes));
 
-    // Restore score history from Firestore into localStorage (syncs across devices)
     if (data.scoreHistory) {
       Object.keys(data.scoreHistory).forEach(function(t) {
         localStorage.setItem('history_score_' + t, JSON.stringify(data.scoreHistory[t]));
       });
     }
 
-    // Restore stats
     if (data.stats) {
       if (data.stats.analyzed) localStorage.setItem('total-analyzed', data.stats.analyzed);
       if (data.stats.streak) localStorage.setItem('streak', JSON.stringify(data.stats.streak));
     }
 
-    // Restore XP
-    if (data.xp !== undefined) _userXP = data.xp;
-
-    document.getElementById('auth-overlay').style.display = 'none';
-
-    if (!userProfile) {
-      openRiskQuiz();
-    } else {
-      document.getElementById('quiz-overlay').style.display = 'none';
-      updateRiskBadge();
+    if (data.xp !== undefined) {
+      _userXP = data.xp;
+      if (_appInitialized) refreshXPProgress();
     }
 
-    updateStreak();
-    updateMarketStatus();
-    loadMarketOverview();
-    loadTrendingTickers();
-    loadSectors();
-    renderDailyTip();
-    initOnboarding();
-    setInterval(function() { loadTrendingTickers(true); }, 60000);
-    setInterval(function() { loadSectors(); }, 300000);
-    renderWatchlist();
-    renderSearchHistory();
-    showTab('analyze');
-    initTheme();
-    initCurrency();
-    handleUrlParams();
-    initScreener();
-    restoreScreenerState();
-    _appReady = true; // allow real-time Firestore updates to re-render
-    refreshXPProgress();
-    hideAppLoading();
+    if (!_appInitialized) {
+      // First visit or no cached data — full init now
+      _initApp();
+    } else {
+      // Background sync done — quietly refresh data-driven sections
+      renderWatchlist();
+      if (typeof renderPortfolio === 'function') renderPortfolio();
+      updateRiskBadge();
+      updateStreak();
+    }
   });
 })();
 
