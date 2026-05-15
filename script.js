@@ -8993,6 +8993,19 @@ function hideAppLoading() {
 
 let _appInitialized = false;
 
+// Fast path: returning users see the app immediately from localStorage,
+// before Firebase auth even resolves. onAuthStateChanged syncs in background.
+(function() {
+  let cachedUserInfo = localStorage.getItem('user-info');
+  let cachedProfile  = localStorage.getItem('userProfile');
+  if (!cachedUserInfo || !cachedProfile) return;
+  try {
+    userProfile = JSON.parse(cachedProfile);
+    if (userProfile) userProfile.icon = _profileIcon(userProfile.type);
+    _initApp();
+  } catch(e) {}
+})();
+
 function _initApp() {
   if (_appInitialized) return;
   _appInitialized = true;
@@ -9031,7 +9044,7 @@ let _authTimeout = setTimeout(function() {
   let retryEl = document.getElementById('app-loading-retry');
   if (msgEl) msgEl.textContent = 'Taking longer than expected…';
   if (retryEl) retryEl.style.display = 'block';
-}, 5000);
+}, 10000);
 
 auth.onAuthStateChanged(function(user) {
   clearTimeout(_authTimeout);
@@ -9040,15 +9053,6 @@ auth.onAuthStateChanged(function(user) {
     document.getElementById('auth-overlay').style.display = 'flex';
     document.getElementById('quiz-overlay').style.display = 'none';
     return;
-  }
-
-  // Fast path: returning user with cached data — show app immediately
-  let cachedUserInfo = localStorage.getItem('user-info');
-  let cachedProfile  = localStorage.getItem('userProfile');
-  if (cachedUserInfo && cachedProfile) {
-    userProfile = JSON.parse(cachedProfile);
-    if (userProfile) userProfile.icon = _profileIcon(userProfile.type);
-    _initApp();
   }
 
   // Always sync from Firestore — source of truth, keeps devices in sync
