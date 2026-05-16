@@ -270,23 +270,36 @@ function _fetchAndCachePrices(symbols, existing) {
   var priceMap = Object.assign({}, existing);
   var delay = 0;
   var promises = symbols.map(function(sym) {
-    var d = delay; delay += 120;
+    var d = delay; delay += 200;
     return new Promise(function(resolve) {
       setTimeout(function() {
         fetch(finnhubUrl('/api/v1/quote', {symbol: sym}))
           .then(function(r) { return r.json(); })
           .then(function(q) {
-            if (q.c > 0) {
-              priceMap[sym] = { price: q.c, changePct: q.dp || 0, change: q.d || (q.pc > 0 ? q.c - q.pc : 0), prevClose: q.pc || 0 };
-              // Persist last known changePct for after-hours
+            var price = q.c > 0 ? q.c : (q.pc > 0 ? q.pc : 0);
+            if (price > 0) {
+              priceMap[sym] = { price: price, changePct: q.dp || 0, change: q.d || (q.pc > 0 ? q.c - q.pc : 0), prevClose: q.pc || 0 };
+              // Persist last-known price as offline/rate-limit fallback
+              var lkp = JSON.parse(localStorage.getItem('lkp') || '{}');
+              lkp[sym] = priceMap[sym];
+              localStorage.setItem('lkp', JSON.stringify(lkp));
               if (q.dp) {
                 var lk = JSON.parse(localStorage.getItem('screener-changepct-last') || '{}');
                 lk[sym] = q.dp;
                 localStorage.setItem('screener-changepct-last', JSON.stringify(lk));
               }
+            } else {
+              // Rate-limited or API error — fall back to last known price
+              var lkp = JSON.parse(localStorage.getItem('lkp') || '{}');
+              if (lkp[sym]) { priceMap[sym] = lkp[sym]; }
+              if (q.error) console.warn('Finnhub:', sym, q.error);
             }
           })
-          .catch(function() {})
+          .catch(function() {
+            // Network error — fall back to last known price
+            var lkp = JSON.parse(localStorage.getItem('lkp') || '{}');
+            if (lkp[sym]) { priceMap[sym] = lkp[sym]; }
+          })
           .then(resolve);
       }, d);
     });
@@ -3914,9 +3927,9 @@ function toggleAddStockForm() {
   body.style.display = open ? 'none' : 'block';
   if (btn) btn.textContent = open ? '+ Add Stock' : '− Close';
   if (!open) {
-    // Auto-fill today's date if the field is empty
     var dateEl = document.getElementById('port-date');
     if (dateEl && !dateEl.value) prefillTodayDate();
+    _refreshVaultBalance(); // show current vault balance when form opens
   }
 }
 
@@ -6326,6 +6339,9 @@ function _doAddToPortfolio() {
   document.getElementById('port-date').value = '';
   clearThesisSelection();
   addXP(5); // +5 XP for adding to portfolio
+  // IQ Vault — deduct purchase cost (price is in USD, convert to MXN)
+  var _vRate = (typeof _fxRate !== 'undefined' && _fxRate > 1) ? _fxRate : 17.5;
+  vaultDebit(shares * buyPrice * _vRate, ticker, shares, buyPrice);
   if (!localStorage.getItem('first-portfolio-done')) {
     localStorage.setItem('first-portfolio-done', '1');
     dismissFirstPortfolioBanner();
@@ -6689,6 +6705,7 @@ function openSellModal(ticker, currentPrice, totalShares) {
       '</div>' +
     '</div>' +
     '<div id="sell-preview-' + ticker + '" class="sell-preview"></div>' +
+    (_vault ? '<div class="vault-in-sell">IQ Vault: <strong>' + _fmtVault(_vault.balance) + '</strong></div>' : '') +
     '<div class="sell-modal-actions">' +
       '<button class="sell-confirm-btn" onclick="confirmSell(' + tickerJ + ',' + totalShares + ')">Confirm Sale</button>' +
       '<button class="sell-all-btn" onclick="sellAll(' + tickerJ + ',' + totalShares + ',' + currentPrice + ')">Sell All</button>' +
@@ -6802,6 +6819,9 @@ function confirmSell(ticker, totalShares) {
 
   all[id].stocks = portfolio;
   savePortfolios(all);
+  // IQ Vault — return sale proceeds (price is in USD, convert to MXN)
+  var _vRate = (typeof _fxRate !== 'undefined' && _fxRate > 1) ? _fxRate : 17.5;
+  vaultCredit(sh * sp * _vRate, ticker, sh, sp);
   renderPortfolio();
   renderClosedPositions();
 }
@@ -8665,6 +8685,229 @@ function renderBrokerSection() {
     '</div>';
 }
 
+// ── IQ VAULT ─────────────────────────────────────────────────────────────────
+// Virtual bank — starts at MX$50,000. Debited on buy, credited on sell.
+// Tracks net worth history. Reset costs 100 XP and adds a Bankrupt badge.
+
+var _vault = null;
+var VAULT_START = 50000; // MXN
+
+function _vaultLabel() {
+  return new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function _fmtVault(n) {
+  var abs = Math.abs(Math.round(n));
+  return (n < 0 ? '-' : '') + 'MX$' + abs.toLocaleString('en-US');
+}
+
+function _saveVault() {
+  if (!_vault) return;
+  if (_vault.transactions.length > 150) _vault.transactions = _vault.transactions.slice(-150);
+  if (_vault.netWorthHistory.length > 120) _vault.netWorthHistory = _vault.netWorthHistory.slice(-120);
+  saveToFirestore({ vault: _vault });
+}
+
+function initVaultFromData(data) {
+  if (data && data.vault) {
+    _vault = data.vault;
+  } else {
+    _vault = {
+      balance: VAULT_START,
+      transactions: [],
+      netWorthHistory: [{ date: _vaultLabel(), value: VAULT_START, ts: Date.now() }],
+      bankruptCount: 0,
+      createdAt: Date.now()
+    };
+    _saveVault();
+  }
+  _refreshVaultBalance();
+}
+
+function _vaultRecordNetWorth() {
+  if (!_vault) return;
+  var label = _vaultLabel();
+  var hist = _vault.netWorthHistory;
+  if (hist.length > 0 && hist[hist.length - 1].date === label) {
+    hist[hist.length - 1].value = _vault.balance;
+    hist[hist.length - 1].ts = Date.now();
+  } else {
+    hist.push({ date: label, value: _vault.balance, ts: Date.now() });
+  }
+}
+
+function vaultDebit(amountMXN, ticker, shares, priceUSD) {
+  if (!_vault) return;
+  _vault.balance -= amountMXN;
+  _vault.transactions.push({
+    type: 'buy', ticker: ticker, shares: shares, priceUSD: priceUSD,
+    amountMXN: Math.round(amountMXN), date: _vaultLabel(), ts: Date.now()
+  });
+  _vaultRecordNetWorth();
+  _saveVault();
+  _refreshVaultBalance();
+}
+
+function vaultCredit(amountMXN, ticker, shares, priceUSD) {
+  if (!_vault) return;
+  _vault.balance += amountMXN;
+  _vault.transactions.push({
+    type: 'sell', ticker: ticker, shares: shares, priceUSD: priceUSD,
+    amountMXN: Math.round(amountMXN), date: _vaultLabel(), ts: Date.now()
+  });
+  _vaultRecordNetWorth();
+  _saveVault();
+  _refreshVaultBalance();
+}
+
+function _refreshVaultBalance() {
+  var el = document.getElementById('vault-balance');
+  if (el && _vault) el.textContent = _fmtVault(_vault.balance);
+  var el2 = document.getElementById('vault-balance-form');
+  if (el2 && _vault) el2.textContent = _fmtVault(_vault.balance);
+  var row = document.getElementById('vault-in-form');
+  if (row) row.style.display = _vault ? 'flex' : 'none';
+}
+
+function resetVault() {
+  if (!_vault) return;
+  var modal = document.getElementById('vault-reset-confirm');
+  if (modal) modal.style.display = 'flex';
+}
+
+function confirmVaultReset() {
+  if (!_vault) return;
+  _vault.balance = VAULT_START;
+  _vault.bankruptCount = (_vault.bankruptCount || 0) + 1;
+  _vault.transactions.push({ type: 'reset', date: _vaultLabel(), ts: Date.now() });
+  _vaultRecordNetWorth();
+  _saveVault();
+  addXP(-100);
+  var modal = document.getElementById('vault-reset-confirm');
+  if (modal) modal.style.display = 'none';
+  showToast('Vault reset · Bankrupt badge added · −100 XP');
+  renderVault();
+}
+
+function renderVault() {
+  var section = document.getElementById('vault-section');
+  if (!section) return;
+  if (!_vault) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+
+  _refreshVaultBalance();
+
+  // P&L vs starting balance
+  var diff = _vault.balance - VAULT_START;
+  var pct = (diff / VAULT_START * 100);
+  var changeEl = document.getElementById('vault-change');
+  if (changeEl) {
+    if (diff === 0) {
+      changeEl.innerHTML = '<span style="color:var(--text-muted);">Starting balance</span>';
+    } else {
+      var color = diff > 0 ? '#128257' : '#dc2626';
+      var sign = diff > 0 ? '+' : '';
+      changeEl.innerHTML =
+        '<span style="color:' + color + ';">' + sign + _fmtVault(diff) +
+        ' (' + sign + pct.toFixed(1) + '%)</span>' +
+        '<span style="color:var(--text-muted);"> vs MX$50,000 start</span>';
+    }
+  }
+
+  // Bankrupt badge
+  var badge = document.getElementById('vault-bankrupt-badge');
+  if (badge) {
+    var bc = _vault.bankruptCount || 0;
+    badge.style.display = bc > 0 ? 'inline-flex' : 'none';
+    badge.textContent = 'Bankrupt' + (bc > 1 ? ' \xd7' + bc : '');
+  }
+
+  _renderVaultChart();
+  _renderVaultTransactions();
+}
+
+function _renderVaultChart() {
+  var wrap = document.getElementById('vault-chart-wrap');
+  var canvas = document.getElementById('vault-chart');
+  if (!wrap || !canvas || !_vault) return;
+  var hist = _vault.netWorthHistory || [];
+  if (hist.length < 2) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+
+  if (window._vaultChart) { window._vaultChart.destroy(); window._vaultChart = null; }
+
+  var labels = hist.map(function(h) { return h.date; });
+  var values = hist.map(function(h) { return h.value; });
+  var isUp = values[values.length - 1] >= VAULT_START;
+  var lineColor = isUp ? '#128257' : '#dc2626';
+  var theme = (typeof getChartTheme === 'function') ? getChartTheme() : { muted: '#64748b', gridLine: 'rgba(100,116,139,0.15)' };
+
+  window._vaultChart = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: values,
+        borderColor: lineColor,
+        borderWidth: 2.5,
+        fill: true,
+        backgroundColor: isUp ? 'rgba(18,130,87,0.07)' : 'rgba(220,38,38,0.07)',
+        tension: 0.35,
+        pointRadius: 0,
+        pointHoverRadius: 5
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: function(ctx) { return _fmtVault(ctx.raw); } } }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: theme.muted, font: { size: 10 }, maxRotation: 0, maxTicksLimit: 6 } },
+        y: {
+          grid: { color: theme.gridLine },
+          ticks: {
+            color: theme.muted, font: { size: 10 },
+            callback: function(v) { return 'MX$' + (Math.abs(v) >= 1000 ? Math.round(v / 1000) + 'k' : Math.round(v)); }
+          }
+        }
+      }
+    }
+  });
+}
+
+function _renderVaultTransactions() {
+  var el = document.getElementById('vault-transactions');
+  if (!el || !_vault) return;
+  var txns = (_vault.transactions || []).slice().reverse().slice(0, 40);
+  if (txns.length === 0) {
+    el.innerHTML = '<div class="vault-txn-empty">No transactions yet. Add your first stock to the portfolio.</div>';
+    return;
+  }
+  el.innerHTML = txns.map(function(t) {
+    if (t.type === 'reset') {
+      return '<div class="vault-txn-reset-row">' +
+        '<div class="vault-txn-left"><div class="vault-txn-desc">Vault Reset</div><div class="vault-txn-date">' + escHtml(t.date || '') + '</div></div>' +
+        '<div class="vault-txn-reset-amt">Restarted at MX$50,000</div>' +
+      '</div>';
+    }
+    var isBuy = t.type === 'buy';
+    var amtStr = (isBuy ? '−' : '+') + _fmtVault(t.amountMXN || 0);
+    var shares = typeof t.shares !== 'undefined' ? t.shares : '?';
+    var desc = isBuy
+      ? 'Bought ' + shares + ' \xd7 ' + escHtml(t.ticker || '') + ' @ $' + (+(t.priceUSD || 0)).toFixed(2)
+      : 'Sold ' + shares + ' \xd7 ' + escHtml(t.ticker || '') + ' @ $' + (+(t.priceUSD || 0)).toFixed(2);
+    return '<div class="vault-txn">' +
+      '<div class="vault-txn-dot ' + (isBuy ? 'vault-txn-dot-buy' : 'vault-txn-dot-sell') + '"></div>' +
+      '<div class="vault-txn-left"><div class="vault-txn-desc">' + desc + '</div><div class="vault-txn-date">' + escHtml(t.date || '') + '</div></div>' +
+      '<div class="vault-txn-amt ' + (isBuy ? 'vault-txn-debit' : 'vault-txn-credit') + '">' + amtStr + '</div>' +
+    '</div>';
+  }).join('');
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 function renderProfile() {
   loadUserInfo();
   if (userProfile) {
@@ -8689,6 +8932,7 @@ function renderProfile() {
   renderBadges(analyzed, watchlist.length, portCount, streak);
   renderChallengeSection();
   renderBrokerSection();
+  renderVault();
 }
 
 let stockChatHistory = [];
@@ -9153,6 +9397,9 @@ auth.onAuthStateChanged(function(user) {
       _userXP = data.xp;
       if (_appInitialized) refreshXPProgress();
     }
+
+    // IQ Vault — initialize or restore from Firestore
+    initVaultFromData(data);
 
     if (!_appInitialized) {
       // First visit or no cached data — full init now

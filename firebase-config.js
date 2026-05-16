@@ -77,6 +77,10 @@ function _applyFirestoreData(data) {
       if (typeof loadMarketOverview === 'function') loadMarketOverview();
     }
   }
+  if (data.vault && typeof initVaultFromData === 'function') {
+    initVaultFromData(data);
+    if (_appReady && typeof renderVault === 'function') renderVault();
+  }
   if (data.priceAlerts) localStorage.setItem('price-alerts', JSON.stringify(data.priceAlerts));
   if (data.stockNotes) localStorage.setItem('stock-notes', JSON.stringify(data.stockNotes));
   if (data.scoreHistory) {
