@@ -8736,9 +8736,22 @@ function _vaultRate() {
 
 function _vaultNetWorth() {
   if (!_vault) return 0;
-  var portMXN = (typeof portfolioStockData !== 'undefined' ? portfolioStockData : [])
-    .reduce(function(sum, s) { return sum + (s.value || 0); }, 0) * _vaultRate();
-  return _vault.balance + portMXN;
+  // Sum ALL portfolios using last-known prices (lkp), not just the active one.
+  // lkp is updated every time any price is fetched, so this stays current.
+  var portfolios = {};
+  try { portfolios = JSON.parse(localStorage.getItem('portfolios') || '{}'); } catch(e) {}
+  var lkp = {};
+  try { lkp = JSON.parse(localStorage.getItem('lkp') || '{}'); } catch(e) {}
+  var fxRate = _vaultRate();
+  var totalUSD = 0;
+  Object.values(portfolios).forEach(function(port) {
+    (port.stocks || []).forEach(function(stock) {
+      var p = lkp[stock.ticker] ? lkp[stock.ticker].price : 0;
+      var shares = (stock.lots || []).reduce(function(s, l) { return s + (l.shares || 0); }, 0);
+      totalUSD += p * shares;
+    });
+  });
+  return _vault.balance + totalUSD * fxRate;
 }
 
 function _saveVault() {
@@ -8834,7 +8847,8 @@ function _checkVaultMilestones(netWorth) {
 // Called by renderPortfolio after prices load — source of truth for net worth
 function _vaultUpdateFromPortfolio(totalValueUSD) {
   if (!_vault) return;
-  var netWorth = _vault.balance + totalValueUSD * _vaultRate();
+  // lkp just got fresh prices for the active portfolio — now compute across ALL portfolios
+  var netWorth = _vaultNetWorth();
   _vaultWriteHistory(netWorth);
   _checkVaultMilestones(netWorth);
   _saveVault();
