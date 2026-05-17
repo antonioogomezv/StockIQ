@@ -9498,6 +9498,11 @@ let _appInitialized = false;
   try {
     userProfile = JSON.parse(cachedProfile);
     if (userProfile) userProfile.icon = _profileIcon(userProfile.type);
+    // Restore vault immediately so Profile tab shows data before Firestore responds
+    try {
+      var cv = JSON.parse(localStorage.getItem('iq-vault') || 'null');
+      if (cv && cv.balance) _vault = cv;
+    } catch(e) {}
     _initApp();
   } catch(e) {}
 })();
