@@ -218,6 +218,30 @@ let cache = {};
 // Only the first user whose cache is stale makes Finnhub calls — everyone else
 // gets the result for free.
 
+// Global Finnhub rate limiter — shared across ALL callers (market, portfolio,
+// watchlist, trending). Deduplicates in-flight requests and staggers at 400ms
+// per call so concurrent batches don't pile up and hit the 60/min free limit.
+var _fhInFlight = {};   // sym → Promise<raw quote json>
+var _fhGlobalDelay = 0; // increments atomically across all callers
+
+function _fetchQuote(sym) {
+  if (_fhInFlight[sym]) return _fhInFlight[sym]; // share in-flight request
+  var d = _fhGlobalDelay;
+  _fhGlobalDelay += 400; // ~2.5 calls/sec across ALL concurrent batches
+  // Decay the global counter so it doesn't grow forever
+  setTimeout(function() { _fhGlobalDelay = Math.max(0, _fhGlobalDelay - 400); }, d + 2000);
+  var p = new Promise(function(resolve) {
+    setTimeout(function() {
+      fetch(finnhubUrl('/api/v1/quote', {symbol: sym}))
+        .then(function(r) { return r.json(); })
+        .catch(function() { return {}; })
+        .then(function(q) { delete _fhInFlight[sym]; resolve(q); });
+    }, d);
+  });
+  _fhInFlight[sym] = p;
+  return p;
+}
+
 var _sharedPriceCache = null; // in-memory copy for this session
 
 function getSharedPrices(symbols, ttlMs) {
@@ -268,40 +292,26 @@ function getSharedPrices(symbols, ttlMs) {
 
 function _fetchAndCachePrices(symbols, existing) {
   var priceMap = Object.assign({}, existing);
-  var delay = 0;
   var promises = symbols.map(function(sym) {
-    var d = delay; delay += 200;
-    return new Promise(function(resolve) {
-      setTimeout(function() {
-        fetch(finnhubUrl('/api/v1/quote', {symbol: sym}))
-          .then(function(r) { return r.json(); })
-          .then(function(q) {
-            var price = q.c > 0 ? q.c : (q.pc > 0 ? q.pc : 0);
-            if (price > 0) {
-              priceMap[sym] = { price: price, changePct: q.dp || 0, change: q.d || (q.pc > 0 ? q.c - q.pc : 0), prevClose: q.pc || 0 };
-              // Persist last-known price as offline/rate-limit fallback
-              var lkp = JSON.parse(localStorage.getItem('lkp') || '{}');
-              lkp[sym] = priceMap[sym];
-              localStorage.setItem('lkp', JSON.stringify(lkp));
-              if (q.dp) {
-                var lk = JSON.parse(localStorage.getItem('screener-changepct-last') || '{}');
-                lk[sym] = q.dp;
-                localStorage.setItem('screener-changepct-last', JSON.stringify(lk));
-              }
-            } else {
-              // Rate-limited or API error — fall back to last known price
-              var lkp = JSON.parse(localStorage.getItem('lkp') || '{}');
-              if (lkp[sym]) { priceMap[sym] = lkp[sym]; }
-              if (q.error) console.warn('Finnhub:', sym, q.error);
-            }
-          })
-          .catch(function() {
-            // Network error — fall back to last known price
-            var lkp = JSON.parse(localStorage.getItem('lkp') || '{}');
-            if (lkp[sym]) { priceMap[sym] = lkp[sym]; }
-          })
-          .then(resolve);
-      }, d);
+    return _fetchQuote(sym).then(function(q) {
+      var price = q.c > 0 ? q.c : (q.pc > 0 ? q.pc : 0);
+      if (price > 0) {
+        priceMap[sym] = { price: price, changePct: q.dp || 0, change: q.d || (q.pc > 0 ? q.c - q.pc : 0), prevClose: q.pc || 0 };
+        // Persist last-known price as offline/rate-limit fallback
+        var lkp = JSON.parse(localStorage.getItem('lkp') || '{}');
+        lkp[sym] = priceMap[sym];
+        localStorage.setItem('lkp', JSON.stringify(lkp));
+        if (q.dp) {
+          var lk = JSON.parse(localStorage.getItem('screener-changepct-last') || '{}');
+          lk[sym] = q.dp;
+          localStorage.setItem('screener-changepct-last', JSON.stringify(lk));
+        }
+      } else {
+        // Rate-limited or API error — fall back to last known price
+        var lkp = JSON.parse(localStorage.getItem('lkp') || '{}');
+        if (lkp[sym]) { priceMap[sym] = lkp[sym]; }
+        if (q.error) console.warn('Finnhub:', sym, q.error);
+      }
     });
   });
   return Promise.all(promises).then(function() {
