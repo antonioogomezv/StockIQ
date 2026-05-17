@@ -8733,6 +8733,8 @@ function _vaultNetWorth() {
 
 function _saveVault() {
   if (!_vault) return;
+  if (!_vault.transactions) _vault.transactions = [];
+  if (!_vault.netWorthHistory) _vault.netWorthHistory = [];
   if (_vault.transactions.length > 150) _vault.transactions = _vault.transactions.slice(-150);
   if (_vault.netWorthHistory.length > 120) _vault.netWorthHistory = _vault.netWorthHistory.slice(-120);
   saveToFirestore({ vault: _vault });
@@ -8741,10 +8743,13 @@ function _saveVault() {
 function initVaultFromData(data) {
   if (data && data.vault) {
     _vault = data.vault;
-    // Ensure new fields exist on old vault documents
+    // Ensure all fields exist on old vault documents
+    if (!_vault.transactions) _vault.transactions = [];
+    if (!_vault.netWorthHistory) _vault.netWorthHistory = [];
     if (!_vault.milestonesFired) _vault.milestonesFired = {};
     if (!_vault.peakNetWorth) _vault.peakNetWorth = _vault.balance || VAULT_START;
     if (!_vault.peakNetWorthDate) _vault.peakNetWorthDate = _vaultLabel();
+    if (!_vault.bankruptCount) _vault.bankruptCount = 0;
   } else {
     _vault = {
       balance: VAULT_START,
