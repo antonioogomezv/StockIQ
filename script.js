@@ -9344,7 +9344,15 @@ function _initApp() {
   _appReady = true;
   refreshXPProgress();
   hideAppLoading();
-  renderVault(); // pre-render vault DOM (may show loading state until Firebase fires)
+  renderVault();
+  // If Firestore never responds in 5s, stop waiting and show the vault setup card
+  setTimeout(function() {
+    if (!_vaultLoaded) {
+      _vaultLoaded = true;
+      _vault = null;
+      renderVault();
+    }
+  }, 5000);
 }
 
 // If Firebase auth never fires within 5s, show retry
