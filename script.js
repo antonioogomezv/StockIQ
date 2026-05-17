@@ -8804,7 +8804,6 @@ function vaultCredit(amountMXN, ticker, shares, priceUSD) {
 function renderVault() {
   var section = document.getElementById('vault-section');
   if (!section) return;
-  section.style.display = 'block';
 
   if (!_vaultLoaded) {
     section.innerHTML = '<div class="vault-loading">Loading Vault…</div>';

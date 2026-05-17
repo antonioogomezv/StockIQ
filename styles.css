@@ -5220,7 +5220,7 @@ footer {
 }
 
 /* ── IQ Vault ── */
-#vault-section { margin-top: 4px; }
+#vault-section { margin-top: 16px; min-height: 60px; }
 
 .vault-loading {
   text-align: center;
