@@ -8765,6 +8765,7 @@ function initVaultFromData(data) {
     _saveVault();
   }
   _refreshVaultBalance();
+  if (typeof renderVault === 'function') renderVault();
 }
 
 function _vaultWriteHistory(netWorth) {
@@ -9570,7 +9571,7 @@ auth.onAuthStateChanged(function(user) {
     }
 
     // IQ Vault — initialize or restore from Firestore
-    initVaultFromData(data);
+    try { initVaultFromData(data); } catch(e) { console.error('Vault init error:', e); }
 
     if (!_appInitialized) {
       // First visit or no cached data — full init now
