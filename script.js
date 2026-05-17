@@ -9344,6 +9344,7 @@ function _initApp() {
   _appReady = true;
   refreshXPProgress();
   hideAppLoading();
+  renderVault(); // pre-render vault DOM (may show loading state until Firebase fires)
 }
 
 // If Firebase auth never fires within 5s, show retry
@@ -9426,9 +9427,8 @@ auth.onAuthStateChanged(function(user) {
       if (typeof renderPortfolio === 'function') renderPortfolio();
       updateRiskBadge();
       updateStreak();
-      // Re-render vault in case profile tab is open
-      var vaultEl = document.getElementById('vault-section');
-      if (vaultEl && vaultEl.offsetParent !== null) renderVault();
+      // Always update vault DOM — safe even if profile tab is hidden
+      renderVault();
     }
   });
 })();
