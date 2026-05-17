@@ -4812,7 +4812,8 @@ footer {
   margin-bottom: 14px;
 }
 
-.user-edit-field label {
+.user-edit-field label,
+.user-edit-field .user-edit-label {
   font-size: 12px;
   font-weight: 600;
   color: var(--text-muted);

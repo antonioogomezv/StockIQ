@@ -8937,12 +8937,8 @@ function vaultWelcomeBonus() {
 function renderVault() {
   var section = document.getElementById('vault-section');
   if (!section) return;
+  if (!_vault) return; // keep section hidden until initVaultFromData fires
   section.style.display = 'block';
-  if (!_vault) {
-    var balEl = document.getElementById('vault-balance');
-    if (balEl) balEl.textContent = 'Loading…';
-    return;
-  }
 
   var netWorth = _vaultNetWorth();
   var balEl = document.getElementById('vault-balance');
