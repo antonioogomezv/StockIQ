@@ -354,8 +354,9 @@ function _applyRateAndRerender() {
   if (document.getElementById('nav-portfolio').classList.contains('active')) renderPortfolio();
   else if (document.getElementById('nav-watchlist').classList.contains('active')) renderWatchlist();
   else if (allTrendingData && allTrendingData.length) renderTrending(allTrendingData);
-  // Always refresh market bar prices
+  // Always refresh market bar prices and vault (vault balance/transactions are currency-sensitive)
   loadMarketOverview();
+  if (typeof renderVault === 'function') renderVault();
 }
 
 function fetchFxRate(callback) {
@@ -8831,8 +8832,12 @@ function _vaultRate() {
   return (typeof _fxRate !== 'undefined' && _fxRate > 1) ? _fxRate : 17.5;
 }
 
-function _fmtVault(n) {
-  return 'MX$' + Math.round(n).toLocaleString('en-US');
+function _fmtVault(amountMXN) {
+  if (_currency === 'USD') {
+    var usd = amountMXN / _vaultRate();
+    return '$' + usd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  return 'MX$' + Math.round(amountMXN).toLocaleString('en-US');
 }
 
 function initVaultFromData(data) {
@@ -9034,9 +9039,10 @@ function _renderVaultTransactions() {
       var sign = isBuy ? '−' : '+';
       var gainHtml = '';
       if (!isBuy && typeof t.realizedGainUSD === 'number') {
-        var gainMXN = Math.round(t.realizedGainUSD * _vaultRate());
-        var gc = gainMXN >= 0 ? '#128257' : '#dc2626';
-        var gs = gainMXN >= 0 ? '+' : '';
+        // Convert canonical USD value to MXN for _fmtVault (which handles display currency)
+        var gainMXN = t.realizedGainUSD * _vaultRate();
+        var gc = t.realizedGainUSD >= 0 ? '#128257' : '#dc2626';
+        var gs = t.realizedGainUSD >= 0 ? '+' : '';
         gainHtml = ' \xb7 <span style="color:' + gc + ';">' + gs + _fmtVault(gainMXN) + ' gain</span>';
       }
       return '<div class="vault-txn-row">' +
