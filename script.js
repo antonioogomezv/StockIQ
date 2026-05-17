@@ -8792,8 +8792,12 @@ function confirmVaultReset() {
 function renderVault() {
   var section = document.getElementById('vault-section');
   if (!section) return;
-  if (!_vault) { section.style.display = 'none'; return; }
   section.style.display = 'block';
+  if (!_vault) {
+    var balEl = document.getElementById('vault-balance');
+    if (balEl) balEl.textContent = 'Loading…';
+    return;
+  }
 
   _refreshVaultBalance();
 
@@ -9408,6 +9412,7 @@ auth.onAuthStateChanged(function(user) {
       // Background sync done — quietly refresh data-driven sections
       renderWatchlist();
       if (typeof renderPortfolio === 'function') renderPortfolio();
+      if (typeof renderVault === 'function') renderVault();
       updateRiskBadge();
       updateStreak();
     }
