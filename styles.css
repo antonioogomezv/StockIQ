@@ -6706,6 +6706,181 @@ footer {
   font-family: var(--mono);
 }
 
+/* ── Archived / Closed Portfolios ─────────────────────── */
+#archived-portfolios-section {
+  margin-bottom: 8px;
+}
+
+.archived-ports-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0 10px;
+  border-top: 1px solid var(--border);
+  cursor: pointer;
+  user-select: none;
+}
+
+.archived-ports-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  flex: 1;
+}
+
+.archived-ports-count {
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--surface2);
+  color: var(--text-muted);
+  border-radius: 10px;
+  padding: 1px 7px;
+}
+
+.archived-ports-chevron {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.archived-port-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 10px;
+  opacity: 0.78;
+}
+
+.archived-port-header {
+  padding: 14px 16px 12px;
+  cursor: pointer;
+  user-select: none;
+  background: var(--surface);
+  position: relative;
+}
+
+.archived-port-header:hover {
+  background: var(--surface2);
+}
+
+.archived-port-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.archived-port-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.archived-port-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: #d1fae5;
+  color: #065f46;
+  border-radius: 6px;
+  padding: 2px 7px;
+}
+
+[data-theme="dark"] .archived-port-badge {
+  background: rgba(18, 130, 87, 0.25);
+  color: #34d399;
+}
+
+.archived-port-date {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
+.archived-port-metrics {
+  display: flex;
+  gap: 20px;
+}
+
+.archived-port-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.archived-port-metric-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.archived-port-metric-val {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.archived-port-chevron {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.archived-port-body {
+  background: var(--surface2);
+  border-top: 1px solid var(--border);
+  padding: 0 16px;
+}
+
+.archived-port-empty {
+  font-size: 13px;
+  color: var(--text-muted);
+  padding: 14px 0;
+  text-align: center;
+}
+
+.archived-closed-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.archived-closed-row:last-child {
+  border-bottom: none;
+}
+
+.archived-closed-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.archived-closed-ticker {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.archived-closed-detail {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.archived-closed-gain {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+}
+
 /* ════════════════════════════════════════
    PHONE  (≤ 640 px)
    ════════════════════════════════════════ */

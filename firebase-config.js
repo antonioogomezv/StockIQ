@@ -81,6 +81,7 @@ function _applyFirestoreData(data) {
     initVaultFromData(data);
     if (_appReady && typeof renderVault === 'function') renderVault();
   }
+  if (data.archivedPortfolios) localStorage.setItem('archivedPortfolios', JSON.stringify(data.archivedPortfolios));
   if (data.priceAlerts) localStorage.setItem('price-alerts', JSON.stringify(data.priceAlerts));
   if (data.stockNotes) localStorage.setItem('stock-notes', JSON.stringify(data.stockNotes));
   if (data.scoreHistory) {

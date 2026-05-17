@@ -5438,7 +5438,8 @@ function confirmDeletePortfolio(id) {
   let all = getAllPortfolios();
   let port = all[id];
   if (!port) return;
-  let isLast = Object.keys(all).length <= 1;
+
+  let hasOpenPositions = port.stocks && port.stocks.length > 0;
 
   let overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:2000;display:flex;align-items:center;justify-content:center;padding:24px;';
@@ -5448,13 +5449,9 @@ function confirmDeletePortfolio(id) {
 
   let title = document.createElement('div');
   title.style.cssText = 'font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px;';
-  title.textContent = 'Delete Portfolio?';
 
   let desc = document.createElement('div');
-  desc.style.cssText = 'font-size:13px;color:var(--text-muted);margin-bottom:24px;';
-  desc.innerHTML = isLast
-    ? 'This will delete <strong>' + escHtml(port.name) + '</strong> and replace it with a blank portfolio.'
-    : 'This will permanently delete <strong>' + escHtml(port.name) + '</strong> and all its holdings. This cannot be undone.';
+  desc.style.cssText = 'font-size:13px;color:var(--text-muted);margin-bottom:24px;line-height:1.5;';
 
   let btnRow = document.createElement('div');
   btnRow.style.cssText = 'display:flex;gap:10px;justify-content:center;';
@@ -5462,29 +5459,69 @@ function confirmDeletePortfolio(id) {
   let cancelBtn = document.createElement('button');
   cancelBtn.textContent = 'Cancel';
   cancelBtn.style.cssText = 'flex:1;background:var(--surface2);color:var(--text);border:1px solid var(--border);';
+  cancelBtn.addEventListener('click', function() { overlay.remove(); });
 
-  let deleteBtn = document.createElement('button');
-  deleteBtn.textContent = 'Delete';
-  deleteBtn.style.cssText = 'flex:1;background:#ef4444;color:white;border:none;';
+  if (hasOpenPositions) {
+    title.textContent = 'Sell First';
+    desc.innerHTML = 'Sell all positions in <strong>' + escHtml(port.name) + '</strong> before archiving. Your gains and losses will be saved permanently in the vault.';
+    let okBtn = document.createElement('button');
+    okBtn.textContent = 'OK';
+    okBtn.style.cssText = 'flex:1;background:var(--accent);color:white;border:none;';
+    okBtn.addEventListener('click', function() { overlay.remove(); });
+    btnRow.appendChild(cancelBtn);
+    btnRow.appendChild(okBtn);
+  } else {
+    title.textContent = 'Archive Portfolio?';
+    let isLast = Object.keys(all).length <= 1;
+    desc.innerHTML = isLast
+      ? 'This will archive <strong>' + escHtml(port.name) + '</strong> and create a blank portfolio. Your trade history is saved forever.'
+      : 'This will archive <strong>' + escHtml(port.name) + '</strong>. Your full trade history will be saved under Closed Portfolios.';
+    let archiveBtn = document.createElement('button');
+    archiveBtn.textContent = 'Archive';
+    archiveBtn.style.cssText = 'flex:1;background:#128257;color:white;border:none;';
+    archiveBtn.addEventListener('click', function() { overlay.remove(); deletePortfolio(id); });
+    btnRow.appendChild(cancelBtn);
+    btnRow.appendChild(archiveBtn);
+  }
 
-  btnRow.appendChild(cancelBtn);
-  btnRow.appendChild(deleteBtn);
   card.appendChild(title);
   card.appendChild(desc);
   card.appendChild(btnRow);
   overlay.appendChild(card);
   document.body.appendChild(overlay);
-
-  cancelBtn.addEventListener('click', function() { overlay.remove(); });
-  deleteBtn.addEventListener('click', function() { overlay.remove(); deletePortfolio(id); });
 }
 
 function deletePortfolio(id) {
   let all = getAllPortfolios();
+  let port = all[id];
+
+  // Archive snapshot before removing from active portfolios
+  if (port) {
+    let closed = port.closedPositions || [];
+    let totalInvested = closed.reduce(function(s, c) { return s + (c.avgCost || 0) * (c.sharesSold || 0); }, 0);
+    let totalProceeds = closed.reduce(function(s, c) { return s + (c.sellPrice || 0) * (c.sharesSold || 0); }, 0);
+    let totalRealized = closed.reduce(function(s, c) { return s + (c.realizedGain || 0); }, 0);
+    let archive = {
+      name: port.name,
+      dateArchived: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      ts: Date.now(),
+      closedPositions: closed,
+      totalInvested: totalInvested,
+      totalProceeds: totalProceeds,
+      totalRealized: totalRealized
+    };
+    // Persist to localStorage
+    let archived = JSON.parse(localStorage.getItem('archivedPortfolios') || '{}');
+    archived[id] = archive;
+    localStorage.setItem('archivedPortfolios', JSON.stringify(archived));
+    // Persist to Firestore — use field path to merge into the map without clobbering other archives
+    replaceInFirestore({ ['archivedPortfolios.' + id]: archive });
+  }
+
   delete all[id];
   let newActive;
   if (Object.keys(all).length === 0) {
-    // Last portfolio deleted — auto-create a blank one so user is never stuck
+    // Last portfolio removed — auto-create a blank one so user is never stuck
     newActive = 'port_' + Date.now();
     all[newActive] = { name: 'My Portfolio', isDemo: false, stocks: [], closedPositions: [], valueHistory: [] };
   } else {
@@ -6405,6 +6442,7 @@ function renderPortfolio() {
     let searchWrap = document.getElementById('port-search-wrap');
     if (searchWrap) searchWrap.style.display = 'none';
     portfolioStockData = [];
+    renderArchivedPortfolios();
     return;
   }
   empty.style.display = 'none';
@@ -6511,6 +6549,7 @@ function renderPortfolio() {
     if (searchWrap) searchWrap.style.display = 'block';
     renderPortfolioRows(stockData);
     renderClosedPositions();
+    renderArchivedPortfolios();
     fetchMissingPortfolioScores(stockData);
 
     if (totalValue > 0) savePortfolioValueHistory(totalValue);
@@ -6839,6 +6878,90 @@ function renderClosedPositions() {
   if (totalEl) {
     totalEl.innerHTML = 'Total Realized: <span style="color:' + totalColor + ';">' + fmtSigned$(totalRealized) + '</span>';
   }
+}
+
+function getAllArchivedPortfolios() {
+  return JSON.parse(localStorage.getItem('archivedPortfolios') || '{}');
+}
+
+function toggleArchivedPortfolio(id) {
+  var body = document.getElementById('archived-port-body-' + id);
+  var chevron = document.getElementById('archived-port-chevron-' + id);
+  if (!body) return;
+  var isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  if (chevron) chevron.textContent = isOpen ? '▾' : '▴';
+}
+
+function renderArchivedPortfolios() {
+  var el = document.getElementById('archived-portfolios-section');
+  if (!el) return;
+  var archived = getAllArchivedPortfolios();
+  var entries = Object.keys(archived).map(function(id) { return { id: id, data: archived[id] }; });
+  // Sort newest first
+  entries.sort(function(a, b) { return (b.data.ts || 0) - (a.data.ts || 0); });
+
+  if (entries.length === 0) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+
+  var html = '<div class="archived-ports-header" onclick="(function(){var b=document.getElementById(\'archived-ports-list\');var c=document.getElementById(\'archived-ports-chevron\');var open=b&&b.style.display!==\'none\';if(b)b.style.display=open?\'none\':\'block\';if(c)c.textContent=open?\'▾\':\'▴\';})()">' +
+    '<span class="archived-ports-title">Closed Portfolios</span>' +
+    '<span class="archived-ports-count">' + entries.length + '</span>' +
+    '<span id="archived-ports-chevron" class="archived-ports-chevron">▾</span>' +
+  '</div>' +
+  '<div id="archived-ports-list">';
+
+  entries.forEach(function(e) {
+    var a = e.data;
+    var id = e.id;
+    var gainPct = a.totalInvested > 0 ? ((a.totalRealized / a.totalInvested) * 100) : 0;
+    var gc = a.totalRealized >= 0 ? '#128257' : '#dc2626';
+    var gainSign = a.totalRealized >= 0 ? '+' : '';
+
+    // Closed positions list (expanded body)
+    var closedRows = (a.closedPositions || []).slice().reverse().map(function(c) {
+      var cg = (c.realizedGain || 0) >= 0 ? '#128257' : '#dc2626';
+      return '<div class="archived-closed-row">' +
+        '<div class="archived-closed-left">' +
+          '<span class="archived-closed-ticker">' + escHtml(c.ticker) + '</span>' +
+          '<span class="archived-closed-detail">' + (c.sharesSold || 0) + ' shares · avg ' + fmt$(c.avgCost || 0) + ' → ' + fmt$(c.sellPrice || 0) + ' · ' + escHtml(c.date || '') + '</span>' +
+        '</div>' +
+        '<span class="archived-closed-gain" style="color:' + cg + ';">' + fmtSigned$(c.realizedGain || 0) + '</span>' +
+      '</div>';
+    }).join('');
+
+    html +=
+      '<div class="archived-port-card">' +
+        '<div class="archived-port-header" onclick="toggleArchivedPortfolio(\'' + id + '\')">' +
+          '<div class="archived-port-name-row">' +
+            '<span class="archived-port-name">' + escHtml(a.name) + '</span>' +
+            '<span class="archived-port-badge">Closed</span>' +
+            '<span class="archived-port-date">' + escHtml(a.dateArchived || '') + '</span>' +
+          '</div>' +
+          '<div class="archived-port-metrics">' +
+            '<div class="archived-port-metric">' +
+              '<span class="archived-port-metric-label">Invested</span>' +
+              '<span class="archived-port-metric-val">' + fmt$(a.totalInvested || 0) + '</span>' +
+            '</div>' +
+            '<div class="archived-port-metric">' +
+              '<span class="archived-port-metric-label">Proceeds</span>' +
+              '<span class="archived-port-metric-val">' + fmt$(a.totalProceeds || 0) + '</span>' +
+            '</div>' +
+            '<div class="archived-port-metric">' +
+              '<span class="archived-port-metric-label">Gain / Loss</span>' +
+              '<span class="archived-port-metric-val" style="color:' + gc + ';">' + gainSign + fmtSigned$(a.totalRealized || 0) + ' (' + gainSign + gainPct.toFixed(1) + '%)</span>' +
+            '</div>' +
+          '</div>' +
+          '<span id="archived-port-chevron-' + id + '" class="archived-port-chevron">▾</span>' +
+        '</div>' +
+        '<div id="archived-port-body-' + id + '" class="archived-port-body" style="display:none;">' +
+          (closedRows || '<div class="archived-port-empty">No trade history recorded.</div>') +
+        '</div>' +
+      '</div>';
+  });
+
+  html += '</div>';
+  el.innerHTML = html;
 }
 
 function togglePortLots(ticker) {
@@ -9412,6 +9535,7 @@ auth.onAuthStateChanged(function(user) {
       migrateToMultiPortfolio(data.portfolio || [], data.closedPositions || [], legacyHistory);
     }
 
+    if (data.archivedPortfolios) localStorage.setItem('archivedPortfolios', JSON.stringify(data.archivedPortfolios));
     if (data.watchlist) localStorage.setItem('watchlist', JSON.stringify(data.watchlist));
     if (data.priceAlerts) localStorage.setItem('price-alerts', JSON.stringify(data.priceAlerts));
     if (data.stockNotes) localStorage.setItem('stock-notes', JSON.stringify(data.stockNotes));
