@@ -314,7 +314,11 @@ function getChartTheme() {
     tooltipBg:    '#1e293b',
     tooltipBorder:'#334155',
     tooltipTitle: '#f1f5f9',
-    tooltipBody:  '#94a3b8'
+    tooltipBody:  '#94a3b8',
+    win:          isDark ? '#b2f544' : '#16a34a',
+    loss:         '#9b5de5',
+    winAlpha:     isDark ? '178,245,68' : '22,163,74',
+    lossAlpha:    '155,93,229'
   };
 }
 
@@ -902,10 +906,10 @@ function calculateRSI(prices, period) {
 
 function getScoreTier(s) {
   return s >= 85 ? { color: '#0a6642', label: 'Exceptional' }
-       : s >= 70 ? { color: '#128257', label: 'Strong' }
+       : s >= 70 ? { color: 'var(--win)', label: 'Strong' }
        : s >= 55 ? { color: '#c17d08', label: 'Watch' }
        : s >= 40 ? { color: '#c4430f', label: 'Weak' }
-       :           { color: '#dc2626', label: 'Risky' };
+       :           { color: 'var(--loss)', label: 'Risky' };
 }
 
 // ETF score — only uses factors relevant to funds (no P/E, margin, ROE, debt)
@@ -1032,27 +1036,27 @@ function calculateScore(changePct, week52High, price, pe, metrics, qualScore, rs
 
 function buildSignalChips(pe, margin, growth, beta, rsi, ma50, price) {
   var chips = [];
-  if (margin > 20) chips.push({ icon: "↑", color: "#128257", label: "Strong margins" });
-  else if (margin < 0) chips.push({ icon: "↓", color: "#dc2626", label: "Losing money" });
+  if (margin > 20) chips.push({ icon: "↑", color: "var(--win)", label: "Strong margins" });
+  else if (margin < 0) chips.push({ icon: "↓", color: "var(--loss)", label: "Losing money" });
   else if (margin > 5) chips.push({ icon: "→", color: "#e07510", label: "Thin margins" });
 
-  if (growth > 15) chips.push({ icon: "↑", color: "#128257", label: "Fast growth" });
-  else if (growth < 0) chips.push({ icon: "↓", color: "#dc2626", label: "Shrinking sales" });
+  if (growth > 15) chips.push({ icon: "↑", color: "var(--win)", label: "Fast growth" });
+  else if (growth < 0) chips.push({ icon: "↓", color: "var(--loss)", label: "Shrinking sales" });
   else chips.push({ icon: "→", color: "#e07510", label: "Slow growth" });
 
-  if (pe > 0 && pe < 20) chips.push({ icon: "↑", color: "#128257", label: "Cheap P/E" });
-  else if (pe > 35) chips.push({ icon: "↓", color: "#dc2626", label: "Expensive P/E" });
+  if (pe > 0 && pe < 20) chips.push({ icon: "↑", color: "var(--win)", label: "Cheap P/E" });
+  else if (pe > 35) chips.push({ icon: "↓", color: "var(--loss)", label: "Expensive P/E" });
   else if (pe > 0) chips.push({ icon: "→", color: "#e07510", label: "Fair P/E" });
 
-  if (rsi !== null && rsi < 30) chips.push({ icon: "↑", color: "#128257", label: "Oversold" });
-  else if (rsi !== null && rsi > 70) chips.push({ icon: "↓", color: "#dc2626", label: "Overbought" });
+  if (rsi !== null && rsi < 30) chips.push({ icon: "↑", color: "var(--win)", label: "Oversold" });
+  else if (rsi !== null && rsi > 70) chips.push({ icon: "↓", color: "var(--loss)", label: "Overbought" });
 
-  if (beta < 1) chips.push({ icon: "↑", color: "#128257", label: "Low risk" });
-  else if (beta > 1.5) chips.push({ icon: "↓", color: "#dc2626", label: "High risk" });
+  if (beta < 1) chips.push({ icon: "↑", color: "var(--win)", label: "Low risk" });
+  else if (beta > 1.5) chips.push({ icon: "↓", color: "var(--loss)", label: "High risk" });
 
   if (ma50 !== null) {
-    if (price > ma50) chips.push({ icon: "↑", color: "#128257", label: "Uptrend" });
-    else chips.push({ icon: "↓", color: "#dc2626", label: "Downtrend" });
+    if (price > ma50) chips.push({ icon: "↑", color: "var(--win)", label: "Uptrend" });
+    else chips.push({ icon: "↓", color: "var(--loss)", label: "Downtrend" });
   }
 
   // Sort: bad first so user sees risks, then good — deduplicate by label
@@ -1074,33 +1078,33 @@ function buildScoreExplainer(_bd, pe, margin, growth, beta, rsi, _ma50) {
   let lines = [];
 
   // Profit margin
-  if (margin > 20) lines.push({ icon: "↑", color: "#128257", text: "Strong profit margins (" + margin.toFixed(1) + "%) — keeps more of every dollar earned" });
+  if (margin > 20) lines.push({ icon: "↑", color: "var(--win)", text: "Strong profit margins (" + margin.toFixed(1) + "%) — keeps more of every dollar earned" });
   else if (margin > 5) lines.push({ icon: "→", color: "#e07510", text: "Moderate profit margins (" + margin.toFixed(1) + "%) — decent but room to improve" });
-  else if (margin < 0) lines.push({ icon: "↓", color: "#dc2626", text: "Negative profit margins (" + margin.toFixed(1) + "%) — currently losing money" });
+  else if (margin < 0) lines.push({ icon: "↓", color: "var(--loss)", text: "Negative profit margins (" + margin.toFixed(1) + "%) — currently losing money" });
   else lines.push({ icon: "→", color: "#e07510", text: "Thin profit margins (" + margin.toFixed(1) + "%) — not much profit per dollar of sales" });
 
   // Revenue growth
-  if (growth > 15) lines.push({ icon: "↑", color: "#128257", text: "Strong revenue growth (+" + growth.toFixed(1) + "% YoY) — business is expanding fast" });
+  if (growth > 15) lines.push({ icon: "↑", color: "var(--win)", text: "Strong revenue growth (+" + growth.toFixed(1) + "% YoY) — business is expanding fast" });
   else if (growth > 0) lines.push({ icon: "→", color: "#e07510", text: "Moderate revenue growth (+" + growth.toFixed(1) + "% YoY) — steady but not explosive" });
-  else lines.push({ icon: "↓", color: "#dc2626", text: "Revenue shrinking (" + growth.toFixed(1) + "% YoY) — sales are declining" });
+  else lines.push({ icon: "↓", color: "var(--loss)", text: "Revenue shrinking (" + growth.toFixed(1) + "% YoY) — sales are declining" });
 
   // P/E ratio
-  if (pe > 0 && pe < 15) lines.push({ icon: "↑", color: "#128257", text: "Low P/E ratio (" + pe.toFixed(1) + ") — may be undervalued relative to earnings" });
+  if (pe > 0 && pe < 15) lines.push({ icon: "↑", color: "var(--win)", text: "Low P/E ratio (" + pe.toFixed(1) + ") — may be undervalued relative to earnings" });
   else if (pe > 0 && pe < 30) lines.push({ icon: "→", color: "#e07510", text: "Average P/E ratio (" + pe.toFixed(1) + ") — fairly priced for current earnings" });
-  else if (pe > 30) lines.push({ icon: "↓", color: "#dc2626", text: "High P/E ratio (" + pe.toFixed(1) + ") — priced for high future growth, adds risk" });
-  else if (pe < 0) lines.push({ icon: "↓", color: "#dc2626", text: "Negative P/E — company is currently unprofitable" });
+  else if (pe > 30) lines.push({ icon: "↓", color: "var(--loss)", text: "High P/E ratio (" + pe.toFixed(1) + ") — priced for high future growth, adds risk" });
+  else if (pe < 0) lines.push({ icon: "↓", color: "var(--loss)", text: "Negative P/E — company is currently unprofitable" });
 
   // RSI
   if (rsi !== null) {
-    if (rsi < 30) lines.push({ icon: "↑", color: "#128257", text: "RSI " + rsi + " — oversold, possible rebound ahead" });
-    else if (rsi > 70) lines.push({ icon: "↓", color: "#dc2626", text: "RSI " + rsi + " — overbought, may pull back soon" });
+    if (rsi < 30) lines.push({ icon: "↑", color: "var(--win)", text: "RSI " + rsi + " — oversold, possible rebound ahead" });
+    else if (rsi > 70) lines.push({ icon: "↓", color: "var(--loss)", text: "RSI " + rsi + " — overbought, may pull back soon" });
     else lines.push({ icon: "→", color: "#64748b", text: "RSI " + rsi + " — neutral momentum, no extreme signals" });
   }
 
   // Beta (risk)
-  if (beta < 1) lines.push({ icon: "↑", color: "#128257", text: "Low beta (" + beta.toFixed(2) + ") — less volatile than the market" });
+  if (beta < 1) lines.push({ icon: "↑", color: "var(--win)", text: "Low beta (" + beta.toFixed(2) + ") — less volatile than the market" });
   else if (beta < 1.5) lines.push({ icon: "→", color: "#e07510", text: "Beta " + beta.toFixed(2) + " — moves similarly to the overall market" });
-  else lines.push({ icon: "↓", color: "#dc2626", text: "High beta (" + beta.toFixed(2) + ") — more volatile than the market, bigger swings" });
+  else lines.push({ icon: "↓", color: "var(--loss)", text: "High beta (" + beta.toFixed(2) + ") — more volatile than the market, bigger swings" });
 
   let rows = lines.map(function(l) {
     return "<div class='score-explainer-row'>" +
@@ -1126,7 +1130,7 @@ function buildPillarSummary(pillars) {
   var html = "<div class='pillar-summary'>";
   items.forEach(function(item) {
     var p = pillars[item.key];
-    var color = p.score >= 70 ? '#128257' : p.score >= 50 ? '#e07510' : '#dc2626';
+    var color = p.score >= 70 ? 'var(--win)' : p.score >= 50 ? '#e07510' : 'var(--loss)';
     var grade = p.score >= 85 ? 'A' : p.score >= 70 ? 'B' : p.score >= 55 ? 'C' : p.score >= 40 ? 'D' : 'F';
     html += "<div class='pillar-tile'>" +
       "<div class='pillar-score' style='color:" + color + ";'>" + p.score + "<span class='pillar-grade'>" + grade + "</span></div>" +
@@ -1171,7 +1175,7 @@ function buildScoreHistoryBars(ticker, currentScore) {
   let curr = history[history.length - 1];
   let diff = currentScore - prev.score;
   let arrow = diff > 0 ? "▲" : diff < 0 ? "▼" : "—";
-  let color = diff > 0 ? "#128257" : diff < 0 ? "#dc2626" : "#64748b";
+  let color = diff > 0 ? "var(--win)" : diff < 0 ? "var(--loss)" : "#64748b";
   let label = diff > 0 ? "improving" : diff < 0 ? "declining" : "unchanged";
 
   // Build "what changed" diff if both entries have breakdown data
@@ -1200,9 +1204,9 @@ function buildScoreHistoryBars(ticker, currentScore) {
         top.map(function(c) {
           let up = c.delta > 0;
           return "<div class='score-history-diff-row'>" +
-            "<span class='diff-arrow' style='color:" + (up ? "#128257" : "#dc2626") + ";'>" + (up ? "↑" : "↓") + "</span>" +
+            "<span class='diff-arrow' style='color:" + (up ? "var(--win)" : "var(--loss)") + ";'>" + (up ? "↑" : "↓") + "</span>" +
             "<span class='diff-name'>" + c.name + "</span>" +
-            "<span class='diff-delta' style='color:" + (up ? "#128257" : "#dc2626") + ";'>" + (up ? "+" : "") + c.delta + " pts</span>" +
+            "<span class='diff-delta' style='color:" + (up ? "var(--win)" : "var(--loss)") + ";'>" + (up ? "+" : "") + c.delta + " pts</span>" +
           "</div>";
         }).join("") +
       "</div>";
@@ -1210,7 +1214,7 @@ function buildScoreHistoryBars(ticker, currentScore) {
   }
 
   let bars = history.map(function(h) {
-    let barColor = h.score >= 65 ? "#128257" : h.score >= 50 ? "#e07510" : "#dc2626";
+    let barColor = h.score >= 65 ? "var(--win)" : h.score >= 50 ? "#e07510" : "var(--loss)";
     let height = Math.max(20, (h.score / 100) * 60);
     return "<div style='display:flex;flex-direction:column;align-items:center;gap:4px;'>" +
       "<div style='font-size:10px;color:#64748b;'>" + h.score + "</div>" +
@@ -1222,9 +1226,9 @@ function buildScoreHistoryBars(ticker, currentScore) {
     trend: "<span style='color:" + color + ";font-weight:600;font-size:12px;'>" + arrow + " " + Math.abs(diff) + " pts since " + prev.date + " — " + label + "</span>",
     bars: "<div style='display:flex;align-items:flex-end;gap:8px;margin-top:8px;padding:10px;background:var(--surface2);border-radius:10px;'>" + bars + "</div>" +
           "<div style='display:flex;gap:12px;margin-top:6px;font-size:10px;color:var(--text-muted);'>" +
-          "<span><span style='color:#128257;font-weight:700;'>■</span> Strong 65+</span>" +
+          "<span><span style='color:var(--win);font-weight:700;'>■</span> Strong 65+</span>" +
           "<span><span style='color:#e07510;font-weight:700;'>■</span> Watch 50–64</span>" +
-          "<span><span style='color:#dc2626;font-weight:700;'>■</span> Risky &lt;50</span>" +
+          "<span><span style='color:var(--loss);font-weight:700;'>■</span> Risky &lt;50</span>" +
           "</div>",
     diff: diffHtml
   };
@@ -1317,10 +1321,10 @@ function displayData(data) {
   let logoHtml = profile.logo ? "<img src='" + escHtml(profile.logo) + "' class='stock-logo'>" : "";
   let changeAmt = price - prevClose;
   let changeSign = changeAmt >= 0 ? "+" : "";
-  let changeColor = changeAmt >= 0 ? "#128257" : "#dc2626";
+  let changeColor = changeAmt >= 0 ? "var(--win)" : "var(--loss)";
   let changeArrow = changeAmt >= 0 ? "▲" : "▼";
   let changePill = prevClose > 0
-    ? "<span class='price-change-pill' style='background:" + (changeAmt >= 0 ? "rgba(18,130,87,0.12)" : "rgba(220,38,38,0.12)") + ";color:" + changeColor + ";'>" +
+    ? "<span class='price-change-pill' style='background:" + (changeAmt >= 0 ? "var(--win-bg)" : "var(--loss-bg)") + ";color:" + changeColor + ";'>" +
       changeArrow + " " + changeSign + fmt$(Math.abs(changeAmt)) + " (" + changeSign + changePct.toFixed(2) + "%)" +
       "</span>"
     : "";
@@ -1712,7 +1716,7 @@ function renderFundamentals(f) {
   let lastEarningsVal = '—';
   if (f.lastEarnings && f.lastEarnings.actual != null) {
     let beat = f.lastEarnings.estimate != null ? (f.lastEarnings.actual >= f.lastEarnings.estimate ? "Beat" : "Missed") : null;
-    let beatColor = beat === "Beat" ? "#128257" : "#dc2626";
+    let beatColor = beat === "Beat" ? "var(--win)" : "var(--loss)";
     lastEarningsVal = "$" + f.lastEarnings.actual.toFixed(2) +
       (beat ? " <span style='color:" + beatColor + ";font-weight:700;font-size:11px;'>" + beat + "</span>" : "");
   }
@@ -1721,9 +1725,9 @@ function renderFundamentals(f) {
   var zVal = '—', zColor = 'var(--text)', zLabel = '';
   if (f.zScore !== null && f.zScore !== undefined) {
     zVal = f.zScore.toFixed(2);
-    if (f.zScore >= 3)      { zColor = '#128257'; zLabel = 'Safe'; }
+    if (f.zScore >= 3)      { zColor = 'var(--win)'; zLabel = 'Safe'; }
     else if (f.zScore >= 1.81) { zColor = '#e07510'; zLabel = 'Grey Zone'; }
-    else                    { zColor = '#dc2626'; zLabel = 'Distress'; }
+    else                    { zColor = 'var(--loss)'; zLabel = 'Distress'; }
     zVal = '<span style="color:' + zColor + ';font-weight:700;">' + zVal + '</span><span style="font-size:11px;color:' + zColor + ';margin-left:4px;">(' + zLabel + ')</span>';
   }
 
@@ -1823,9 +1827,9 @@ function renderEarningsCard(nextEarningsDate, lastEarnings, companyName) {
 
   var urgencyColor, countdownText, urgencyBg;
   if (daysUntil <= 0) {
-    urgencyColor = '#dc2626'; countdownText = 'Today'; urgencyBg = 'rgba(220,38,38,0.08)';
+    urgencyColor = 'var(--loss)'; countdownText = 'Today'; urgencyBg = 'rgba(155,93,229,0.08)';
   } else if (daysUntil === 1) {
-    urgencyColor = '#dc2626'; countdownText = 'Tomorrow'; urgencyBg = 'rgba(220,38,38,0.08)';
+    urgencyColor = 'var(--loss)'; countdownText = 'Tomorrow'; urgencyBg = 'rgba(155,93,229,0.08)';
   } else if (daysUntil <= 7) {
     urgencyColor = '#e07510'; countdownText = 'In ' + daysUntil + ' days'; urgencyBg = 'rgba(224,117,16,0.08)';
   } else if (daysUntil <= 30) {
@@ -1839,7 +1843,7 @@ function renderEarningsCard(nextEarningsDate, lastEarnings, companyName) {
     var beat = lastEarnings.estimate != null
       ? (lastEarnings.actual >= lastEarnings.estimate ? 'Beat' : 'Missed')
       : null;
-    var beatColor = beat === 'Beat' ? '#128257' : '#dc2626';
+    var beatColor = beat === 'Beat' ? 'var(--win)' : 'var(--loss)';
     lastHtml = '<div class="earnings-last">' +
       '<span class="earnings-last-label">Last quarter:</span> ' +
       '<span class="earnings-last-val">$' + lastEarnings.actual.toFixed(2) + ' EPS</span>' +
@@ -2212,11 +2216,11 @@ function renderScoreExplainer(score) {
   var el = document.getElementById('score-explainer-card');
   if (!el) return;
   var ranges = [
-    { min: 85, max: 100, color: '#0a6642', label: 'Exceptional', desc: 'Top-tier fundamentals across nearly every pillar. Very few stocks reach this level.' },
-    { min: 70, max: 84,  color: '#128257', label: 'Strong',      desc: 'Solid business quality and safety. Well-run company with manageable risk.' },
+    { min: 85, max: 100, color: '#16a34a', label: 'Exceptional', desc: 'Top-tier fundamentals across nearly every pillar. Very few stocks reach this level.' },
+    { min: 70, max: 84,  color: '#16a34a', label: 'Strong',      desc: 'Solid business quality and safety. Well-run company with manageable risk.' },
     { min: 55, max: 69,  color: '#c17d08', label: 'Watch',       desc: 'Some positives, but notable concerns. Worth monitoring before acting.' },
     { min: 40, max: 54,  color: '#c4430f', label: 'Weak',        desc: 'Multiple problem areas. Needs significant improvement before showing strength.' },
-    { min: 0,  max: 39,  color: '#dc2626', label: 'Risky',       desc: 'Major red flags across pillars. High risk — research very carefully.' },
+    { min: 0,  max: 39,  color: '#9b5de5', label: 'Risky',       desc: 'Major red flags across pillars. High risk — research very carefully.' },
   ];
   var current = ranges.find(function(r) { return score >= r.min && score <= r.max; });
 
@@ -2458,7 +2462,7 @@ function toggleScoreWhy(btn) {
 }
 
 function scoreBar(label, score, tooltip) {
-  let color = score >= 7 ? "#128257" : score >= 4 ? "#e07510" : "#dc2626";
+  let color = score >= 7 ? "var(--win)" : score >= 4 ? "#e07510" : "var(--loss)";
   let verdictClass = score >= 7 ? "good" : score >= 4 ? "mid" : "bad";
   let verdictText = score >= 7 ? "Strong" : score >= 4 ? "Average" : "Weak";
   let width = (score / 10) * 100;
@@ -2654,14 +2658,14 @@ function renderPriceChart(prices, dates, volumes, ohlc) {
   var theme = getChartTheme();
 
   var isUp = prices.length > 0 && prices[prices.length - 1] >= prices[0];
-  var lineColor = isUp ? '#128257' : '#dc2626';
+  var lineColor = isUp ? theme.win : theme.loss;
   var maxVol = volumes.length > 0 ? Math.max.apply(null, volumes) : 1;
 
   var canvas = document.getElementById('priceChart');
   var ctx = canvas.getContext('2d');
   var gradientFill = ctx.createLinearGradient(0, 0, 0, canvas.offsetHeight || 240);
-  gradientFill.addColorStop(0, isUp ? 'rgba(18,130,87,0.18)' : 'rgba(220,38,38,0.18)');
-  gradientFill.addColorStop(1, isUp ? 'rgba(18,130,87,0.00)' : 'rgba(220,38,38,0.00)');
+  gradientFill.addColorStop(0, 'rgba(' + (isUp ? theme.winAlpha : theme.lossAlpha) + ',0.18)');
+  gradientFill.addColorStop(1, 'rgba(' + (isUp ? theme.winAlpha : theme.lossAlpha) + ',0.00)');
 
   var datasets = [
     {
@@ -2760,7 +2764,7 @@ function renderCandlestickChart(ohlcData, dates, volumes) {
     return [Math.min(d.o, d.c), Math.max(d.o, d.c)];
   });
   var colors = ohlcData.map(function(d) {
-    return d.c >= d.o ? 'rgba(18,130,87,0.9)' : 'rgba(220,38,38,0.9)';
+    return d.c >= d.o ? 'rgba(' + theme.winAlpha + ',0.9)' : 'rgba(' + theme.lossAlpha + ',0.9)';
   });
   var maxVol = volumes.length > 0 ? Math.max.apply(null, volumes) : 1;
 
@@ -2788,7 +2792,7 @@ function renderCandlestickChart(ohlcData, dates, volumes) {
         var yLow  = chart.scales.yPrice.getPixelForValue(d.l);
         var yBodyTop    = Math.min(bar.y, bar.base);
         var yBodyBottom = Math.max(bar.y, bar.base);
-        ctx.strokeStyle = d.c >= d.o ? '#128257' : '#dc2626';
+        ctx.strokeStyle = d.c >= d.o ? theme.win : theme.loss;
         ctx.lineWidth = 1.5;
         ctx.beginPath(); ctx.moveTo(x, yHigh); ctx.lineTo(x, yBodyTop); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(x, yBodyBottom); ctx.lineTo(x, yLow); ctx.stroke();
@@ -2912,22 +2916,22 @@ function getSectorContext(industry, pe, margin, growth, beta) {
 
   if (pe > 0 && avg.pe) {
     let diff = (((pe - avg.pe) / avg.pe) * 100).toFixed(0);
-    let color = diff > 20 ? "#dc2626" : diff > 0 ? "#e07510" : "#128257";
+    let color = diff > 20 ? "var(--loss)" : diff > 0 ? "#e07510" : "var(--win)";
     rows += "<div class='sector-row'><span class='sector-label'>P/E Ratio</span><span class='sector-val'>" + pe.toFixed(1) + "</span><span class='sector-vs'>vs avg " + avg.pe + "</span><span class='sector-verdict' style='color:" + color + ";'>" + Math.abs(diff) + "% " + (diff > 0 ? "more expensive" : "cheaper") + " than peers</span></div>";
   }
   if (margin !== 0 && avg.margin) {
     let diff = (margin - avg.margin).toFixed(1);
-    let color = diff >= 0 ? "#128257" : "#dc2626";
+    let color = diff >= 0 ? "var(--win)" : "var(--loss)";
     rows += "<div class='sector-row'><span class='sector-label'>Profit Margin</span><span class='sector-val'>" + margin.toFixed(1) + "%</span><span class='sector-vs'>vs avg " + avg.margin + "%</span><span class='sector-verdict' style='color:" + color + ";'>" + Math.abs(diff) + "% " + (diff >= 0 ? "above" : "below") + " average</span></div>";
   }
   if (growth !== 0 && avg.growth) {
     let diff = (growth - avg.growth).toFixed(1);
-    let color = diff >= 0 ? "#128257" : "#dc2626";
+    let color = diff >= 0 ? "var(--win)" : "var(--loss)";
     rows += "<div class='sector-row'><span class='sector-label'>Revenue Growth</span><span class='sector-val'>" + growth.toFixed(1) + "%</span><span class='sector-vs'>vs avg " + avg.growth + "%</span><span class='sector-verdict' style='color:" + color + ";'>Growing " + Math.abs(diff) + "% " + (diff >= 0 ? "faster than" : "slower than") + " peers</span></div>";
   }
   if (beta > 0 && avg.beta) {
     let diff = (beta - avg.beta).toFixed(2);
-    let color = diff <= 0 ? "#128257" : "#e07510";
+    let color = diff <= 0 ? "var(--win)" : "#e07510";
     rows += "<div class='sector-row'><span class='sector-label'>Risk (Beta)</span><span class='sector-val'>" + beta.toFixed(2) + "</span><span class='sector-vs'>vs avg " + avg.beta + "</span><span class='sector-verdict' style='color:" + color + ";'>" + Math.abs(diff) + " " + (diff <= 0 ? "less volatile" : "more volatile") + " than peers</span></div>";
   }
   if (!rows) return "";
@@ -2940,7 +2944,7 @@ function getRiskProfileWarning(beta, totalScore) {
   // Classify the stock itself
   let stockLabel, stockColor;
   if (totalScore >= 70 && beta <= 1.2) {
-    stockLabel = "Defensive Growth"; stockColor = "#128257";
+    stockLabel = "Defensive Growth"; stockColor = "var(--win)";
   } else if (totalScore >= 65) {
     stockLabel = "Aggressive Growth"; stockColor = "#0ea5e9";
   } else if (totalScore >= 50) {
@@ -2948,7 +2952,7 @@ function getRiskProfileWarning(beta, totalScore) {
   } else if (totalScore >= 35) {
     stockLabel = "Speculative"; stockColor = "#c4430f";
   } else {
-    stockLabel = "High Risk"; stockColor = "#dc2626";
+    stockLabel = "High Risk"; stockColor = "var(--loss)";
   }
 
   // How it fits the user's profile
@@ -3050,7 +3054,7 @@ function quizBudgetInput(input) {
   }
   if (val < minAmt) {
     if (btn) btn.disabled = true;
-    if (hint) { hint.textContent = 'Minimum is ' + (_currency === 'MXN' ? 'MX$1,000' : '$100'); hint.style.color = '#ef4444'; }
+    if (hint) { hint.textContent = 'Minimum is ' + (_currency === 'MXN' ? 'MX$1,000' : '$100'); hint.style.color = 'var(--loss)'; }
     return;
   }
   if (btn) btn.disabled = false;
@@ -3426,7 +3430,7 @@ function _cmpStockHeader(d) {
   var logoHtml = d.logo
     ? "<img src='" + escHtml(d.logo) + "' class='cmp-logo' onerror=\"this.style.display='none'\">"
     : "<div class='cmp-logo cmp-logo-placeholder'>" + escHtml(d.ticker.slice(0,2)) + "</div>";
-  var changeColor = (d.changePct || 0) >= 0 ? '#128257' : '#dc2626';
+  var changeColor = (d.changePct || 0) >= 0 ? 'var(--win)' : 'var(--loss)';
   var changeStr = d.changePct != null ? ((d.changePct >= 0 ? '+' : '') + d.changePct.toFixed(2) + '%') : '';
   return "<div class='cmp-col-header'>" +
     logoHtml +
@@ -3711,11 +3715,11 @@ function renderWatchlist() {
 
   // Render immediately with loading placeholders for prices
   function buildRow(item, price, changePct) {
-    let scoreColor = item.score >= 65 ? "#128257" : item.score >= 50 ? "#e07510" : "#dc2626";
+    let scoreColor = item.score >= 65 ? "var(--win)" : item.score >= 50 ? "#e07510" : "var(--loss)";
     let signal = item.score >= 65 ? "Strong" : item.score >= 50 ? "Watch" : "Risky";
     let priceHtml = price == null
       ? "<span class='wl-price'>—</span>"
-      : "<span class='wl-price'>" + fmt$(price) + "</span><span class='wl-change' style='color:" + (changePct >= 0 ? "#128257" : "#dc2626") + ";'>" + (changePct >= 0 ? "+" : "") + changePct.toFixed(2) + "%</span>";
+      : "<span class='wl-price'>" + fmt$(price) + "</span><span class='wl-change' style='color:" + (changePct >= 0 ? "var(--win)" : "var(--loss)") + ";'>" + (changePct >= 0 ? "+" : "") + changePct.toFixed(2) + "%</span>";
     let hist = buildScoreHistoryBars(item.ticker, item.score);
     let histDrawer = hist.bars
       ? "<div class='wl-history-drawer' id='wl-hist-" + item.ticker + "' style='display:none;'>" +
@@ -4809,7 +4813,7 @@ function renderTrending(data) {
   if (data.length === 0) { list.innerHTML = prefix + '<div class="trending-loading">No matches.</div>'; return; }
   list.innerHTML = prefix + data.map(function(r) {
     let up = r.changePct >= 0;
-    let color = up ? '#128257' : '#dc2626';
+    let color = up ? 'var(--win)' : 'var(--loss)';
     let sign = up ? '+' : '';
     let initials = r.symbol.substring(0, 2).toUpperCase();
     let bigMover = Math.abs(r.changePct) > 5;
@@ -4925,7 +4929,7 @@ function loadMarketOverview() {
       var arrow = changePct >= 0 ? "▲" : "▼";
       var sign = changePct >= 0 ? "+" : "";
       var changeStr = arrow + " " + sign + changePct.toFixed(2) + "%";
-      var changeColor = changePct >= 0 ? "#128257" : "#dc2626";
+      var changeColor = changePct >= 0 ? "var(--win)" : "var(--loss)";
       _updateTickerEl('[data-mid="' + index.priceKey + '"]', priceStr, null);
       _updateTickerEl('[data-mid="' + index.changeKey + '"]', changeStr, changeColor);
     });
@@ -4937,7 +4941,7 @@ function loadMarketOverview() {
       var arrow = changePct >= 0 ? "▲" : "▼";
       var sign = changePct >= 0 ? "+" : "";
       var changeStr = arrow + " " + sign + changePct.toFixed(2) + "%";
-      var changeColor = changePct >= 0 ? "#128257" : "#dc2626";
+      var changeColor = changePct >= 0 ? "var(--win)" : "var(--loss)";
       _updateTickerEl('[data-wlprice="' + item.ticker + '"]', priceStr, null);
       _updateTickerEl('[data-wlchange="' + item.ticker + '"]', changeStr, changeColor);
     });
@@ -5029,7 +5033,7 @@ function renderSectorAbout(name, changePct) {
   if (!m) { el.style.display = 'none'; return; }
 
   var up = changePct >= 0;
-  var color = changePct === 0 ? 'var(--text-muted)' : (up ? 'var(--accent-green, #128257)' : '#dc2626');
+  var color = changePct === 0 ? 'var(--text-muted)' : (up ? 'var(--win)' : 'var(--loss)');
   var sign = up ? '+' : '';
   var perfText = changePct !== 0 ? "<span style='color:" + color + ";font-weight:600;'>" + sign + changePct.toFixed(2) + "% today</span>" : '<span style="color:var(--text-muted);">Market closed</span>';
 
@@ -5109,7 +5113,7 @@ function showSectorStocks(name) {
       var price = q.price || 0;
       var dp = q.changePct || 0;
       var up = dp >= 0;
-      var color = up ? 'var(--accent-green, #128257)' : '#dc2626';
+      var color = up ? 'var(--win)' : 'var(--loss)';
       row.querySelector('.sector-stock-price').textContent = price > 0 ? fmt$(price) : '—';
       var chgEl = row.querySelector('.sector-stock-chg');
       chgEl.textContent = price > 0 ? (up ? '+' : '') + dp.toFixed(2) + '%' : '—';
@@ -5168,7 +5172,7 @@ function renderSectors(data) {
   let maxAbs = Math.max.apply(null, data.map(function(s) { return Math.abs(s.changePct); })) || 1;
   let html = data.map(function(s) {
     let up = s.changePct >= 0;
-    let color = allZero ? 'var(--text-muted)' : (up ? '#128257' : '#dc2626');
+    let color = allZero ? 'var(--text-muted)' : (up ? 'var(--win)' : 'var(--loss)');
     let sign = up ? '+' : '';
     let barWidth = allZero ? 50 : Math.round((Math.abs(s.changePct) / maxAbs) * 100);
     let changeLabel = allZero ? '—' : sign + s.changePct.toFixed(2) + '%';
@@ -5479,7 +5483,7 @@ function confirmDeletePortfolio(id) {
       : 'This will archive <strong>' + escHtml(port.name) + '</strong>. Your full trade history will be saved under Closed Portfolios.';
     let archiveBtn = document.createElement('button');
     archiveBtn.textContent = 'Archive';
-    archiveBtn.style.cssText = 'flex:1;background:#128257;color:white;border:none;';
+    archiveBtn.style.cssText = 'flex:1;background:var(--win);color:#0d0d14;border:none;';
     archiveBtn.addEventListener('click', function() { overlay.remove(); deletePortfolio(id); });
     btnRow.appendChild(cancelBtn);
     btnRow.appendChild(archiveBtn);
@@ -5669,8 +5673,8 @@ function paperBalanceInput(input) {
   var hint = document.getElementById('paper-balance-hint');
   var btn  = document.getElementById('paper-create-btn');
   if (!val || val < minAmt) {
-    if (wrap) wrap.style.borderColor = val > 0 ? '#ef4444' : 'var(--border)';
-    if (hint) { hint.textContent = val > 0 ? 'Minimum ' + (_currency === 'MXN' ? 'MX$1,000' : '$100') : ''; hint.style.color = '#ef4444'; }
+    if (wrap) wrap.style.borderColor = val > 0 ? 'var(--loss)' : 'var(--border)';
+    if (hint) { hint.textContent = val > 0 ? 'Minimum ' + (_currency === 'MXN' ? 'MX$1,000' : '$100') : ''; hint.style.color = 'var(--loss)'; }
     if (btn)  btn.style.opacity = '0.4', btn.disabled = true;
   } else {
     if (wrap) wrap.style.borderColor = '#7c3aed';
@@ -5917,9 +5921,9 @@ function _wizardBudgetInput(input) {
   var hint = document.getElementById('wizard-budget-hint');
   var nextBtn = document.getElementById('wizard-next-btn');
   if (!val || val < minAmt) {
-    if (wrap) wrap.style.borderColor = val > 0 ? '#ef4444' : 'var(--border)';
+    if (wrap) wrap.style.borderColor = val > 0 ? 'var(--loss)' : 'var(--border)';
     if (hint) hint.innerHTML = val > 0
-      ? '<span style="color:#ef4444;">Minimum is ' + (_currency === 'MXN' ? 'MX$1,000' : '$100') + '</span>'
+      ? '<span style="color:var(--loss);">Minimum is ' + (_currency === 'MXN' ? 'MX$1,000' : '$100') + '</span>'
       : (_currency === 'MXN' ? 'Mínimo MX$1,000' : 'Minimum $100') + ' · We use fractional shares so any amount works';
     if (nextBtn) nextBtn.style.opacity = '0.4';
   } else {
@@ -6098,7 +6102,7 @@ function _showWizardPreview(picks, budget, profile, today) {
   var profileColor = {
     Aggressive: '#f59e0b',
     Balanced:   '#3b82f6',
-    Conservative: '#128257'
+    Conservative: 'var(--win)'
   }[profile] || '#3b82f6';
 
   var perStock = budget / picks.length;
@@ -6114,7 +6118,7 @@ function _showWizardPreview(picks, budget, profile, today) {
   var picksHtml = picks.map(function(p) {
     var name = nameMap[p.ticker] || p.ticker;
     var shares = p.price > 0 ? (perStock / p.price).toFixed(2) : '—';
-    var scoreColor = p.score >= 65 ? '#128257' : p.score >= 50 ? '#c17d08' : '#dc2626';
+    var scoreColor = p.score >= 65 ? 'var(--win)' : p.score >= 50 ? '#c17d08' : 'var(--loss)';
     return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">' +
       '<div>' +
         '<div style="font-size:14px;font-weight:700;">' + p.ticker + ' <span style="font-size:12px;font-weight:400;color:var(--text-muted);">· ' + escHtml(name) + '</span></div>' +
@@ -6174,7 +6178,7 @@ function openPortfolioMenu(id) {
   menu.className = 'port-tab-menu-popup';
   menu.innerHTML =
     '<button onclick="document.getElementById(\'port-tab-menu-popup\').remove();promptRenamePortfolio(\'' + id + '\');">Rename</button>' +
-    '<button onclick="document.getElementById(\'port-tab-menu-popup\').remove();confirmDeletePortfolio(\'' + id + '\');" style="color:#ef4444;">Delete</button>';
+    '<button onclick="document.getElementById(\'port-tab-menu-popup\').remove();confirmDeletePortfolio(\'' + id + '\');" style="color:var(--loss);">Delete</button>';
   let btn = document.getElementById('port-menu-btn-' + id);
   if (btn) { btn.parentNode.appendChild(menu); }
   else { document.getElementById('portfolio-tabs-bar').appendChild(menu); }
@@ -6481,8 +6485,8 @@ function renderPortfolio() {
     let totalGain = totalValue - totalCost;
     let totalGainPct = totalCost > 0 ? ((totalGain / totalCost) * 100) : 0;
     let avgScore = scores.length > 0 ? Math.round(scores.reduce(function(a, b) { return a + b; }, 0) / scores.length) : null;
-    let gainColor = totalGain >= 0 ? '#128257' : '#dc2626';
-    let dayColor = totalDayChange >= 0 ? '#128257' : '#dc2626';
+    let gainColor = totalGain >= 0 ? 'var(--win)' : 'var(--loss)';
+    let dayColor = totalDayChange >= 0 ? 'var(--win)' : 'var(--loss)';
 
     // Summary bar
     var psBar = document.getElementById('port-summary-bar');
@@ -6517,7 +6521,7 @@ function renderPortfolio() {
     let realizedCard = document.getElementById('port-realized-card');
     if (realizedEl) {
       realizedEl.textContent = fmtSigned$(totalRealized);
-      realizedEl.style.color = totalRealized >= 0 ? '#128257' : '#dc2626';
+      realizedEl.style.color = totalRealized >= 0 ? 'var(--win)' : 'var(--loss)';
     }
     if (realizedCard) { realizedCard.classList.remove('metric-up','metric-down'); realizedCard.classList.add(totalRealized >= 0 ? 'metric-up' : 'metric-down'); }
     let gainCard = document.getElementById('port-gain-card');
@@ -6532,10 +6536,10 @@ function renderPortfolio() {
     if (best && worst) {
       document.getElementById('port-best-ticker').textContent = best.ticker;
       document.getElementById('port-best-gain').textContent = fmtSigned$(best.gain) + ' · ' + (best.gainPct >= 0 ? '+' : '') + best.gainPct.toFixed(1) + '%';
-      document.getElementById('port-best-gain').style.color = best.gain >= 0 ? '#128257' : '#dc2626';
+      document.getElementById('port-best-gain').style.color = best.gain >= 0 ? 'var(--win)' : 'var(--loss)';
       document.getElementById('port-worst-ticker').textContent = worst.ticker;
       document.getElementById('port-worst-gain').textContent = fmtSigned$(worst.gain) + ' · ' + (worst.gainPct >= 0 ? '+' : '') + worst.gainPct.toFixed(1) + '%';
-      document.getElementById('port-worst-gain').style.color = worst.gain >= 0 ? '#128257' : '#dc2626';
+      document.getElementById('port-worst-gain').style.color = worst.gain >= 0 ? 'var(--win)' : 'var(--loss)';
     }
     if (failedTickers.length > 0) {
       showToast('Prices unavailable for ' + failedTickers.join(', ') + ' — showing cost basis instead.');
@@ -6589,7 +6593,7 @@ function renderPortfolio() {
       let rate = (typeof _fxRate !== 'undefined' ? _fxRate : 1);
       let netUSD = totalValue + balUSD - startUSD;
       let netPct = startUSD > 0 ? (netUSD / startUSD) * 100 : 0;
-      let netColor = netUSD >= 0 ? '#a855f7' : '#dc2626';
+      let netColor = netUSD >= 0 ? '#a855f7' : 'var(--loss)';
       let balDisplay = _currency === 'MXN' ? 'MX$' + Math.round(balUSD * rate).toLocaleString('en-US') : '$' + Math.round(balUSD).toLocaleString('en-US');
       let startDisplay = _currency === 'MXN' ? 'MX$' + Math.round(startUSD * rate).toLocaleString('en-US') : '$' + Math.round(startUSD).toLocaleString('en-US');
       if (!paperBanner) {
@@ -6619,10 +6623,10 @@ function renderPortfolio() {
       if (!benchEl) return;
       if (!bench) { benchEl.style.display = 'none'; return; }
       let youVsSpy = totalGainPct - bench.spyReturn;
-      let vsColor = youVsSpy >= 0 ? '#128257' : '#dc2626';
+      let vsColor = youVsSpy >= 0 ? 'var(--win)' : 'var(--loss)';
       let vsText = youVsSpy >= 0 ? '↑ Beating the market' : '↓ Behind the market';
-      let youColor = totalGainPct >= 0 ? '#128257' : '#dc2626';
-      let spyColor = bench.spyReturn >= 0 ? '#128257' : '#dc2626';
+      let youColor = totalGainPct >= 0 ? 'var(--win)' : 'var(--loss)';
+      let spyColor = bench.spyReturn >= 0 ? 'var(--win)' : 'var(--loss)';
       benchEl.innerHTML =
         '<span class="port-bench-label">vs S&P 500 since ' + bench.since + '</span>' +
         '<span class="port-bench-stat" style="color:' + youColor + ';">You ' + (totalGainPct >= 0 ? '+' : '') + totalGainPct.toFixed(1) + '%</span>' +
@@ -6767,7 +6771,7 @@ function openSellModal(ticker, currentPrice, totalShares) {
     }
     let avgCostSold = sh > 0 ? weightedCost / sh : 0;
     let realizedPct = avgCostSold > 0 ? ((sp - avgCostSold) / avgCostSold * 100) : 0;
-    let color = realizedGain >= 0 ? '#128257' : '#dc2626';
+    let color = realizedGain >= 0 ? 'var(--win)' : 'var(--loss)';
     let remaining = totalSh - sh;
     let proceeds = sh * sp;
     preview.innerHTML =
@@ -6861,12 +6865,12 @@ function renderClosedPositions() {
   if (closed.length === 0) { el.style.display = 'none'; return; }
   el.style.display = 'block';
   let totalRealized = closed.reduce(function(sum, c) { return sum + c.realizedGain; }, 0);
-  let totalColor = totalRealized >= 0 ? '#128257' : '#dc2626';
+  let totalColor = totalRealized >= 0 ? 'var(--win)' : 'var(--loss)';
   let listEl = document.getElementById('closed-positions-list');
   let totalEl = document.getElementById('closed-positions-total');
   if (listEl) {
     listEl.innerHTML = closed.slice().reverse().map(function(c) {
-      let gc = c.realizedGain >= 0 ? '#128257' : '#dc2626';
+      let gc = c.realizedGain >= 0 ? 'var(--win)' : 'var(--loss)';
       return '<div class="closed-row">' +
         '<div class="closed-row-left">' +
           '<div class="closed-row-ticker">' + escHtml(c.ticker) + '</div>' +
@@ -6916,12 +6920,12 @@ function renderArchivedPortfolios() {
     var a = e.data;
     var id = e.id;
     var gainPct = a.totalInvested > 0 ? ((a.totalRealized / a.totalInvested) * 100) : 0;
-    var gc = a.totalRealized >= 0 ? '#128257' : '#dc2626';
+    var gc = a.totalRealized >= 0 ? 'var(--win)' : 'var(--loss)';
     var gainSign = a.totalRealized >= 0 ? '+' : '';
 
     // Closed positions list (expanded body)
     var closedRows = (a.closedPositions || []).slice().reverse().map(function(c) {
-      var cg = (c.realizedGain || 0) >= 0 ? '#128257' : '#dc2626';
+      var cg = (c.realizedGain || 0) >= 0 ? 'var(--win)' : 'var(--loss)';
       return '<div class="archived-closed-row">' +
         '<div class="archived-closed-left">' +
           '<span class="archived-closed-ticker">' + escHtml(c.ticker) + '</span>' +
@@ -7019,7 +7023,7 @@ function renderPortfolioEarningsCalendar(tickers) {
 
     // Soonest event — shown in the collapsed header
     var soonest = upcoming[0];
-    var soonestColor = soonest.daysAway === 0 ? '#dc2626' : soonest.daysAway <= 7 ? '#e07510' : 'var(--text-muted)';
+    var soonestColor = soonest.daysAway === 0 ? 'var(--loss)' : soonest.daysAway <= 7 ? '#e07510' : 'var(--text-muted)';
     var soonestText = soonest.daysAway === 0 ? 'Today' : soonest.daysAway === 1 ? 'Tomorrow' : 'In ' + soonest.daysAway + 'd';
 
     // Preserve open/closed state across re-renders
@@ -7037,7 +7041,7 @@ function renderPortfolioEarningsCalendar(tickers) {
       '</div>' +
       '<div class="port-earnings-list" id="port-earnings-list" style="display:' + (wasOpen ? 'flex' : 'none') + ';">' +
       upcoming.map(function(e) {
-        var urgColor = e.daysAway === 0 ? '#dc2626' : e.daysAway <= 7 ? '#e07510' : 'var(--text-muted)';
+        var urgColor = e.daysAway === 0 ? 'var(--loss)' : e.daysAway <= 7 ? '#e07510' : 'var(--text-muted)';
         var countText = e.daysAway === 0 ? 'Today' : e.daysAway === 1 ? 'Tomorrow' : 'In ' + e.daysAway + 'd';
         var dateStr = new Date(e.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         return '<div class="port-earnings-row" onclick="quickSearch(\'' + escHtml(e.ticker) + '\')">' +
@@ -7081,8 +7085,8 @@ function renderPortfolioRows(data) {
   }
   list.innerHTML = '<div class="port-stock-header"><div>Stock</div><div>Mkt Value</div><div class="hide-mobile">Cost</div><div class="hide-mobile">Unrealized G/L</div><div class="hide-mobile">Day Change</div><div>Signal</div></div>' +
     data.map(function(s) {
-      let gc = s.gain >= 0 ? '#128257' : '#dc2626';
-      let dc = s.dayChangeAmt >= 0 ? '#128257' : '#dc2626';
+      let gc = s.gain >= 0 ? 'var(--win)' : 'var(--loss)';
+      let dc = s.dayChangeAmt >= 0 ? 'var(--win)' : 'var(--loss)';
       let hasMultiple = s.lots && s.lots.length > 1;
       let lotsHtml = '';
       if (s.lots) {
@@ -7092,7 +7096,7 @@ function renderPortfolioRows(data) {
           let lotValue = s.currentPrice * lot.shares;
           let lotGain = lotValue - lotCost;
           let lotGainPct = lotCost > 0 ? ((lotGain / lotCost) * 100) : 0;
-          let lotGc = lotGain >= 0 ? '#128257' : '#dc2626';
+          let lotGc = lotGain >= 0 ? 'var(--win)' : 'var(--loss)';
           return '<div class="port-lot-row">' +
             '<div class="port-lot-info">' +
               '<span class="port-lot-num">Lot ' + (i + 1) + '</span>' +
@@ -7208,7 +7212,7 @@ var SECTOR_COLORS = {
   'Technology':  '#6366f1',
   'Healthcare':  '#10b981',
   'Financials':  '#f59e0b',
-  'Energy':      '#ef4444',
+  'Energy':      'var(--loss)',
   'Consumer':    '#ec4899',
   'Industrials': '#8b5cf6',
   'Real Estate': '#14b8a6',
@@ -7241,16 +7245,16 @@ function renderSectorAllocation(stockData, totalValue) {
   var numHoldings = stockData.length;
   var grade, gradeColor, gradeNote;
   if (numSectors >= 4 && topPct < 50 && numHoldings >= 5) {
-    grade = 'A'; gradeColor = '#128257';
+    grade = 'A'; gradeColor = 'var(--win)';
     gradeNote = 'Well diversified — spread across ' + numSectors + ' sectors.';
   } else if (numSectors >= 3 && topPct < 65) {
-    grade = 'B'; gradeColor = '#128257';
+    grade = 'B'; gradeColor = 'var(--win)';
     gradeNote = 'Decent spread. Consider adding stocks from other sectors.';
   } else if (numSectors >= 2 && topPct < 80) {
     grade = 'C'; gradeColor = '#e07510';
     gradeNote = 'Moderate concentration. A bad week in ' + sectors[0].name + ' could hurt significantly.';
   } else {
-    grade = 'D'; gradeColor = '#dc2626';
+    grade = 'D'; gradeColor = 'var(--loss)';
     gradeNote = 'High concentration in ' + sectors[0].name + '. Consider diversifying.';
   }
 
@@ -7323,8 +7327,9 @@ function renderHoldingsChart() {
   let pcts = filtered.map(function(h) { return base > 0 ? ((h.value - base) / base * 100) : 0; });
   // Color based on whether the line ends above or below where it started in this view
   let isUp = pcts[pcts.length - 1] >= 0;
-  let lineColor = isUp ? '#128257' : '#dc2626';
-  let fillColor = isUp ? 'rgba(18,130,87,0.08)' : 'rgba(220,38,38,0.08)';
+  let _cht1 = getChartTheme();
+  let lineColor = isUp ? _cht1.win : _cht1.loss;
+  let fillColor = isUp ? 'rgba(' + _cht1.winAlpha + ',0.08)' : 'rgba(' + _cht1.lossAlpha + ',0.08)';
 
   if (holdingsChartInstance) holdingsChartInstance.destroy();
   holdingsChartInstance = new Chart(canvas.getContext('2d'), {
@@ -7483,8 +7488,9 @@ function renderPortfolioLineChart() {
   let labels = history.map(function(h) { return h.date; });
   let pcts   = history.map(function(h) { return base > 0 ? parseFloat(((h.value - base) / base * 100).toFixed(2)) : 0; });
   let isUp   = pcts[pcts.length - 1] >= 0;
-  let lineColor = isUp ? '#128257' : '#dc2626';
-  let fillColor = isUp ? 'rgba(18,130,87,0.06)' : 'rgba(220,38,38,0.06)';
+  let _cht2 = getChartTheme();
+  let lineColor = isUp ? _cht2.win : _cht2.loss;
+  let fillColor = isUp ? 'rgba(' + _cht2.winAlpha + ',0.06)' : 'rgba(' + _cht2.lossAlpha + ',0.06)';
 
   function buildChart(spyPcts) {
     if (portfolioLineChartInstance) portfolioLineChartInstance.destroy();
@@ -7579,7 +7585,7 @@ function renderPortfolioChart(stockData, totalValue) {
   if (validStocks.length === 0) { section.style.display = 'none'; return; }
   section.style.display = 'block';
 
-  let palette = ['#128257','#0ea5e9','#e07510','#dc2626','#a29bfe','#fd79a8','#55efc4','#fdcb6e'];
+  let palette = ['var(--win)','#0ea5e9','#e07510','var(--loss)','#a29bfe','#fd79a8','#55efc4','#fdcb6e'];
   let labels  = validStocks.map(function(s) { return s.ticker; });
   let values  = validStocks.map(function(s) { return s.value; });
   let colors  = validStocks.map(function(_, i) { return palette[i % palette.length]; });
@@ -8158,7 +8164,7 @@ function renderLeaderboardEntries(entries, bodyId, myRankId) {
     var isMe = e.uid === uid;
     var rank = medals[i] || ('#' + (i + 1));
     var sign = e.returnPct >= 0 ? '+' : '';
-    var retColor = e.returnPct >= 0 ? '#128257' : '#dc2626';
+    var retColor = e.returnPct >= 0 ? 'var(--win)' : 'var(--loss)';
     return '<div class="lb-row' + (isMe ? ' lb-row-me' : '') + '" data-idx="' + i + '" onclick="openPublicProfileModal(\'profile\',' + i + ')" style="cursor:pointer;">' +
       '<span class="lb-rank">' + rank + '</span>' +
       '<span class="lb-name">' + escHtml(e.displayName || 'Investor') + (isMe ? ' <span class="lb-you-badge">You</span>' : '') + '</span>' +
@@ -8199,7 +8205,7 @@ function renderChallengeSection() {
     if (lbSection) lbSection.style.display = 'block';
 
     var TIER_LABELS = { beginner: 'Beginner', intermediate: 'Intermediate', advanced: 'Advanced' };
-    var TIER_COLORS = { beginner: '#128257', intermediate: '#0284c7', advanced: '#7c3aed' };
+    var TIER_COLORS = { beginner: 'var(--win)', intermediate: '#0284c7', advanced: '#7c3aed' };
 
     container.innerHTML = challenges.map(function(c) {
       var hasJoined = Object.values(all).some(function(p) { return p.challengeId === c.id; });
@@ -8264,7 +8270,7 @@ function renderAdminChallengeList(challenges) {
     listEl.innerHTML = '<div class="lb-empty">No challenges yet.</div>';
     return;
   }
-  var STATUS_COLOR = { draft: '#64748b', active: '#128257', ended: '#dc2626' };
+  var STATUS_COLOR = { draft: '#64748b', active: 'var(--win)', ended: 'var(--loss)' };
   listEl.innerHTML = challenges.map(function(c) {
     var color = STATUS_COLOR[c.status] || '#64748b';
     var startStr = c.startDate ? new Date(c.startDate.seconds * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
@@ -8324,7 +8330,7 @@ function adminToggleResults(id) {
         '</div>' +
         entries.map(function(e, i) {
           var sign = e.returnPct >= 0 ? '+' : '';
-          var retColor = e.returnPct >= 0 ? '#128257' : '#dc2626';
+          var retColor = e.returnPct >= 0 ? 'var(--win)' : 'var(--loss)';
           var rank = medals[i] || ('#' + (i + 1));
           var holdingsHtml = '';
           if (e.holdings && e.holdings.length > 0) {
@@ -8600,7 +8606,7 @@ function _renderMiniLeaderboard(challengeId, containerEl) {
       var rowsHtml = top3.map(function(e, i) {
         var isMe = e.uid === uid;
         var sign = e.returnPct >= 0 ? '+' : '';
-        var retColor = e.returnPct >= 0 ? '#128257' : '#dc2626';
+        var retColor = e.returnPct >= 0 ? 'var(--win)' : 'var(--loss)';
         return '<div class="lb-row' + (isMe ? ' lb-row-me' : '') + '" data-source="mini" data-idx="' + i + '" onclick="openPublicProfileModal(\'mini\',' + i + ')" style="cursor:pointer;">' +
           '<span class="lb-rank">' + medals[i] + '</span>' +
           '<span class="lb-name">' + escHtml(e.displayName || 'Investor') + (isMe ? ' <span class="lb-you-badge">You</span>' : '') + '</span>' +
@@ -8645,7 +8651,7 @@ function openPublicProfileModal(source, idx) {
   var hue = (name.charCodeAt(0) * 37 + ((name.charCodeAt(1) || 0) * 13)) % 360;
   var avatarStyle = 'background:linear-gradient(135deg,hsl(' + hue + ',65%,55%),hsl(' + ((hue + 40) % 360) + ',75%,45%));';
   var sign = entry.returnPct >= 0 ? '+' : '';
-  var retColor = entry.returnPct >= 0 ? '#128257' : '#dc2626';
+  var retColor = entry.returnPct >= 0 ? 'var(--win)' : 'var(--loss)';
   var overlay = document.createElement('div');
   overlay.id = 'public-profile-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:3000;display:flex;align-items:center;justify-content:center;padding:24px;';
@@ -8957,7 +8963,7 @@ function renderVault() {
 
   var diff = _vault.balance - _vault.startingBalance;
   var pct = (_vault.startingBalance > 0) ? ((diff / _vault.startingBalance) * 100).toFixed(1) : '0.0';
-  var changeColor = diff >= 0 ? '#128257' : '#dc2626';
+  var changeColor = diff >= 0 ? 'var(--win)' : 'var(--loss)';
   var sign = diff >= 0 ? '+' : '';
   var bc = _vault.bankruptCount || 0;
   var badgeHtml = bc > 0
@@ -9008,7 +9014,7 @@ function _renderVaultChart() {
   if (window._vaultChart) { window._vaultChart.destroy(); window._vaultChart = null; }
   var values = hist.map(function(h) { return h.balance; });
   var isUp = values[values.length - 1] >= values[0];
-  var lc = isUp ? '#128257' : '#dc2626';
+  var lc = isUp ? 'var(--win)' : 'var(--loss)';
   window._vaultChart = new Chart(canvas, {
     type: 'line',
     data: {
@@ -9035,13 +9041,13 @@ function _renderVaultTransactions() {
     '<div class="vault-txns-title">Recent Activity</div>' +
     txns.map(function(t) {
       var isBuy = t.type === 'buy';
-      var color = isBuy ? '#dc2626' : '#128257';
+      var color = isBuy ? 'var(--loss)' : 'var(--win)';
       var sign = isBuy ? '−' : '+';
       var gainHtml = '';
       if (!isBuy && typeof t.realizedGainUSD === 'number') {
         // Convert canonical USD value to MXN for _fmtVault (which handles display currency)
         var gainMXN = t.realizedGainUSD * _vaultRate();
-        var gc = t.realizedGainUSD >= 0 ? '#128257' : '#dc2626';
+        var gc = t.realizedGainUSD >= 0 ? 'var(--win)' : 'var(--loss)';
         var gs = t.realizedGainUSD >= 0 ? '+' : '';
         gainHtml = ' \xb7 <span style="color:' + gc + ';">' + gs + _fmtVault(gainMXN) + ' gain</span>';
       }
@@ -9068,7 +9074,7 @@ function _vaultResetConfirm() {
     'You lose 100 XP and get a Bankrupt badge. 30-day cooldown starts now.</div>' +
     '<div style="display:flex;gap:10px;">' +
       '<button id="_vr-cancel" style="flex:1;background:var(--surface2);color:var(--text);border:1px solid var(--border);">Cancel</button>' +
-      '<button id="_vr-ok" style="flex:1;background:#dc2626;color:#fff;border:none;">Reset</button>' +
+      '<button id="_vr-ok" style="flex:1;background:var(--loss);color:#fff;border:none;">Reset</button>' +
     '</div>';
   overlay.appendChild(card);
   document.body.appendChild(overlay);
@@ -9345,12 +9351,12 @@ function removeAccount() {
   overlay.innerHTML =
     '<div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;max-width:360px;width:100%;">' +
       '<div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px;">Delete Account</div>' +
-      '<div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;line-height:1.5;">This will permanently delete your account, all portfolios, watchlist, and data. <strong style="color:#dc2626;">This cannot be undone.</strong></div>' +
+      '<div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;line-height:1.5;">This will permanently delete your account, all portfolios, watchlist, and data. <strong style="color:var(--loss);">This cannot be undone.</strong></div>' +
       '<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Type <strong>DELETE</strong> to confirm:</div>' +
       '<input id="_del-account-input" type="text" placeholder="DELETE" autocomplete="off" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box;margin-bottom:14px;">' +
       '<div style="display:flex;gap:10px;">' +
         '<button id="_del-account-cancel" style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px;font-size:13px;font-weight:600;color:var(--text);cursor:pointer;">Cancel</button>' +
-        '<button id="_del-account-confirm" style="flex:1;background:#dc2626;border:none;border-radius:10px;padding:10px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;opacity:0.4;" disabled>Delete Forever</button>' +
+        '<button id="_del-account-confirm" style="flex:1;background:var(--loss);border:none;border-radius:10px;padding:10px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;opacity:0.4;" disabled>Delete Forever</button>' +
       '</div>' +
     '</div>';
   document.body.appendChild(overlay);
