@@ -1032,7 +1032,7 @@
       <div id="portfolio-tabs-bar"></div>
       <div id="paper-trading-nudge" style="display:none;margin:12px 0;"></div>
 
-      <!-- Summary bar — 3 key numbers, shown when portfolio has stocks -->
+      <!-- Summary bar — 4 key numbers, shown when portfolio has stocks -->
       <div id="port-summary-bar" style="display:none;">
         <div class="psb-item">
           <div class="psb-label">Invested</div>
@@ -1046,6 +1046,10 @@
           <div class="psb-label">Total Gain / Loss</div>
           <div class="psb-value" id="psb-gain">—</div>
           <div class="psb-pct" id="psb-gain-pct"></div>
+        </div>
+        <div class="psb-item psb-item-networth">
+          <div class="psb-label">Net Worth</div>
+          <div class="psb-value" id="psb-networth">—</div>
         </div>
       </div>
 
@@ -1145,9 +1149,9 @@
                 <div id="port-ticker-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,0.12);overflow:hidden;margin-top:4px;"></div>
               </div>
               <div class="add-form-row2">
-                <input type="number" id="port-shares" placeholder="Shares" aria-label="Number of shares">
+                <input type="number" id="port-shares" placeholder="Shares" aria-label="Number of shares" oninput="_updateAnalyzeVaultAffordability()">
                 <div style="position:relative;flex:1;">
-                  <input type="number" id="port-price" placeholder="Buy price $" style="width:100%;" aria-label="Buy price in dollars">
+                  <input type="number" id="port-price" placeholder="Buy price $" style="width:100%;" aria-label="Buy price in dollars" oninput="_updateAnalyzeVaultAffordability()">
                   <span id="port-price-loading" style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--text-muted);">...</span>
                   <span style="position:absolute;right:8px;bottom:-16px;font-size:10px;color:var(--text-muted);pointer-events:none;">USD</span>
                 </div>
@@ -1172,6 +1176,7 @@
                 <span class="vault-in-form-label">IQ Vault balance</span>
                 <span class="vault-in-form-value" id="vault-balance-form">—</span>
               </div>
+              <div id="vault-afford-preview" class="vault-afford-preview" style="display:none;"></div>
               <button type="button" class="port-add-btn" onclick="addToPortfolio()">Add to Portfolio</button>
             </div>
           </div>
@@ -1378,10 +1383,12 @@
             <span id="vault-bankrupt-badge" class="vault-bankrupt-badge" style="display:none;"></span>
           </div>
           <div class="vault-hero">
-            <div class="vault-hero-label">Virtual Balance</div>
+            <div class="vault-hero-label">Net Worth</div>
             <div id="vault-balance" class="vault-hero-balance">MX$50,000</div>
+            <div id="vault-cash-line" class="vault-cash-line"></div>
             <div id="vault-change" class="vault-hero-change"></div>
           </div>
+          <div id="vault-hof" class="vault-hof" style="display:none;"></div>
           <div id="vault-chart-wrap" class="vault-chart-wrap" style="display:none;">
             <canvas id="vault-chart" height="140"></canvas>
           </div>
@@ -1389,7 +1396,7 @@
             <div class="vault-txn-header">Transaction History</div>
             <div id="vault-transactions"></div>
           </div>
-          <button class="vault-reset-btn" onclick="resetVault()">
+          <button id="vault-reset-btn" class="vault-reset-btn" onclick="resetVault()">
             <span class="vault-reset-btn-main">Reset Vault</span>
             <span class="vault-reset-warning">Bankrupt badge added · −100 XP</span>
           </button>

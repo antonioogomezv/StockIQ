@@ -3930,6 +3930,10 @@ function toggleAddStockForm() {
     var dateEl = document.getElementById('port-date');
     if (dateEl && !dateEl.value) prefillTodayDate();
     _refreshVaultBalance(); // show current vault balance when form opens
+    _updateAnalyzeVaultAffordability();
+  } else {
+    var ap = document.getElementById('vault-afford-preview');
+    if (ap) ap.style.display = 'none';
   }
 }
 
@@ -6236,6 +6240,7 @@ function createDemoPortfolio(profileType, budget) {
       });
       createPortfolio('Recommended Portfolio', true, stocks);
       showToast('Recommended Portfolio ready — ' + finalTop5.map(function(s) { return s.ticker; }).join(', '));
+      vaultWelcomeBonus();
     };
 
     if (top5.length === 0) {
@@ -6524,6 +6529,7 @@ function renderPortfolio() {
     fetchMissingPortfolioScores(stockData);
 
     if (totalValue > 0) savePortfolioValueHistory(totalValue);
+    _vaultUpdateFromPortfolio(totalValue);
     // Update weekly challenge leaderboard entry (throttled — only if portfolio has challenge)
     if (active && active.challengeId) updateChallengeEntry(totalValue, totalCost, avgScore, stockData);
     renderPortfolioChart(stockData, totalValue);
@@ -8686,11 +8692,24 @@ function renderBrokerSection() {
 }
 
 // ── IQ VAULT ─────────────────────────────────────────────────────────────────
-// Virtual bank — starts at MX$50,000. Debited on buy, credited on sell.
-// Tracks net worth history. Reset costs 100 XP and adds a Bankrupt badge.
+// Net worth = Vault cash + portfolio market value in MXN.
+// Starts at MX$50,000. MX$25,000 welcome bonus on first recommended portfolio.
+// Milestones fire on crossing thresholds. Peak preserved forever through resets.
+// Reset: 100 XP + Bankrupt badge + 30-day cooldown.
 
 var _vault = null;
 var VAULT_START = 50000; // MXN
+
+var _VAULT_UP = [
+  { t: 100000, msg: 'Doubled your money — Hall of Fame territory', xp: 25 },
+  { t: 75000,  msg: 'Up 50% — your portfolio is working for you', xp: 15 },
+  { t: 60000,  msg: 'Up 20% — outperforming most beginners', xp: 10 }
+];
+var _VAULT_DOWN = [
+  { t: 10000, msg: 'Critical — only MX$10,000 left in your Vault.' },
+  { t: 25000, msg: 'Half your Vault is gone. This is what a real drawdown feels like.' },
+  { t: 40000, msg: 'Down 20% from your start. What\'s your next move?' }
+];
 
 function _vaultLabel() {
   return new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -8699,6 +8718,17 @@ function _vaultLabel() {
 function _fmtVault(n) {
   var abs = Math.abs(Math.round(n));
   return (n < 0 ? '-' : '') + 'MX$' + abs.toLocaleString('en-US');
+}
+
+function _vaultRate() {
+  return (typeof _fxRate !== 'undefined' && _fxRate > 1) ? _fxRate : 17.5;
+}
+
+function _vaultNetWorth() {
+  if (!_vault) return 0;
+  var portMXN = (typeof portfolioStockData !== 'undefined' ? portfolioStockData : [])
+    .reduce(function(sum, s) { return sum + (s.value || 0); }, 0) * _vaultRate();
+  return _vault.balance + portMXN;
 }
 
 function _saveVault() {
@@ -8711,12 +8741,20 @@ function _saveVault() {
 function initVaultFromData(data) {
   if (data && data.vault) {
     _vault = data.vault;
+    // Ensure new fields exist on old vault documents
+    if (!_vault.milestonesFired) _vault.milestonesFired = {};
+    if (!_vault.peakNetWorth) _vault.peakNetWorth = _vault.balance || VAULT_START;
+    if (!_vault.peakNetWorthDate) _vault.peakNetWorthDate = _vaultLabel();
   } else {
     _vault = {
       balance: VAULT_START,
       transactions: [],
       netWorthHistory: [{ date: _vaultLabel(), value: VAULT_START, ts: Date.now() }],
+      peakNetWorth: VAULT_START,
+      peakNetWorthDate: _vaultLabel(),
+      milestonesFired: {},
       bankruptCount: 0,
+      lastResetAt: null,
       createdAt: Date.now()
     };
     _saveVault();
@@ -8724,15 +8762,76 @@ function initVaultFromData(data) {
   _refreshVaultBalance();
 }
 
-function _vaultRecordNetWorth() {
+function _vaultWriteHistory(netWorth) {
   if (!_vault) return;
   var label = _vaultLabel();
   var hist = _vault.netWorthHistory;
+  var rounded = Math.round(netWorth);
   if (hist.length > 0 && hist[hist.length - 1].date === label) {
-    hist[hist.length - 1].value = _vault.balance;
+    hist[hist.length - 1].value = rounded;
     hist[hist.length - 1].ts = Date.now();
   } else {
-    hist.push({ date: label, value: _vault.balance, ts: Date.now() });
+    hist.push({ date: label, value: rounded, ts: Date.now() });
+  }
+  if (netWorth > (_vault.peakNetWorth || 0)) {
+    _vault.peakNetWorth = rounded;
+    _vault.peakNetWorthDate = label;
+  }
+}
+
+function _checkVaultMilestones(netWorth) {
+  if (!_vault) return;
+  if (!_vault.milestonesFired) _vault.milestonesFired = {};
+  _VAULT_UP.forEach(function(m) {
+    var key = 'up_' + m.t;
+    if (!_vault.milestonesFired[key] && netWorth >= m.t) {
+      _vault.milestonesFired[key] = true;
+      showToast(m.msg + (m.xp ? ' +' + m.xp + ' XP' : ''));
+      if (m.xp) addXP(m.xp);
+    }
+  });
+  _VAULT_DOWN.forEach(function(m) {
+    var key = 'dn_' + m.t;
+    if (!_vault.milestonesFired[key] && netWorth <= m.t && (_vault.peakNetWorth || 0) > m.t) {
+      _vault.milestonesFired[key] = true;
+      showToast(m.msg);
+    }
+    // Allow re-firing if they recover 10K above the threshold
+    if (_vault.milestonesFired[key] && netWorth > m.t + 10000) {
+      delete _vault.milestonesFired[key];
+    }
+  });
+}
+
+// Called by renderPortfolio after prices load — source of truth for net worth
+function _vaultUpdateFromPortfolio(totalValueUSD) {
+  if (!_vault) return;
+  var netWorth = _vault.balance + totalValueUSD * _vaultRate();
+  _vaultWriteHistory(netWorth);
+  _checkVaultMilestones(netWorth);
+  _saveVault();
+  // Update net worth tile in portfolio summary bar
+  var nwEl = document.getElementById('psb-networth');
+  if (nwEl) nwEl.textContent = _fmtVault(netWorth);
+  // Refresh vault section if profile tab is open
+  var balEl = document.getElementById('vault-balance');
+  if (balEl) balEl.textContent = _fmtVault(netWorth);
+  var changeEl = document.getElementById('vault-change');
+  if (changeEl) _vaultRenderChange(netWorth, changeEl);
+}
+
+function _vaultRenderChange(netWorth, el) {
+  var diff = netWorth - VAULT_START;
+  var pct = (diff / VAULT_START * 100);
+  if (diff === 0) {
+    el.innerHTML = '<span style="color:var(--text-muted);">Starting balance</span>';
+  } else {
+    var color = diff > 0 ? '#128257' : '#dc2626';
+    var sign = diff > 0 ? '+' : '';
+    el.innerHTML =
+      '<span style="color:' + color + ';">' + sign + _fmtVault(diff) +
+      ' (' + sign + pct.toFixed(1) + '%)</span>' +
+      '<span style="color:var(--text-muted);"> vs MX$50,000 start</span>';
   }
 }
 
@@ -8743,8 +8842,6 @@ function vaultDebit(amountMXN, ticker, shares, priceUSD) {
     type: 'buy', ticker: ticker, shares: shares, priceUSD: priceUSD,
     amountMXN: Math.round(amountMXN), date: _vaultLabel(), ts: Date.now()
   });
-  _vaultRecordNetWorth();
-  _saveVault();
   _refreshVaultBalance();
 }
 
@@ -8755,22 +8852,50 @@ function vaultCredit(amountMXN, ticker, shares, priceUSD) {
     type: 'sell', ticker: ticker, shares: shares, priceUSD: priceUSD,
     amountMXN: Math.round(amountMXN), date: _vaultLabel(), ts: Date.now()
   });
-  _vaultRecordNetWorth();
-  _saveVault();
   _refreshVaultBalance();
 }
 
 function _refreshVaultBalance() {
+  if (!_vault) return;
+  var nw = _vaultNetWorth();
   var el = document.getElementById('vault-balance');
-  if (el && _vault) el.textContent = _fmtVault(_vault.balance);
+  if (el) el.textContent = _fmtVault(nw);
   var el2 = document.getElementById('vault-balance-form');
-  if (el2 && _vault) el2.textContent = _fmtVault(_vault.balance);
+  if (el2) el2.textContent = _fmtVault(_vault.balance);
   var row = document.getElementById('vault-in-form');
-  if (row) row.style.display = _vault ? 'flex' : 'none';
+  if (row) row.style.display = 'flex';
+  var nwEl = document.getElementById('psb-networth');
+  if (nwEl) nwEl.textContent = _fmtVault(nw);
+}
+
+function _updateAnalyzeVaultAffordability() {
+  var preview = document.getElementById('vault-afford-preview');
+  if (!preview || !_vault) return;
+  var shares = parseFloat(document.getElementById('port-shares') ? document.getElementById('port-shares').value : 0) || 0;
+  var price  = parseFloat(document.getElementById('port-price')  ? document.getElementById('port-price').value  : 0) || 0;
+  if (shares <= 0 || price <= 0) { preview.style.display = 'none'; return; }
+  var costMXN = shares * price * _vaultRate();
+  var afterMXN = _vault.balance - costMXN;
+  var costStr  = _fmtVault(Math.round(costMXN));
+  var afterStr = _fmtVault(Math.max(0, Math.round(afterMXN)));
+  var color = afterMXN < 0 ? '#dc2626' : 'var(--text-muted)';
+  preview.style.display = 'block';
+  preview.innerHTML =
+    '<span>' + shares + ' share' + (shares !== 1 ? 's' : '') + ' = ' + costStr + '</span>' +
+    '<span style="color:' + color + ';">Vault after: ' + afterStr + (afterMXN < 0 ? ' ⚠' : '') + '</span>';
 }
 
 function resetVault() {
   if (!_vault) return;
+  if (_vault.lastResetAt) {
+    var cooldown = 30 * 24 * 60 * 60 * 1000;
+    var elapsed = Date.now() - _vault.lastResetAt;
+    if (elapsed < cooldown) {
+      var days = Math.ceil((cooldown - elapsed) / (24 * 60 * 60 * 1000));
+      showToast('Reset available in ' + days + ' day' + (days !== 1 ? 's' : ''));
+      return;
+    }
+  }
   var modal = document.getElementById('vault-reset-confirm');
   if (modal) modal.style.display = 'flex';
 }
@@ -8779,14 +8904,28 @@ function confirmVaultReset() {
   if (!_vault) return;
   _vault.balance = VAULT_START;
   _vault.bankruptCount = (_vault.bankruptCount || 0) + 1;
+  _vault.lastResetAt = Date.now();
+  _vault.milestonesFired = {};
   _vault.transactions.push({ type: 'reset', date: _vaultLabel(), ts: Date.now() });
-  _vaultRecordNetWorth();
+  _vaultWriteHistory(VAULT_START);
   _saveVault();
   addXP(-100);
   var modal = document.getElementById('vault-reset-confirm');
   if (modal) modal.style.display = 'none';
   showToast('Vault reset · Bankrupt badge added · −100 XP');
   renderVault();
+}
+
+function vaultWelcomeBonus() {
+  if (!_vault || _vault.welcomeBonusGiven) return;
+  var bonus = 25000;
+  _vault.balance += bonus;
+  _vault.welcomeBonusGiven = true;
+  _vault.transactions.push({ type: 'welcome_bonus', amountMXN: bonus, date: _vaultLabel(), ts: Date.now() });
+  _vaultWriteHistory(_vault.balance);
+  _saveVault();
+  _refreshVaultBalance();
+  showToast('IQ Vault bonus: +MX$25,000 for completing your profile!');
 }
 
 function renderVault() {
@@ -8799,24 +8938,16 @@ function renderVault() {
     return;
   }
 
-  _refreshVaultBalance();
+  var netWorth = _vaultNetWorth();
+  var balEl = document.getElementById('vault-balance');
+  if (balEl) balEl.textContent = _fmtVault(netWorth);
 
-  // P&L vs starting balance
-  var diff = _vault.balance - VAULT_START;
-  var pct = (diff / VAULT_START * 100);
   var changeEl = document.getElementById('vault-change');
-  if (changeEl) {
-    if (diff === 0) {
-      changeEl.innerHTML = '<span style="color:var(--text-muted);">Starting balance</span>';
-    } else {
-      var color = diff > 0 ? '#128257' : '#dc2626';
-      var sign = diff > 0 ? '+' : '';
-      changeEl.innerHTML =
-        '<span style="color:' + color + ';">' + sign + _fmtVault(diff) +
-        ' (' + sign + pct.toFixed(1) + '%)</span>' +
-        '<span style="color:var(--text-muted);"> vs MX$50,000 start</span>';
-    }
-  }
+  if (changeEl) _vaultRenderChange(netWorth, changeEl);
+
+  // Cash line below net worth
+  var cashEl = document.getElementById('vault-cash-line');
+  if (cashEl) cashEl.textContent = 'Cash: ' + _fmtVault(_vault.balance);
 
   // Bankrupt badge
   var badge = document.getElementById('vault-bankrupt-badge');
@@ -8824,6 +8955,37 @@ function renderVault() {
     var bc = _vault.bankruptCount || 0;
     badge.style.display = bc > 0 ? 'inline-flex' : 'none';
     badge.textContent = 'Bankrupt' + (bc > 1 ? ' \xd7' + bc : '');
+  }
+
+  // Hall of Fame
+  var hofEl = document.getElementById('vault-hof');
+  if (hofEl) {
+    if (_vault.peakNetWorth && _vault.peakNetWorth > VAULT_START) {
+      hofEl.style.display = 'flex';
+      hofEl.innerHTML =
+        '<span class="vault-hof-label">All-time peak</span>' +
+        '<span class="vault-hof-peak">' + _fmtVault(_vault.peakNetWorth) + '</span>' +
+        '<span class="vault-hof-date">' + escHtml(_vault.peakNetWorthDate || '') + '</span>';
+    } else {
+      hofEl.style.display = 'none';
+    }
+  }
+
+  // Reset button — show cooldown if applicable
+  var resetBtn = document.getElementById('vault-reset-btn');
+  if (resetBtn && _vault.lastResetAt) {
+    var cooldown = 30 * 24 * 60 * 60 * 1000;
+    var elapsed = Date.now() - _vault.lastResetAt;
+    if (elapsed < cooldown) {
+      var days = Math.ceil((cooldown - elapsed) / (24 * 60 * 60 * 1000));
+      resetBtn.disabled = true;
+      var warn = resetBtn.querySelector('.vault-reset-warning');
+      if (warn) warn.textContent = 'Available in ' + days + ' day' + (days !== 1 ? 's' : '');
+    } else {
+      resetBtn.disabled = false;
+      var warn = resetBtn.querySelector('.vault-reset-warning');
+      if (warn) warn.textContent = 'Bankrupt badge added · −100 XP';
+    }
   }
 
   _renderVaultChart();

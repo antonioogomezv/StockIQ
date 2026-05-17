@@ -9174,4 +9174,55 @@ h2 {
   transition: border-color 0.15s;
 }
 .vault-confirm-cancel:hover { border-color: var(--text-muted); }
+/* Cash line below net worth headline */
+.vault-cash-line {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: var(--mono);
+  margin-bottom: 4px;
+}
+/* Hall of Fame */
+.vault-hof {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 12px;
+  margin-bottom: 14px;
+  font-size: 12px;
+}
+.vault-hof-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.vault-hof-peak {
+  font-weight: 700;
+  font-family: var(--mono);
+  color: #128257;
+  flex: 1;
+}
+.vault-hof-date { font-size: 11px; color: var(--text-muted); }
+/* Reset button disabled state */
+.vault-reset-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.vault-reset-btn:disabled:hover { border-color: var(--border); background: none; }
+/* Affordability preview in add form */
+.vault-afford-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 7px 12px;
+  background: var(--bg);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  gap: 8px;
+}
+/* Net worth tile in portfolio summary bar — no extra rules needed, flex handles it */
 /* ── END IQ VAULT ─────────────────────────────────────────────────────────── */
