@@ -1313,7 +1313,7 @@
     <section aria-label="Profile">
       <div id="profile-section">
 
-        <!-- Hero card: identity + investor type merged -->
+        <!-- Hero card: identity + investor type + XP all unified -->
         <div id="profile-hero">
           <div id="user-info-card">
             <div id="user-avatar"></div>
@@ -1334,21 +1334,20 @@
               <button type="button" onclick="openRiskQuiz()" id="profile-quiz-btn">Take Risk Quiz</button>
             </div>
           </div>
-        </div>
-
-        <!-- XP Learning Progress -->
-        <div id="xp-progress-section">
-          <div id="xp-progress-header">
-            <span id="xp-tier-badge">Beginner</span>
-            <span id="xp-progress-label">0 / 50 XP to Explorer</span>
-          </div>
-          <div id="xp-progress-track">
-            <div id="xp-progress-bar"></div>
-          </div>
-          <div id="xp-progress-legend">
-            <span class="xp-legend-item">+10 XP analyze stock</span>
-            <span class="xp-legend-item">+15 XP correct quiz</span>
-            <span class="xp-legend-item">+5 XP ask AI</span>
+          <!-- XP Learning Progress — inside hero -->
+          <div id="xp-progress-section">
+            <div id="xp-progress-header">
+              <span id="xp-tier-badge">Beginner</span>
+              <span id="xp-progress-label">0 / 50 XP to Explorer</span>
+            </div>
+            <div id="xp-progress-track">
+              <div id="xp-progress-bar"></div>
+            </div>
+            <div id="xp-progress-legend">
+              <span class="xp-legend-item">+10 XP analyze stock</span>
+              <span class="xp-legend-item">+15 XP correct quiz</span>
+              <span class="xp-legend-item">+5 XP ask AI</span>
+            </div>
           </div>
         </div>
 
@@ -1533,7 +1532,7 @@
 
         <!-- Activity stats -->
         <div id="profile-stats">
-          <h2>YOUR ACTIVITY</h2>
+          <div class="profile-section-header"><h2>YOUR ACTIVITY</h2></div>
           <div id="profile-stats-grid">
             <div class="profile-stat-tile" data-accent="blue">
               <div class="profile-stat-icon"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
