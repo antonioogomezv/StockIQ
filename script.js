@@ -8747,32 +8747,44 @@ function _saveVault() {
   if (!_vault.netWorthHistory) _vault.netWorthHistory = [];
   if (_vault.transactions.length > 150) _vault.transactions = _vault.transactions.slice(-150);
   if (_vault.netWorthHistory.length > 120) _vault.netWorthHistory = _vault.netWorthHistory.slice(-120);
+  // Keep localStorage in sync so network errors can't reset vault data
+  try { localStorage.setItem('iq-vault', JSON.stringify(_vault)); } catch(e) {}
   saveToFirestore({ vault: _vault });
 }
 
 function initVaultFromData(data) {
   if (data && data.vault) {
     _vault = data.vault;
-    // Ensure all fields exist on old vault documents
+    // Ensure all v2 fields exist on old vault documents
     if (!_vault.transactions) _vault.transactions = [];
     if (!_vault.netWorthHistory) _vault.netWorthHistory = [];
     if (!_vault.milestonesFired) _vault.milestonesFired = {};
     if (!_vault.peakNetWorth) _vault.peakNetWorth = _vault.balance || VAULT_START;
     if (!_vault.peakNetWorthDate) _vault.peakNetWorthDate = _vaultLabel();
     if (!_vault.bankruptCount) _vault.bankruptCount = 0;
+    // Mirror to localStorage so network errors can't reset the vault
+    try { localStorage.setItem('iq-vault', JSON.stringify(_vault)); } catch(e) {}
   } else {
-    _vault = {
-      balance: VAULT_START,
-      transactions: [],
-      netWorthHistory: [{ date: _vaultLabel(), value: VAULT_START, ts: Date.now() }],
-      peakNetWorth: VAULT_START,
-      peakNetWorthDate: _vaultLabel(),
-      milestonesFired: {},
-      bankruptCount: 0,
-      lastResetAt: null,
-      createdAt: Date.now()
-    };
-    _saveVault();
+    // Firestore failed (network error / timeout) — try localStorage first
+    var cached = null;
+    try { cached = JSON.parse(localStorage.getItem('iq-vault') || 'null'); } catch(e) {}
+    if (cached) {
+      _vault = cached; // real data preserved — don't write back to Firestore
+    } else {
+      // Truly new user with no local data — create and persist default vault
+      _vault = {
+        balance: VAULT_START,
+        transactions: [],
+        netWorthHistory: [{ date: _vaultLabel(), value: VAULT_START, ts: Date.now() }],
+        peakNetWorth: VAULT_START,
+        peakNetWorthDate: _vaultLabel(),
+        milestonesFired: {},
+        bankruptCount: 0,
+        lastResetAt: null,
+        createdAt: Date.now()
+      };
+      _saveVault();
+    }
   }
   _refreshVaultBalance();
   if (typeof renderVault === 'function') renderVault();
