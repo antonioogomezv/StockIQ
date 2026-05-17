@@ -1032,7 +1032,7 @@
       <div id="portfolio-tabs-bar"></div>
       <div id="paper-trading-nudge" style="display:none;margin:12px 0;"></div>
 
-      <!-- Summary bar — 4 key numbers, shown when portfolio has stocks -->
+      <!-- Summary bar — 3 key numbers, shown when portfolio has stocks -->
       <div id="port-summary-bar" style="display:none;">
         <div class="psb-item">
           <div class="psb-label">Invested</div>
@@ -1046,10 +1046,6 @@
           <div class="psb-label">Total Gain / Loss</div>
           <div class="psb-value" id="psb-gain">—</div>
           <div class="psb-pct" id="psb-gain-pct"></div>
-        </div>
-        <div class="psb-item psb-item-networth">
-          <div class="psb-label">Net Worth</div>
-          <div class="psb-value" id="psb-networth">—</div>
         </div>
       </div>
 
@@ -1149,9 +1145,9 @@
                 <div id="port-ticker-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,0.12);overflow:hidden;margin-top:4px;"></div>
               </div>
               <div class="add-form-row2">
-                <input type="number" id="port-shares" placeholder="Shares" aria-label="Number of shares" oninput="_updateAnalyzeVaultAffordability()">
+                <input type="number" id="port-shares" placeholder="Shares" aria-label="Number of shares">
                 <div style="position:relative;flex:1;">
-                  <input type="number" id="port-price" placeholder="Buy price $" style="width:100%;" aria-label="Buy price in dollars" oninput="_updateAnalyzeVaultAffordability()">
+                  <input type="number" id="port-price" placeholder="Buy price $" style="width:100%;" aria-label="Buy price in dollars">
                   <span id="port-price-loading" style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--text-muted);">...</span>
                   <span style="position:absolute;right:8px;bottom:-16px;font-size:10px;color:var(--text-muted);pointer-events:none;">USD</span>
                 </div>
@@ -1172,11 +1168,6 @@
                 </div>
               </div>
               <div id="thesis-challenge" style="display:none;"></div>
-              <div class="vault-in-form" id="vault-in-form" style="display:none;">
-                <span class="vault-in-form-label">IQ Vault balance</span>
-                <span class="vault-in-form-value" id="vault-balance-form">—</span>
-              </div>
-              <div id="vault-afford-preview" class="vault-afford-preview" style="display:none;"></div>
               <button type="button" class="port-add-btn" onclick="addToPortfolio()">Add to Portfolio</button>
             </div>
           </div>
@@ -1313,7 +1304,7 @@
     <section aria-label="Profile">
       <div id="profile-section">
 
-        <!-- Hero card: identity + investor type + XP all unified -->
+        <!-- Hero card: identity + investor type merged -->
         <div id="profile-hero">
           <div id="user-info-card">
             <div id="user-avatar"></div>
@@ -1334,27 +1325,28 @@
               <button type="button" onclick="openRiskQuiz()" id="profile-quiz-btn">Take Risk Quiz</button>
             </div>
           </div>
-          <!-- XP Learning Progress — inside hero -->
-          <div id="xp-progress-section">
-            <div id="xp-progress-header">
-              <span id="xp-tier-badge">Beginner</span>
-              <span id="xp-progress-label">0 / 50 XP to Explorer</span>
-            </div>
-            <div id="xp-progress-track">
-              <div id="xp-progress-bar"></div>
-            </div>
-            <div id="xp-progress-legend">
-              <span class="xp-legend-item">+10 XP analyze stock</span>
-              <span class="xp-legend-item">+15 XP correct quiz</span>
-              <span class="xp-legend-item">+5 XP ask AI</span>
-            </div>
+        </div>
+
+        <!-- XP Learning Progress -->
+        <div id="xp-progress-section">
+          <div id="xp-progress-header">
+            <span id="xp-tier-badge">Beginner</span>
+            <span id="xp-progress-label">0 / 50 XP to Explorer</span>
+          </div>
+          <div id="xp-progress-track">
+            <div id="xp-progress-bar"></div>
+          </div>
+          <div id="xp-progress-legend">
+            <span class="xp-legend-item">+10 XP analyze stock</span>
+            <span class="xp-legend-item">+15 XP correct quiz</span>
+            <span class="xp-legend-item">+5 XP ask AI</span>
           </div>
         </div>
 
         <!-- Edit form -->
         <div id="user-edit-form" style="display:none;">
           <div class="user-edit-field">
-            <span class="user-edit-label">Profile Picture</span>
+            <label>Profile Picture</label>
             <div id="avatar-picker"></div>
           </div>
           <div class="user-edit-field">
@@ -1373,32 +1365,6 @@
             <button type="button" id="user-save-btn" onclick="saveUserInfo()">Save</button>
             <button type="button" id="user-cancel-btn" onclick="toggleEditProfile()">Cancel</button>
           </div>
-        </div>
-
-        <!-- IQ Vault -->
-        <div id="vault-section" style="display:none;">
-          <div class="vault-header-row">
-            <h2>IQ VAULT</h2>
-            <span id="vault-bankrupt-badge" class="vault-bankrupt-badge" style="display:none;"></span>
-          </div>
-          <div class="vault-hero">
-            <div class="vault-hero-label">Net Worth</div>
-            <div id="vault-balance" class="vault-hero-balance">MX$50,000</div>
-            <div id="vault-cash-line" class="vault-cash-line"></div>
-            <div id="vault-change" class="vault-hero-change"></div>
-          </div>
-          <div id="vault-hof" class="vault-hof" style="display:none;"></div>
-          <div id="vault-chart-wrap" class="vault-chart-wrap" style="display:none;">
-            <canvas id="vault-chart" height="140"></canvas>
-          </div>
-          <div class="vault-txn-section">
-            <div class="vault-txn-header">Transaction History</div>
-            <div id="vault-transactions"></div>
-          </div>
-          <button id="vault-reset-btn" class="vault-reset-btn" onclick="resetVault()">
-            <span class="vault-reset-btn-main">Reset Vault</span>
-            <span class="vault-reset-warning">Bankrupt badge added · −100 XP</span>
-          </button>
         </div>
 
         <!-- Weekly Challenge -->
@@ -1437,45 +1403,45 @@
           <div id="admin-create-form" style="display:none;">
             <div class="admin-form-grid">
               <div class="admin-field">
-                <label for="admin-new-title">Title *</label>
-                <input id="admin-new-title" placeholder="e.g. Market Beater">
+                <label>Title *</label>
+                <input id="admin-new-title" placeholder="e.g. Market Beater" aria-label="Challenge title">
               </div>
               <div class="admin-field">
-                <label for="admin-new-tier">Tier *</label>
-                <select id="admin-new-tier">
+                <label id="lbl-admin-tier">Tier *</label>
+                <select id="admin-new-tier" aria-labelledby="lbl-admin-tier">
                   <option value="beginner">Beginner</option>
                   <option value="intermediate" selected>Intermediate</option>
                   <option value="advanced">Advanced</option>
                 </select>
               </div>
               <div class="admin-field admin-field-full">
-                <label for="admin-new-desc">Description *</label>
-                <textarea id="admin-new-desc" rows="2" placeholder="What's the challenge objective?"></textarea>
+                <label>Description *</label>
+                <textarea id="admin-new-desc" rows="2" placeholder="What's the challenge objective?" aria-label="Challenge description"></textarea>
               </div>
               <div class="admin-field" style="display:flex;gap:8px;align-items:flex-end;">
                 <div style="flex:1;">
-                  <label for="admin-new-balance">Starting Balance *</label>
-                  <input id="admin-new-balance" type="number" placeholder="10000">
+                  <label>Starting Balance *</label>
+                  <input id="admin-new-balance" type="number" placeholder="10000" aria-label="Starting balance amount">
                 </div>
                 <div>
-                  <label for="admin-new-balance-currency">Currency</label>
-                  <select id="admin-new-balance-currency">
+                  <label id="lbl-admin-currency">Currency</label>
+                  <select id="admin-new-balance-currency" aria-labelledby="lbl-admin-currency">
                     <option value="USD">USD $</option>
                     <option value="MXN">MXN $</option>
                   </select>
                 </div>
               </div>
               <div class="admin-field">
-                <label for="admin-new-start">Start Date *</label>
-                <input id="admin-new-start" type="date">
+                <label>Start Date *</label>
+                <input id="admin-new-start" type="date" aria-label="Challenge start date">
               </div>
               <div class="admin-field">
-                <label for="admin-new-end">End Date *</label>
-                <input id="admin-new-end" type="date">
+                <label>End Date *</label>
+                <input id="admin-new-end" type="date" aria-label="Challenge end date">
               </div>
               <div class="admin-field">
-                <label for="admin-new-prize-type">Prize Type</label>
-                <select id="admin-new-prize-type">
+                <label id="lbl-admin-prize-type">Prize Type</label>
+                <select id="admin-new-prize-type" aria-labelledby="lbl-admin-prize-type">
                   <option value="">No prize</option>
                   <option value="cash">Cash</option>
                   <option value="gift_card">Gift Card</option>
@@ -1483,16 +1449,16 @@
                 </select>
               </div>
               <div class="admin-field">
-                <label for="admin-new-prize-value">Prize Value ($)</label>
-                <input id="admin-new-prize-value" type="number" placeholder="50">
+                <label>Prize Value ($)</label>
+                <input id="admin-new-prize-value" type="number" placeholder="50" aria-label="Prize value in dollars">
               </div>
               <div class="admin-field admin-field-full">
-                <label for="admin-new-prize-desc">Prize Description</label>
-                <input id="admin-new-prize-desc" placeholder="e.g. $50 Amazon Gift Card">
+                <label>Prize Description</label>
+                <input id="admin-new-prize-desc" placeholder="e.g. $50 Amazon Gift Card" aria-label="Prize description">
               </div>
               <div class="admin-field">
-                <label for="admin-new-challenge-type">Challenge Type</label>
-                <select id="admin-new-challenge-type">
+                <label id="lbl-admin-challenge-type">Challenge Type</label>
+                <select id="admin-new-challenge-type" aria-labelledby="lbl-admin-challenge-type">
                   <option value="Best Return">Best Return</option>
                   <option value="Tech Stocks Only">Tech Stocks Only</option>
                   <option value="No Loss Challenge">No Loss Challenge</option>
@@ -1502,8 +1468,8 @@
                 </select>
               </div>
               <div class="admin-field">
-                <label for="admin-new-win-factor">Win Condition</label>
-                <select id="admin-new-win-factor">
+                <label id="lbl-admin-win-factor">Win Condition</label>
+                <select id="admin-new-win-factor" aria-labelledby="lbl-admin-win-factor">
                   <option value="return_pct">Best Return %</option>
                   <option value="score_weighted">Score-Weighted Return</option>
                   <option value="lowest_drawdown">Lowest Drawdown</option>
@@ -1516,8 +1482,8 @@
                 <label for="admin-new-is-premium" style="text-transform:none;font-size:13px;font-weight:600;color:var(--text);">Premium only</label>
               </div>
               <div class="admin-field admin-field-full">
-                <label for="admin-new-rules">Rules / Restrictions</label>
-                <textarea id="admin-new-rules" rows="2" placeholder="e.g. Only tech stocks allowed, max 5 positions"></textarea>
+                <label>Rules / Restrictions</label>
+                <textarea id="admin-new-rules" rows="2" placeholder="e.g. Only tech stocks allowed, max 5 positions" aria-label="Challenge rules"></textarea>
               </div>
             </div>
             <div class="admin-form-actions">
@@ -1532,7 +1498,7 @@
 
         <!-- Activity stats -->
         <div id="profile-stats">
-          <div class="profile-section-header"><h2>YOUR ACTIVITY</h2></div>
+          <h2>YOUR ACTIVITY</h2>
           <div id="profile-stats-grid">
             <div class="profile-stat-tile" data-accent="blue">
               <div class="profile-stat-icon"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
@@ -1568,18 +1534,6 @@
 
         <!-- Ready to invest? Broker recommendations -->
         <div id="profile-broker-section"></div>
-
-        <!-- Vault reset confirm modal -->
-        <div id="vault-reset-confirm" class="vault-confirm-overlay" style="display:none;">
-          <div class="vault-confirm-box">
-            <div class="vault-confirm-title">Reset your IQ Vault?</div>
-            <div class="vault-confirm-desc">Your balance returns to <strong>MX$50,000</strong>. You'll earn a permanent <strong>Bankrupt</strong> badge on your profile and lose <strong>100 XP</strong>. Your trade history is kept.</div>
-            <div class="vault-confirm-actions">
-              <button class="vault-confirm-go" onclick="confirmVaultReset()">Reset anyway</button>
-              <button class="vault-confirm-cancel" onclick="document.getElementById('vault-reset-confirm').style.display='none'">Cancel</button>
-            </div>
-          </div>
-        </div>
 
         <!-- Account actions -->
         <div id="profile-actions">
