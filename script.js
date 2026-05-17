@@ -6808,7 +6808,7 @@ function confirmSell(ticker, totalShares) {
 
   all[id].stocks = portfolio;
   savePortfolios(all);
-  vaultCredit(sh * sp * _vaultRate(), ticker, sh, sp);
+  vaultCredit(sh * sp * _vaultRate(), ticker, sh, sp, realizedGain);
   renderPortfolio();
   renderClosedPositions();
 }
@@ -8784,15 +8784,17 @@ function vaultDebit(amountMXN, ticker, shares, priceUSD) {
   if (txnEl) _renderVaultTransactions();
 }
 
-function vaultCredit(amountMXN, ticker, shares, priceUSD) {
+function vaultCredit(amountMXN, ticker, shares, priceUSD, realizedGain) {
   if (!_vault) return;
   _vault.balance += amountMXN;
-  _vault.transactions.push({
+  var txn = {
     type: 'sell', ticker: ticker, shares: shares, priceUSD: priceUSD,
     amountMXN: Math.round(amountMXN),
     date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
     ts: Date.now()
-  });
+  };
+  if (typeof realizedGain === 'number') txn.realizedGainUSD = parseFloat(realizedGain.toFixed(2));
+  _vault.transactions.push(txn);
   _vaultWriteHistory();
   _saveVault();
   var balEl = document.getElementById('vault-balance');
@@ -8907,10 +8909,17 @@ function _renderVaultTransactions() {
       var isBuy = t.type === 'buy';
       var color = isBuy ? '#dc2626' : '#128257';
       var sign = isBuy ? '−' : '+';
+      var gainHtml = '';
+      if (!isBuy && typeof t.realizedGainUSD === 'number') {
+        var gainMXN = Math.round(t.realizedGainUSD * _vaultRate());
+        var gc = gainMXN >= 0 ? '#128257' : '#dc2626';
+        var gs = gainMXN >= 0 ? '+' : '';
+        gainHtml = ' \xb7 <span style="color:' + gc + ';">' + gs + _fmtVault(gainMXN) + ' gain</span>';
+      }
       return '<div class="vault-txn-row">' +
         '<div class="vault-txn-left">' +
           '<span class="vault-txn-ticker">' + escHtml(t.ticker) + '</span>' +
-          '<span class="vault-txn-detail">' + (isBuy ? 'Bought' : 'Sold') + ' ' + t.shares + ' share' + (t.shares !== 1 ? 's' : '') + ' \xb7 ' + escHtml(t.date) + '</span>' +
+          '<span class="vault-txn-detail">' + (isBuy ? 'Bought' : 'Sold') + ' ' + t.shares + ' share' + (t.shares !== 1 ? 's' : '') + ' \xb7 ' + escHtml(t.date) + gainHtml + '</span>' +
         '</div>' +
         '<span class="vault-txn-amount" style="color:' + color + ';">' + sign + _fmtVault(t.amountMXN) + '</span>' +
       '</div>';
