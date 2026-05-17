@@ -5217,6 +5217,199 @@ footer {
   .claim-field-row { grid-template-columns: 1fr 1fr; }
 }
 
+/* ── IQ Vault ── */
+#vault-section { margin-top: 4px; }
+
+.vault-loading {
+  text-align: center;
+  padding: 24px 0;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.vault-setup-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px 20px;
+}
+.vault-setup-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.vault-setup-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 18px;
+  line-height: 1.5;
+}
+.vault-setup-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.vault-setup-btn {
+  padding: 14px 8px;
+  border-radius: 12px;
+  border: 2px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.vault-setup-btn:hover { border-color: #128257; background: rgba(18,130,87,0.08); }
+
+/* Vault onboarding card */
+.vault-ob-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 18px;
+}
+.vault-ob-btn {
+  padding: 14px 8px;
+  border-radius: 12px;
+  border: 2px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.vault-ob-btn.active { border-color: #128257; background: rgba(18,130,87,0.12); color: #128257; }
+.vault-ob-btn:hover { border-color: #128257; }
+#vault-ob-confirm {
+  margin-top: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #128257;
+  text-align: center;
+}
+
+/* Vault card */
+.vault-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.vault-header {
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.vault-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.vault-balance {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.02em;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.vault-change {
+  font-size: 13px;
+  font-weight: 500;
+}
+.vault-bankrupt-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: rgba(220,38,38,0.12);
+  color: #dc2626;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+#vault-chart-wrap {
+  padding: 16px 16px 0;
+}
+#vault-chart { width: 100% !important; }
+
+/* Transactions */
+.vault-txns-empty {
+  padding: 20px;
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+}
+.vault-txns-title {
+  padding: 16px 20px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.vault-txn-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  border-top: 1px solid var(--border);
+}
+.vault-txn-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.vault-txn-ticker {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+.vault-txn-detail {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.vault-txn-amount {
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Reset */
+.vault-reset-wrap {
+  padding: 16px 20px 20px;
+  border-top: 1px solid var(--border);
+}
+.vault-reset-btn {
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(220,38,38,0.3);
+  background: rgba(220,38,38,0.06);
+  color: #dc2626;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  margin-bottom: 6px;
+}
+.vault-reset-btn:hover:not(:disabled) { background: rgba(220,38,38,0.12); }
+.vault-reset-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.vault-reset-note {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.4;
+}
+
 #profile-actions {
   display: flex;
   flex-direction: column;

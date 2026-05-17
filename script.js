@@ -3225,7 +3225,7 @@ function _finishQuizUI() {
 }
 
 let _obStep = 0;
-const _obTotal = 3;
+const _obTotal = 4;
 
 function obSetCurrency(code) {
   _currency = code;
@@ -3268,6 +3268,11 @@ function finishOnboarding() {
   _obStep = 0;
   localStorage.setItem('tour-done', '1');
   document.getElementById("onboarding-overlay").style.display = "none";
+  // Create vault if user picked a balance during onboarding
+  if (window._obVaultChoice && !_vault) {
+    _vaultSetup(window._obVaultChoice);
+    window._obVaultChoice = null;
+  }
   showTab('analyze');
   if (!localStorage.getItem('screener-auto-done')) {
     var prof = JSON.parse(localStorage.getItem('userProfile') || 'null');
@@ -6326,6 +6331,7 @@ function _doAddToPortfolio() {
   document.getElementById('port-date').value = '';
   clearThesisSelection();
   addXP(5); // +5 XP for adding to portfolio
+  vaultDebit(shares * buyPrice * _vaultRate(), ticker, shares, buyPrice);
   if (!localStorage.getItem('first-portfolio-done')) {
     localStorage.setItem('first-portfolio-done', '1');
     dismissFirstPortfolioBanner();
@@ -6802,6 +6808,7 @@ function confirmSell(ticker, totalShares) {
 
   all[id].stocks = portfolio;
   savePortfolios(all);
+  vaultCredit(sh * sp * _vaultRate(), ticker, sh, sp);
   renderPortfolio();
   renderClosedPositions();
 }
@@ -8689,6 +8696,257 @@ function renderProfile() {
   renderBadges(analyzed, watchlist.length, portCount, streak);
   renderChallengeSection();
   renderBrokerSection();
+  renderVault();
+}
+
+// ── IQ Vault ──────────────────────────────────────────────────────────────
+
+var _vault = null;
+var _vaultLoaded = false;
+
+function _vaultRate() {
+  return (typeof _fxRate !== 'undefined' && _fxRate > 1) ? _fxRate : 17.5;
+}
+
+function _fmtVault(n) {
+  return 'MX$' + Math.round(n).toLocaleString('en-US');
+}
+
+function initVaultFromData(data) {
+  _vaultLoaded = true;
+  if (data && data.vault && typeof data.vault.balance === 'number') {
+    _vault = data.vault;
+    if (!_vault.transactions) _vault.transactions = [];
+    if (!_vault.balanceHistory) _vault.balanceHistory = [];
+    if (typeof _vault.bankruptCount !== 'number') _vault.bankruptCount = 0;
+    if (!_vault.startingBalance) _vault.startingBalance = _vault.balance;
+  } else {
+    _vault = null;
+  }
+}
+
+function _saveVault() {
+  if (!_vault) return;
+  if (_vault.transactions.length > 150) _vault.transactions = _vault.transactions.slice(-150);
+  if (_vault.balanceHistory.length > 120) _vault.balanceHistory = _vault.balanceHistory.slice(-120);
+  saveToFirestore({ vault: _vault });
+}
+
+function _vaultWriteHistory() {
+  if (!_vault) return;
+  var today = new Date().toISOString().slice(0, 10);
+  var hist = _vault.balanceHistory;
+  if (hist.length === 0 || hist[hist.length - 1].date !== today) {
+    hist.push({ date: today, balance: Math.round(_vault.balance) });
+  } else {
+    hist[hist.length - 1].balance = Math.round(_vault.balance);
+  }
+}
+
+function _vaultSetup(startingBalance) {
+  _vault = {
+    balance: startingBalance,
+    startingBalance: startingBalance,
+    createdAt: Date.now(),
+    transactions: [],
+    balanceHistory: [{ date: new Date().toISOString().slice(0, 10), balance: startingBalance }],
+    bankruptCount: 0,
+    lastResetAt: null
+  };
+  _saveVault();
+  renderVault();
+}
+
+function obPickVaultBalance(amount) {
+  document.querySelectorAll('.vault-ob-btn').forEach(function(b) {
+    b.classList.toggle('active', parseInt(b.dataset.amount) === amount);
+  });
+  window._obVaultChoice = amount;
+  var conf = document.getElementById('vault-ob-confirm');
+  if (conf) { conf.textContent = _fmtVault(amount) + ' selected'; conf.style.display = 'block'; }
+}
+
+function vaultDebit(amountMXN, ticker, shares, priceUSD) {
+  if (!_vault) return;
+  _vault.balance = Math.max(0, _vault.balance - amountMXN);
+  _vault.transactions.push({
+    type: 'buy', ticker: ticker, shares: shares, priceUSD: priceUSD,
+    amountMXN: Math.round(amountMXN),
+    date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    ts: Date.now()
+  });
+  _vaultWriteHistory();
+  _saveVault();
+  // Refresh vault balance display if profile tab is visible
+  var balEl = document.getElementById('vault-balance');
+  if (balEl) balEl.textContent = _fmtVault(_vault.balance);
+  var txnEl = document.getElementById('vault-transactions');
+  if (txnEl) _renderVaultTransactions();
+}
+
+function vaultCredit(amountMXN, ticker, shares, priceUSD) {
+  if (!_vault) return;
+  _vault.balance += amountMXN;
+  _vault.transactions.push({
+    type: 'sell', ticker: ticker, shares: shares, priceUSD: priceUSD,
+    amountMXN: Math.round(amountMXN),
+    date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    ts: Date.now()
+  });
+  _vaultWriteHistory();
+  _saveVault();
+  var balEl = document.getElementById('vault-balance');
+  if (balEl) balEl.textContent = _fmtVault(_vault.balance);
+  var txnEl = document.getElementById('vault-transactions');
+  if (txnEl) _renderVaultTransactions();
+}
+
+function renderVault() {
+  var section = document.getElementById('vault-section');
+  if (!section) return;
+  section.style.display = 'block';
+
+  if (!_vaultLoaded) {
+    section.innerHTML = '<div class="vault-loading">Loading Vault…</div>';
+    return;
+  }
+
+  if (!_vault) {
+    section.innerHTML =
+      '<div class="vault-setup-card">' +
+        '<div class="vault-setup-title">Set up your IQ Vault</div>' +
+        '<div class="vault-setup-desc">Pick a starting balance. It goes down when you buy stocks and comes back when you sell.</div>' +
+        '<div class="vault-setup-grid">' +
+          [10000, 50000, 100000, 500000].map(function(n) {
+            return '<button class="vault-setup-btn" onclick="_vaultSetup(' + n + ')">' + _fmtVault(n) + '</button>';
+          }).join('') +
+        '</div>' +
+      '</div>';
+    return;
+  }
+
+  var diff = _vault.balance - _vault.startingBalance;
+  var pct = (_vault.startingBalance > 0) ? ((diff / _vault.startingBalance) * 100).toFixed(1) : '0.0';
+  var changeColor = diff >= 0 ? '#128257' : '#dc2626';
+  var sign = diff >= 0 ? '+' : '';
+  var bc = _vault.bankruptCount || 0;
+  var badgeHtml = bc > 0
+    ? '<span class="vault-bankrupt-badge">Bankrupt' + (bc > 1 ? ' \xd7' + bc : '') + '</span>'
+    : '';
+
+  section.innerHTML =
+    '<div class="vault-card">' +
+      '<div class="vault-header">' +
+        '<div class="vault-label">IQ Vault ' + badgeHtml + '</div>' +
+        '<div class="vault-balance" id="vault-balance">' + _fmtVault(_vault.balance) + '</div>' +
+        '<div class="vault-change" style="color:' + changeColor + ';">' +
+          sign + _fmtVault(Math.abs(diff)) + ' (' + sign + pct + '%) vs ' + _fmtVault(_vault.startingBalance) + ' start' +
+        '</div>' +
+      '</div>' +
+      '<div id="vault-chart-wrap" style="display:none;"><canvas id="vault-chart" height="80"></canvas></div>' +
+      '<div id="vault-transactions"></div>' +
+      '<div class="vault-reset-wrap">' +
+        '<button class="vault-reset-btn" id="vault-reset-btn" onclick="_vaultResetConfirm()">Reset Vault</button>' +
+        '<div class="vault-reset-note">Resets balance · costs 100 XP · adds Bankrupt badge · 30-day cooldown</div>' +
+      '</div>' +
+    '</div>';
+
+  _renderVaultChart();
+  _renderVaultTransactions();
+  _vaultUpdateResetBtn();
+}
+
+function _vaultUpdateResetBtn() {
+  var btn = document.getElementById('vault-reset-btn');
+  if (!btn || !_vault || !_vault.lastResetAt) return;
+  var ms = 30 * 24 * 60 * 60 * 1000;
+  var elapsed = Date.now() - _vault.lastResetAt;
+  if (elapsed < ms) {
+    var days = Math.ceil((ms - elapsed) / (24 * 60 * 60 * 1000));
+    btn.disabled = true;
+    btn.textContent = 'Reset — available in ' + days + ' day' + (days !== 1 ? 's' : '');
+  }
+}
+
+function _renderVaultChart() {
+  var wrap = document.getElementById('vault-chart-wrap');
+  var canvas = document.getElementById('vault-chart');
+  if (!wrap || !canvas || !_vault) return;
+  var hist = _vault.balanceHistory || [];
+  if (hist.length < 2) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  if (window._vaultChart) { window._vaultChart.destroy(); window._vaultChart = null; }
+  var values = hist.map(function(h) { return h.balance; });
+  var isUp = values[values.length - 1] >= values[0];
+  var lc = isUp ? '#128257' : '#dc2626';
+  window._vaultChart = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: hist.map(function(h) { return h.date; }),
+      datasets: [{ data: values, borderColor: lc, backgroundColor: lc + '18', borderWidth: 2, pointRadius: 0, fill: true, tension: 0.3 }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(ctx) { return _fmtVault(ctx.raw); } } } },
+      scales: { x: { display: false }, y: { display: false } }
+    }
+  });
+}
+
+function _renderVaultTransactions() {
+  var el = document.getElementById('vault-transactions');
+  if (!el || !_vault) return;
+  var txns = (_vault.transactions || []).slice().reverse().slice(0, 20);
+  if (txns.length === 0) {
+    el.innerHTML = '<div class="vault-txns-empty">No transactions yet. Buy or sell stocks to see activity here.</div>';
+    return;
+  }
+  el.innerHTML =
+    '<div class="vault-txns-title">Recent Activity</div>' +
+    txns.map(function(t) {
+      var isBuy = t.type === 'buy';
+      var color = isBuy ? '#dc2626' : '#128257';
+      var sign = isBuy ? '−' : '+';
+      return '<div class="vault-txn-row">' +
+        '<div class="vault-txn-left">' +
+          '<span class="vault-txn-ticker">' + escHtml(t.ticker) + '</span>' +
+          '<span class="vault-txn-detail">' + (isBuy ? 'Bought' : 'Sold') + ' ' + t.shares + ' share' + (t.shares !== 1 ? 's' : '') + ' \xb7 ' + escHtml(t.date) + '</span>' +
+        '</div>' +
+        '<span class="vault-txn-amount" style="color:' + color + ';">' + sign + _fmtVault(t.amountMXN) + '</span>' +
+      '</div>';
+    }).join('');
+}
+
+function _vaultResetConfirm() {
+  if (!_vault) return;
+  if (_vault.lastResetAt && Date.now() - _vault.lastResetAt < 30 * 24 * 60 * 60 * 1000) return;
+  var overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:4000;display:flex;align-items:center;justify-content:center;padding:24px;';
+  var card = document.createElement('div');
+  card.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px 24px;max-width:320px;width:100%;text-align:center;';
+  card.innerHTML =
+    '<div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px;">Reset IQ Vault?</div>' +
+    '<div style="font-size:13px;color:var(--text-muted);margin-bottom:24px;">Your balance resets to ' + _fmtVault(_vault.startingBalance) + '. ' +
+    'You lose 100 XP and get a Bankrupt badge. 30-day cooldown starts now.</div>' +
+    '<div style="display:flex;gap:10px;">' +
+      '<button id="_vr-cancel" style="flex:1;background:var(--surface2);color:var(--text);border:1px solid var(--border);">Cancel</button>' +
+      '<button id="_vr-ok" style="flex:1;background:#dc2626;color:#fff;border:none;">Reset</button>' +
+    '</div>';
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+  document.getElementById('_vr-cancel').onclick = function() { overlay.remove(); };
+  document.getElementById('_vr-ok').onclick = function() {
+    overlay.remove();
+    _vault.balance = _vault.startingBalance;
+    _vault.transactions = [];
+    _vault.balanceHistory = [{ date: new Date().toISOString().slice(0, 10), balance: _vault.startingBalance }];
+    _vault.bankruptCount = (_vault.bankruptCount || 0) + 1;
+    _vault.lastResetAt = Date.now();
+    addXP(-100);
+    _saveVault();
+    renderVault();
+    showToast('Vault reset. −90 XP \xb7 Bankrupt badge added.');
+  };
 }
 
 let stockChatHistory = [];
@@ -9014,6 +9272,8 @@ function checkAnthropicRateLimit() {
 
 function logout() {
   unsubscribeFirestore();
+  _vault = null;
+  _vaultLoaded = false;
   auth.signOut().then(function() {
     userProfile = null;
     location.reload();
@@ -9154,6 +9414,9 @@ auth.onAuthStateChanged(function(user) {
       if (_appInitialized) refreshXPProgress();
     }
 
+    // Vault — always call so _vaultLoaded is set even when there's no vault yet
+    initVaultFromData(data);
+
     if (!_appInitialized) {
       // First visit or no cached data — full init now
       _initApp();
@@ -9163,6 +9426,9 @@ auth.onAuthStateChanged(function(user) {
       if (typeof renderPortfolio === 'function') renderPortfolio();
       updateRiskBadge();
       updateStreak();
+      // Re-render vault in case profile tab is open
+      var vaultEl = document.getElementById('vault-section');
+      if (vaultEl && vaultEl.offsetParent !== null) renderVault();
     }
   });
 })();
