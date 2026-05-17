@@ -846,6 +846,7 @@
           <div id="search-input-wrap">
             <input type="text" id="stock-input" placeholder="e.g. Apple, Tesla or AAPL"
               aria-label="Search for a stock by name or ticker"
+              autocomplete="off"
               oninput="onSearchInput()"
               onkeypress="if(event.key==='Enter'){ hideDropdown(); searchStock(); }"
               onblur="hideDropdown()"
