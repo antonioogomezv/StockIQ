@@ -8891,6 +8891,7 @@ function initVaultFromData(data) {
   } else {
     _vault = null;
   }
+  renderVaultMiniCard();
 }
 
 function _saveVault() {
@@ -9526,6 +9527,7 @@ function _initApp() {
   refreshXPProgress();
   hideAppLoading();
   renderVault();
+  renderVaultMiniCard();
   // If Firestore never responds in 5s, fall back to localStorage cache
   setTimeout(function() {
     if (!_vaultLoaded) {
@@ -9533,6 +9535,7 @@ function _initApp() {
       var cached = localStorage.getItem('vault');
       _vault = cached ? JSON.parse(cached) : null;
       renderVault();
+      renderVaultMiniCard();
     }
   }, 5000);
 }
