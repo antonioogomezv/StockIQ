@@ -480,6 +480,7 @@ function showTab(name) {
     var rs = document.getElementById('results-section');
     if (sp && rs && rs.style.display === 'none') sp.style.display = 'block';
     renderAnalyzeChallengeBanner();
+    renderVaultMiniCard();
   }
 }
 
@@ -8856,7 +8857,6 @@ function renderProfile() {
   document.getElementById('stat-portfolio').textContent = portCount;
   document.getElementById('stat-streak').textContent    = streak;
   renderBadges(analyzed, watchlist.length, portCount, streak);
-  renderVaultMiniCard();
   renderChallengeSection();
   renderBrokerSection();
   renderVault();
