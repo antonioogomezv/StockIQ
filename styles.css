@@ -7474,10 +7474,10 @@ header p {
 }
 .score-badge-num {
   font-size: 52px;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 0.95;
-  letter-spacing: -2px;
-  font-family: var(--display);
+  letter-spacing: -0.5px;
+  font-family: var(--mono);
 }
 .score-badge-label {
   font-size: 13px;
