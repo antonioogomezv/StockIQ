@@ -37,7 +37,7 @@
   --shadow-md:    0 4px 20px rgba(0,0,0,0.06);
   --shadow-lg:    0 8px 32px rgba(0,0,0,0.08);
   --shadow-xl:    0 16px 48px rgba(0,0,0,0.10);
-  --mono:    'Cormorant Garamond', serif;
+  --mono:    'Playfair Display', Georgia, serif;
   --sans:    'Inter', system-ui, sans-serif;
   --display: 'Syne', system-ui, sans-serif;
   /* ── Spacing scale (8pt base) ── */
@@ -701,9 +701,9 @@ button:active { transform: translateY(0); box-shadow: none; }
 .score-badge:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
 .score-badge-num {
   font-size: 40px;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1;
-  letter-spacing: -2px;
+  letter-spacing: -0.5px;
   font-family: var(--mono);
 }
 
@@ -9694,10 +9694,10 @@ h2 {
 .port-stat-num {
   font-family: var(--mono);
   font-size: 26px;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--text);
   line-height: 1;
-  letter-spacing: -0.5px;
+  letter-spacing: 0;
 }
 
 .port-stat-sub {
