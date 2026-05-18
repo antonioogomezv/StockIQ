@@ -1321,43 +1321,31 @@
     <section aria-label="Profile">
       <div id="profile-section">
 
-        <!-- Hero card: identity + investor type merged -->
+        <!-- Hero card: avatar + name + XP bar -->
         <div id="profile-hero">
-          <div id="user-info-card">
-            <div id="user-avatar"></div>
-            <div id="user-info-display">
-              <div id="user-name-display">Set your name</div>
-              <div id="user-username-display">@username</div>
-              <div id="user-email-display">email@example.com</div>
-            </div>
-            <button type="button" id="user-edit-btn" onclick="toggleEditProfile()">Edit</button>
-          </div>
-          <div id="profile-card">
-            <div id="profile-card-left">
-              <div id="profile-icon-display"></div>
-            </div>
-            <div id="profile-card-right">
-              <div id="profile-type-display">No profile set</div>
-              <div id="profile-desc-display">Complete the quiz to personalize your experience.</div>
-              <button type="button" onclick="openRiskQuiz()" id="profile-quiz-btn">Take Risk Quiz</button>
+          <div id="profile-hero-left">
+            <div id="profile-avatar-ring">
+              <div id="user-avatar"></div>
+              <span id="xp-tier-badge">Beginner</span>
             </div>
           </div>
-        </div>
-
-        <!-- XP Learning Progress -->
-        <div id="xp-progress-section">
-          <div id="xp-progress-header">
-            <span id="xp-tier-badge">Beginner</span>
-            <span id="xp-progress-label">0 / 50 XP to Explorer</span>
+          <div id="profile-hero-right">
+            <div id="user-name-display">Set your name</div>
+            <div id="profile-hero-tags">
+              <span id="profile-type-display">No profile set</span>
+              <span class="profile-hero-sep">/</span>
+              <span id="user-username-display">@username</span>
+            </div>
+            <div id="xp-progress-section">
+              <div id="xp-progress-header">
+                <span>XP PROGRESSION</span>
+                <span id="xp-progress-label">0 / 50 XP</span>
+              </div>
+              <div id="xp-progress-track"><div id="xp-progress-bar"></div></div>
+            </div>
           </div>
-          <div id="xp-progress-track">
-            <div id="xp-progress-bar"></div>
-          </div>
-          <div id="xp-progress-legend">
-            <span class="xp-legend-item">+10 XP analyze stock</span>
-            <span class="xp-legend-item">+15 XP correct quiz</span>
-            <span class="xp-legend-item">+5 XP ask AI</span>
-          </div>
+          <button type="button" id="user-edit-btn" onclick="toggleEditProfile()">Edit</button>
+          <span id="user-email-display" style="display:none;"></span>
         </div>
 
         <!-- Edit form -->
@@ -1384,13 +1372,44 @@
           </div>
         </div>
 
-        <!-- Weekly Challenge -->
-        <div id="challenge-section">
-          <div class="challenge-section-header">
-            <h2>ACTIVE CHALLENGES</h2>
-            <span class="challenge-section-sub">Virtual cash · Score-weighted ranking · Real prizes</span>
+        <!-- Activity stats row -->
+        <div id="profile-stats">
+          <div id="profile-stats-grid">
+            <div class="profile-stat-tile" data-accent="blue">
+              <div class="profile-stat-num" id="stat-analyzed">0</div>
+              <div class="profile-stat-label">Stocks Analyzed</div>
+            </div>
+            <div class="profile-stat-tile" data-accent="orange">
+              <div class="profile-stat-num" id="stat-streak">0</div>
+              <div class="profile-stat-label">Day Streak</div>
+            </div>
+            <div class="profile-stat-tile" data-accent="green">
+              <div class="profile-stat-num" id="stat-watchlist">0</div>
+              <div class="profile-stat-label">Watchlist</div>
+            </div>
+            <div class="profile-stat-tile" data-accent="purple">
+              <div class="profile-stat-num" id="stat-portfolio">0</div>
+              <div class="profile-stat-label">Portfolio</div>
+            </div>
           </div>
-          <div id="challenge-header"></div>
+        </div>
+
+        <!-- Achievements + Challenges side by side -->
+        <div id="profile-two-col">
+          <div id="profile-badges">
+            <div class="badges-header">
+              <h2>ACHIEVEMENTS</h2>
+              <span id="badges-progress"></span>
+            </div>
+            <div id="badges-grid"></div>
+          </div>
+          <div id="challenge-section">
+            <div class="challenge-section-header">
+              <h2>ACTIVE CHALLENGES</h2>
+              <span class="challenge-section-sub">Virtual cash · Score-weighted ranking · Real prizes</span>
+            </div>
+            <div id="challenge-header"></div>
+          </div>
         </div>
 
         <!-- Leaderboard -->
@@ -1513,43 +1532,7 @@
           <div id="admin-challenge-list"></div>
         </div>
 
-        <!-- Activity stats -->
-        <div id="profile-stats">
-          <h2>YOUR ACTIVITY</h2>
-          <div id="profile-stats-grid">
-            <div class="profile-stat-tile" data-accent="blue">
-              <div class="profile-stat-icon"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
-              <div class="profile-stat-num" id="stat-analyzed">0</div>
-              <div class="profile-stat-label">Stocks analyzed</div>
-            </div>
-            <div class="profile-stat-tile" data-accent="orange">
-              <div class="profile-stat-icon"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
-              <div class="profile-stat-num" id="stat-streak">0</div>
-              <div class="profile-stat-label">Day streak</div>
-            </div>
-            <div class="profile-stat-tile" data-accent="green">
-              <div class="profile-stat-icon"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>
-              <div class="profile-stat-num" id="stat-watchlist">0</div>
-              <div class="profile-stat-label">In watchlist</div>
-            </div>
-            <div class="profile-stat-tile" data-accent="purple">
-              <div class="profile-stat-icon"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg></div>
-              <div class="profile-stat-num" id="stat-portfolio">0</div>
-              <div class="profile-stat-label">In portfolio</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Achievements -->
-        <div id="profile-badges">
-          <div class="badges-header">
-            <h2>ACHIEVEMENTS</h2>
-            <span id="badges-progress"></span>
-          </div>
-          <div id="badges-grid"></div>
-        </div>
-
-        <!-- Ready to invest? Broker recommendations -->
+        <!-- Broker recommendations -->
         <div id="profile-broker-section"></div>
 
         <!-- IQ Vault -->
