@@ -37,7 +37,7 @@
   --shadow-md:    0 4px 20px rgba(0,0,0,0.06);
   --shadow-lg:    0 8px 32px rgba(0,0,0,0.08);
   --shadow-xl:    0 16px 48px rgba(0,0,0,0.10);
-  --mono:    'Playfair Display', Georgia, serif;
+  --mono:    'DM Mono', 'Courier New', monospace;
   --sans:    'Inter', system-ui, sans-serif;
   --display: 'Syne', system-ui, sans-serif;
   /* ── Spacing scale (8pt base) ── */
@@ -7474,10 +7474,10 @@ header p {
 }
 .score-badge-num {
   font-size: 52px;
-  font-weight: 700;
+  font-weight: 800;
   line-height: 0.95;
-  letter-spacing: -0.5px;
-  font-family: var(--mono);
+  letter-spacing: -2px;
+  font-family: var(--display);
 }
 .score-badge-label {
   font-size: 13px;
