@@ -9807,6 +9807,7 @@ h2 {
    ─────────────────────────────────────────────────────────────────────── */
 .quick-ticker-chip,
 .search-history-chip,
+.search-history-clear,
 .wl-sort-btn,
 .hs-range-btn,
 .hs-view-btn,
@@ -9832,6 +9833,7 @@ h2 {
 /* Dark mode glow must NOT reach chips */
 [data-theme="dark"] .quick-ticker-chip,
 [data-theme="dark"] .search-history-chip,
+[data-theme="dark"] .search-history-clear,
 [data-theme="dark"] .wl-sort-btn,
 [data-theme="dark"] .hs-range-btn,
 [data-theme="dark"] .hs-view-btn,
@@ -9852,6 +9854,7 @@ h2 {
 /* Hover: lift/glow only where chips define their own hover — no inherited transform */
 [data-theme="dark"] .quick-ticker-chip:hover,
 [data-theme="dark"] .search-history-chip:hover,
+[data-theme="dark"] .search-history-clear:hover,
 [data-theme="dark"] .hs-range-btn:hover,
 [data-theme="dark"] .hs-view-btn:hover,
 [data-theme="dark"] .wl-sort-btn:hover,
@@ -9876,6 +9879,8 @@ h2 {
 .hs-view-btn:focus-visible,
 .wl-sort-btn:focus,
 .wl-sort-btn:focus-visible,
+.search-history-clear:focus,
+.search-history-clear:focus-visible,
 .trend-filter-btn:focus,
 .trend-filter-btn:focus-visible,
 .screener-query-chip:focus,
