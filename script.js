@@ -8194,6 +8194,32 @@ function renderLeaderboardEntries(entries, bodyId, myRankId) {
 }
 
 // ── Render challenge cards ─────────────────────────────────────────────────
+function renderVaultMiniCard() {
+  var el = document.getElementById('vault-mini-card');
+  if (!el) return;
+
+  if (!_vault || !_vaultLoaded) {
+    el.style.display = 'none';
+    return;
+  }
+
+  var diff = _vault.balance - _vault.startingBalance;
+  var pct  = _vault.startingBalance > 0 ? (diff / _vault.startingBalance * 100) : 0;
+  var sign = diff >= 0 ? '+' : '';
+  var color = diff >= 0 ? 'var(--win)' : 'var(--loss)';
+  var arrow = diff >= 0 ? '▲' : '▼';
+
+  el.style.display = 'block';
+  el.innerHTML =
+    '<div class="vault-mini-wrap">' +
+      '<div class="vault-mini-label">IQ VAULT</div>' +
+      '<div class="vault-mini-balance">' + _fmtVault(_vault.balance) + '</div>' +
+      '<div class="vault-mini-change" style="color:' + color + ';">' +
+        arrow + ' ' + sign + _fmtVault(Math.abs(diff)) + ' (' + sign + pct.toFixed(1) + '%) vs ' + _fmtVault(_vault.startingBalance) + ' start' +
+      '</div>' +
+    '</div>';
+}
+
 function renderChallengeSection() {
   var container = document.getElementById('challenge-header');
   if (!container) return;
@@ -8830,6 +8856,7 @@ function renderProfile() {
   document.getElementById('stat-portfolio').textContent = portCount;
   document.getElementById('stat-streak').textContent    = streak;
   renderBadges(analyzed, watchlist.length, portCount, streak);
+  renderVaultMiniCard();
   renderChallengeSection();
   renderBrokerSection();
   renderVault();
@@ -8998,6 +9025,7 @@ function renderVault() {
   _renderVaultChart();
   _renderVaultTransactions();
   _vaultUpdateResetBtn();
+  renderVaultMiniCard();
 }
 
 function _vaultUpdateResetBtn() {
