@@ -37,7 +37,7 @@
   --shadow-md:    0 4px 20px rgba(0,0,0,0.06);
   --shadow-lg:    0 8px 32px rgba(0,0,0,0.08);
   --shadow-xl:    0 16px 48px rgba(0,0,0,0.10);
-  --mono:    'DM Mono', 'Courier New', monospace;
+  --mono:    'JetBrains Mono', 'Courier New', monospace;
   --sans:    'Inter', system-ui, sans-serif;
   --display: 'Syne', system-ui, sans-serif;
   /* ── Spacing scale (8pt base) ── */
@@ -408,7 +408,7 @@ header p {
 }
 
 .market-price {
-  font-family: var(--display);
+  font-family: var(--mono);
   font-size: 15px;
   font-weight: 600;
   color: var(--text);
@@ -672,10 +672,10 @@ button:active { transform: translateY(0); box-shadow: none; }
 .stock-header-price {
   font-size: 38px;
   font-weight: 700;
-  letter-spacing: -2px;
+  letter-spacing: -1px;
   line-height: 1;
   color: var(--text);
-  font-family: var(--display);
+  font-family: var(--mono);
 }
 .price-change-pill {
   font-size: 13px;
@@ -7458,8 +7458,8 @@ header p {
 .stock-header-price {
   font-size: 36px;
   font-weight: 800;
-  letter-spacing: -1.5px;
-  font-family: var(--display);
+  letter-spacing: -1px;
+  font-family: var(--mono);
 }
 .stock-logo { border-radius: 10px; width: 48px; height: 48px; }
 
