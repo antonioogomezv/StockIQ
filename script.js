@@ -9645,13 +9645,18 @@ function _initApp() {
   }, 5000);
 }
 
-// If Firebase auth never fires within 5s, show retry
+// Hard 5s fallback — if Firebase auth hasn't resolved, unblock the UI
 let _authTimeout = setTimeout(function() {
-  let msgEl = document.getElementById('app-loading-msg');
-  let retryEl = document.getElementById('app-loading-retry');
-  if (msgEl) msgEl.textContent = 'Taking longer than expected…';
+  if (_appInitialized) return; // already running, do nothing
+  hideAppLoading();
+  // Show auth overlay so the user can log in rather than staring at a spinner
+  var authEl = document.getElementById('auth-overlay');
+  var quizEl = document.getElementById('quiz-overlay');
+  if (authEl) authEl.style.display = 'flex';
+  if (quizEl) quizEl.style.display = 'none';
+  var retryEl = document.getElementById('app-loading-retry');
   if (retryEl) retryEl.style.display = 'block';
-}, 10000);
+}, 5000);
 
 auth.onAuthStateChanged(function(user) {
   clearTimeout(_authTimeout);

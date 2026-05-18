@@ -1673,7 +1673,8 @@ button:active { transform: translateY(0); box-shadow: none; }
   font-family: var(--sans);
   font-weight: 600;
   color: var(--text-muted);
-  padding: 4px 12px;
+  padding: 10px 16px;
+  min-height: 44px;
   cursor: pointer;
   box-shadow: none;
   transition: all 0.15s;
@@ -3517,14 +3518,17 @@ details[open] .sector-summary { color: var(--text); }
   border: 1px solid var(--border);
   color: var(--text-muted);
   border-radius: 50%;
-  width: 13px;
-  height: 13px;
-  font-size: 8px;
+  min-width: 44px;
+  min-height: 44px;
+  font-size: 10px;
   font-weight: 700;
   cursor: pointer;
-  padding: 0;
+  padding: 15px;
   line-height: 1;
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   box-shadow: none;
   transition: border-color 0.15s, color 0.15s;
 }
@@ -8000,7 +8004,8 @@ h2 {
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.3px;
-  padding: 4px 11px;
+  padding: 10px 16px;
+  min-height: 44px;
   border-radius: 20px;
 }
 .trend-filter-btn.active { background: var(--accent-green); }
