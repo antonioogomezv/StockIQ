@@ -6433,6 +6433,10 @@ function renderPortfolio() {
     empty.style.display = 'flex'; list.innerHTML = ''; summary.style.display = 'none';
     var psBar = document.getElementById('port-summary-bar');
     if (psBar) psBar.style.display = 'none';
+    var portHeroRow = document.getElementById('port-hero-row');
+    if (portHeroRow) portHeroRow.style.display = 'none';
+    var portBottomRow = document.getElementById('port-bottom-row');
+    if (portBottomRow) portBottomRow.style.display = 'none';
     if (portfolioChartInstance) { portfolioChartInstance.destroy(); portfolioChartInstance = null; }
     let chartSection = document.getElementById('portfolio-chart-section');
     if (chartSection) chartSection.style.display = 'none';
@@ -6452,6 +6456,10 @@ function renderPortfolio() {
   }
   empty.style.display = 'none';
   summary.style.display = 'block';
+  var portHeroRow = document.getElementById('port-hero-row');
+  if (portHeroRow) portHeroRow.style.display = 'grid';
+  var portBottomRow = document.getElementById('port-bottom-row');
+  if (portBottomRow) portBottomRow.style.display = 'grid';
   let totalValue = 0, totalCost = 0, totalDayChange = 0;
   let scores = [], stockData = [], failedTickers = [];
   // Pre-compute lot totals so we can use them in the price callback
@@ -6488,19 +6496,17 @@ function renderPortfolio() {
     let gainColor = totalGain >= 0 ? 'var(--win)' : 'var(--loss)';
     let dayColor = totalDayChange >= 0 ? 'var(--win)' : 'var(--loss)';
 
-    // Summary bar
+    // Summary bar (kept for backwards compat) + populate hero card IDs
     var psBar = document.getElementById('port-summary-bar');
-    if (psBar) {
-      psBar.style.display = 'flex';
-      var psInvested = document.getElementById('psb-invested');
-      var psMktval  = document.getElementById('psb-mktval');
-      var psGain    = document.getElementById('psb-gain');
-      var psGainPct = document.getElementById('psb-gain-pct');
-      if (psInvested) psInvested.textContent = fmt$(totalCost);
-      if (psMktval)   psMktval.textContent   = fmt$(totalValue);
-      if (psGain)   { psGain.textContent = fmtSigned$(totalGain); psGain.style.color = gainColor; }
-      if (psGainPct){ psGainPct.textContent = (totalGainPct >= 0 ? '+' : '') + totalGainPct.toFixed(2) + '%'; psGainPct.style.color = gainColor; }
-    }
+    if (psBar) psBar.style.display = 'flex';
+    var psInvested = document.getElementById('psb-invested');
+    var psMktval  = document.getElementById('psb-mktval');
+    var psGain    = document.getElementById('psb-gain');
+    var psGainPct = document.getElementById('psb-gain-pct');
+    if (psInvested) psInvested.textContent = fmt$(totalCost);
+    if (psMktval)   psMktval.textContent   = fmt$(totalValue);
+    if (psGain)   { psGain.textContent = fmtSigned$(totalGain); psGain.style.color = gainColor; }
+    if (psGainPct){ psGainPct.textContent = (totalGainPct >= 0 ? '+' : '') + totalGainPct.toFixed(2) + '%'; psGainPct.style.color = gainColor; }
 
     document.getElementById('port-total-value').textContent = fmt$(totalValue);
     let costEl = document.getElementById('port-total-cost');

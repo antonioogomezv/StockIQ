@@ -9640,3 +9640,127 @@ h2 {
 /* Gain/loss numbers: if JS renders inline color var(--win) or #dc2626,
    we can't override those from CSS. The token changes handle class-based
    coloring. JS inline colors are a separate follow-up. */
+
+/* ════════════════════════════════════════════════════
+   Portfolio Dashboard Redesign — hero row + chart panels
+   ════════════════════════════════════════════════════ */
+
+/* Hero stat row */
+#port-hero-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.port-stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: var(--shadow-sm);
+  transition: background 0.18s, border-color 0.18s, box-shadow 0.18s, transform 0.18s;
+}
+
+.port-stat-card:hover {
+  border-color: var(--border-hover);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+[data-theme="dark"] .port-stat-card {
+  background: #141420;
+  border-color: rgba(255,255,255,0.06);
+}
+
+[data-theme="dark"] .port-stat-card:hover {
+  border-color: rgba(255,255,255,0.12);
+}
+
+.port-stat-card.metric-up .port-stat-num  { color: var(--win); }
+.port-stat-card.metric-down .port-stat-num { color: var(--loss); }
+
+.port-stat-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.port-stat-num {
+  font-family: var(--mono);
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1;
+  letter-spacing: -0.5px;
+}
+
+.port-stat-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: var(--mono);
+}
+
+/* Bottom chart panels row */
+#port-bottom-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.port-chart-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+  min-width: 0;
+}
+
+[data-theme="dark"] .port-chart-panel {
+  background: #141420;
+  border-color: rgba(255,255,255,0.06);
+}
+
+.port-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.port-panel-title {
+  font-family: var(--display);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.port-panel-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* Responsive */
+@media (max-width: 700px) {
+  #port-hero-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  #port-bottom-row {
+    grid-template-columns: 1fr;
+  }
+}

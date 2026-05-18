@@ -1047,103 +1047,104 @@
       <div id="portfolio-tabs-bar"></div>
       <div id="paper-trading-nudge" style="display:none;margin:12px 0;"></div>
 
-      <!-- Summary bar — 3 key numbers, shown when portfolio has stocks -->
-      <div id="port-summary-bar" style="display:none;">
-        <div class="psb-item">
-          <div class="psb-label">Invested</div>
-          <div class="psb-value" id="psb-invested">—</div>
+      <!-- Portfolio hero stat cards — shown when portfolio has data -->
+      <div id="port-hero-row" style="display:none;">
+        <div class="port-stat-card">
+          <div class="port-stat-label">Market Value</div>
+          <div class="port-stat-num" id="port-total-value">—</div>
+          <div class="port-stat-sub" id="psb-mktval"></div>
         </div>
-        <div class="psb-item">
-          <div class="psb-label">Market Value</div>
-          <div class="psb-value" id="psb-mktval">—</div>
+        <div class="port-stat-card" id="port-today-card">
+          <div class="port-stat-label">Day Change</div>
+          <div class="port-stat-num" id="port-today-change">—</div>
+          <div class="port-stat-sub" id="port-today-pct"></div>
         </div>
-        <div class="psb-item">
-          <div class="psb-label">Total Gain / Loss</div>
-          <div class="psb-value" id="psb-gain">—</div>
-          <div class="psb-pct" id="psb-gain-pct"></div>
+        <div class="port-stat-card" id="port-gain-card">
+          <div class="port-stat-label">Total Return</div>
+          <div class="port-stat-num" id="psb-gain">—</div>
+          <div class="port-stat-sub" id="psb-gain-pct"></div>
+        </div>
+        <div class="port-stat-card">
+          <div class="port-stat-label">Avg Score</div>
+          <div class="port-stat-num" id="port-avg-score">—</div>
         </div>
       </div>
 
-      <!-- Holdings Summary — hidden until portfolio has data -->
-      <div id="portfolio-summary" style="display:none;">
-        <div class="holdings-summary-card">
-          <div class="holdings-summary-header">
-            <span class="holdings-summary-title">Holdings Summary</span>
-            <button class="holdings-explain-btn" onclick="explainPortfolio()">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13" style="margin-right:5px;vertical-align:-2px;"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>AI Analysis
-            </button>
+      <!-- Hidden compatibility elements — JS writes to these IDs -->
+      <div style="display:none;" aria-hidden="true">
+        <span id="psb-invested"></span>
+        <span id="port-total-gain"></span>
+        <span id="port-total-pct"></span>
+        <span id="port-realized-gain"></span>
+        <span id="port-total-cost"></span>
+        <span id="holdings-bar-fill"></span>
+        <span id="port-realized-card"></span>
+      </div>
+
+      <!-- Portfolio chart panels — shown when portfolio has data -->
+      <div id="port-bottom-row" style="display:none;">
+
+        <!-- Performance over time -->
+        <div class="port-chart-panel" id="port-perf-panel">
+          <div class="port-panel-header">
+            <h2 class="port-panel-title">Performance</h2>
+            <div class="port-panel-controls">
+              <div class="holdings-chart-ranges">
+                <button class="hs-range-btn" data-range="1M" onclick="setHsRange('1M')">1M</button>
+                <button class="hs-range-btn" data-range="3M" onclick="setHsRange('3M')">3M</button>
+                <button class="hs-range-btn active" data-range="6M" onclick="setHsRange('6M')">6M</button>
+                <button class="hs-range-btn" data-range="1Y" onclick="setHsRange('1Y')">1Y</button>
+                <button class="hs-range-btn" data-range="all" onclick="setHsRange('all')">All</button>
+              </div>
+              <div class="holdings-chart-view-toggle">
+                <button class="hs-view-btn active" data-view="value" onclick="switchHoldingsView('value')">Value</button>
+                <button class="hs-view-btn" data-view="return" onclick="switchHoldingsView('return')">vs S&amp;P 500</button>
+              </div>
+            </div>
           </div>
-          <div class="holdings-summary-body">
-            <!-- Left: key metrics -->
-            <div class="holdings-left">
-              <div class="holdings-big-value" id="port-total-value">$0</div>
-              <div class="holdings-market-bar-row">
-                <span class="holdings-dot">●</span>
-                <span>Market Value</span>
-                <div class="holdings-bar-track"><div class="holdings-bar-fill" id="holdings-bar-fill"></div></div>
-              </div>
-              <div class="holdings-divider"></div>
-              <div class="holdings-metric-row">
-                <span>Day Change <button class="hs-tip-btn" onclick="showHsTip(event,'day')">ⓘ</button></span>
-                <span id="port-today-change" style="font-weight:600;">—</span>
-              </div>
-              <div class="holdings-metric-row">
-                <span id="port-today-pct" style="font-size:11px;color:var(--text-muted);padding-left:16px;"></span>
-              </div>
-              <div class="holdings-metric-row" style="margin-top:6px;">
-                <span>Unrealized G/L <button class="hs-tip-btn" onclick="showHsTip(event,'unrealized')">ⓘ</button></span>
-                <span id="port-total-gain" style="font-weight:600;">—</span>
-              </div>
-              <div class="holdings-metric-row">
-                <span id="port-total-pct" style="font-size:11px;color:var(--text-muted);padding-left:16px;"></span>
-              </div>
-              <div class="holdings-metric-row" style="margin-top:6px;">
-                <span>Realized G/L <button class="hs-tip-btn" onclick="showHsTip(event,'realized')">ⓘ</button></span>
-                <span id="port-realized-gain" style="font-weight:600;">—</span>
-              </div>
-              <div class="holdings-metric-row" style="margin-top:6px;">
-                <span>Avg Score <button class="hs-tip-btn" onclick="showHsTip(event,'score')">ⓘ</button></span>
-                <span id="port-avg-score" style="font-weight:600;">—</span>
-              </div>
-              <div id="port-total-cost" style="font-size:11px;color:var(--text-muted);margin-top:8px;"></div>
+          <div id="holdings-value-view">
+            <canvas id="holdingsChart"></canvas>
+            <div id="holdings-chart-empty" style="display:none;text-align:center;padding:32px 16px;font-size:13px;color:var(--text-muted);">
+              <strong>Chart builds over time</strong><br>Each day you open the app adds a data point. Come back tomorrow to see your first trend.
             </div>
-            <!-- Right: performance chart -->
-            <div class="holdings-right">
-              <div class="holdings-chart-header-row">
-                <div class="holdings-chart-ranges">
-                  <button class="hs-range-btn" data-range="1M" onclick="setHsRange('1M')">1M</button>
-                  <button class="hs-range-btn" data-range="3M" onclick="setHsRange('3M')">3M</button>
-                  <button class="hs-range-btn active" data-range="6M" onclick="setHsRange('6M')">6M</button>
-                  <button class="hs-range-btn" data-range="1Y" onclick="setHsRange('1Y')">1Y</button>
-                  <button class="hs-range-btn" data-range="all" onclick="setHsRange('all')">All</button>
-                </div>
-                <div class="holdings-chart-view-toggle">
-                  <button class="hs-view-btn active" data-view="value" onclick="switchHoldingsView('value')">Value</button>
-                  <button class="hs-view-btn" data-view="return" onclick="switchHoldingsView('return')">vs S&P 500</button>
-                </div>
-              </div>
-              <div id="holdings-value-view">
-                <canvas id="holdingsChart"></canvas>
-                <div id="holdings-chart-empty" style="display:none;text-align:center;padding:32px 16px;font-size:13px;color:var(--text-muted);">
-                  <strong>Chart builds over time</strong><br>Each day you open the app adds a data point. Come back tomorrow to see your first trend.
-                </div>
-              </div>
-              <div id="holdings-return-view" style="display:none;">
-                <canvas id="portfolioLineChart"></canvas>
-                <div id="portfolio-line-empty" style="display:none;text-align:center;padding:24px 0;font-size:13px;color:var(--text-muted);">
-                  Visit the app on multiple days to see your portfolio value over time.
-                </div>
-                <div id="portfolio-line-legend" style="display:flex;gap:16px;justify-content:center;margin-top:10px;font-size:11px;color:var(--text-muted);">
-                  <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:16px;height:2px;background:#128257;border-radius:2px;"></span>Portfolio</span>
-                  <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:16px;height:2px;background:rgba(148,163,184,0.7);border-radius:2px;border-top:1px dashed rgba(148,163,184,0.7);"></span>S&amp;P 500</span>
-                </div>
-              </div>
+          </div>
+          <div id="holdings-return-view" style="display:none;">
+            <canvas id="portfolioLineChart"></canvas>
+            <div id="portfolio-line-empty" style="display:none;text-align:center;padding:24px 0;font-size:13px;color:var(--text-muted);">
+              Visit the app on multiple days to see your portfolio value over time.
             </div>
+            <div id="portfolio-line-legend" style="display:flex;gap:16px;justify-content:center;margin-top:10px;font-size:11px;color:var(--text-muted);">
+              <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:16px;height:2px;background:#128257;border-radius:2px;"></span>Portfolio</span>
+              <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:16px;height:2px;background:rgba(148,163,184,0.7);border-radius:2px;border-top:1px dashed rgba(148,163,184,0.7);"></span>S&amp;P 500</span>
+            </div>
+          </div>
+          <div id="hs-tooltip-popup" style="display:none;"></div>
+          <div id="port-benchmark" style="display:none;"></div>
+          <button class="holdings-explain-btn" onclick="explainPortfolio()" style="margin-top:12px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13" style="margin-right:5px;vertical-align:-2px;"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>AI Analysis
+          </button>
+        </div>
+
+        <!-- Allocation chart -->
+        <div class="port-chart-panel" id="portfolio-chart-section">
+          <div class="port-panel-header">
+            <h2 class="port-panel-title">Allocation</h2>
+            <div id="portfolio-chart-toggle">
+              <button class="port-chart-btn active" data-view="pie" onclick="switchPortfolioChart('pie')">Allocation</button>
+              <button class="port-chart-btn" data-view="sectors" onclick="switchPortfolioChart('sectors')">Sectors</button>
+            </div>
+          </div>
+          <div id="portfolio-pie-view">
+            <div id="portfolio-chart-wrap">
+              <canvas id="portfolioChart"></canvas>
+              <div id="portfolio-chart-legend"></div>
+            </div>
+          </div>
+          <div id="portfolio-sectors-view" style="display:none;">
+            <div id="portfolio-sectors-bars"></div>
           </div>
         </div>
-        <!-- Tooltip popup -->
-        <div id="hs-tooltip-popup" style="display:none;"></div>
-        <div id="port-benchmark" style="display:none;"></div>
+
       </div>
 
       <!-- Two-column layout -->
@@ -1187,24 +1188,6 @@
             </div>
           </div>
 
-          <div id="portfolio-chart-section" style="display:none;">
-            <div id="portfolio-chart-header">
-              <h2>ALLOCATION</h2>
-              <div id="portfolio-chart-toggle">
-                <button class="port-chart-btn active" data-view="pie" onclick="switchPortfolioChart('pie')">Allocation</button>
-                <button class="port-chart-btn" data-view="sectors" onclick="switchPortfolioChart('sectors')">Sectors</button>
-              </div>
-            </div>
-            <div id="portfolio-pie-view">
-              <div id="portfolio-chart-wrap">
-                <canvas id="portfolioChart"></canvas>
-                <div id="portfolio-chart-legend"></div>
-              </div>
-            </div>
-            <div id="portfolio-sectors-view" style="display:none;">
-              <div id="portfolio-sectors-bars"></div>
-            </div>
-          </div>
 
         </div>
 
