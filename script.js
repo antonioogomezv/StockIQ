@@ -7755,7 +7755,18 @@ function sendPortfolioQuestion() {
   });
 }
 
+function _updateTotalDays() {
+  var lastDayKey = localStorage.getItem('last-day-counted') || '';
+  var today = new Date().toISOString().slice(0, 10);
+  if (lastDayKey !== today) {
+    var days = parseInt(localStorage.getItem('total-days') || '0') + 1;
+    localStorage.setItem('total-days', days);
+    localStorage.setItem('last-day-counted', today);
+  }
+}
+
 function updateStreak() {
+  _updateTotalDays();
   let today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
   let streakData = JSON.parse(localStorage.getItem('streak') || '{"count":0,"lastDate":""}');
   let yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
@@ -7827,9 +7838,12 @@ function getBadgeStats() {
   var totalDays   = parseInt(localStorage.getItem('total-days') || '0');
   var all         = getAllPortfolios();
   var challengesJoined = Object.values(all).filter(function(p) { return p.challengeId; }).length;
-  // Sector count from analyzed history
-  var sectorKeys  = Object.keys(localStorage).filter(function(k) { return k.startsWith('history_score_'); });
-  var sectors     = parseInt(localStorage.getItem('sectors-analyzed') || '0');
+  // Compute distinct sectors from analyzed tickers using the sector map
+  var analyzedTickers = Object.keys(localStorage)
+    .filter(function(k) { return k.startsWith('history_score_'); })
+    .map(function(k) { return k.replace('history_score_', ''); });
+  var analyzedSectors = new Set(analyzedTickers.map(function(t) { return _tickerSectorMap[t] || null; }).filter(Boolean));
+  var sectors = analyzedSectors.size;
   // Challenge wins from Firestore badges (loaded async separately)
   var challengeWins = parseInt(localStorage.getItem('challenge-wins') || '0');
 
@@ -7838,7 +7852,9 @@ function getBadgeStats() {
 
 function renderBadges(analyzed, watchlistLen, portfolioLen, streak) {
   var stats = getBadgeStats();
-  // Also load Firestore badges for challenge wins + special badges
+  // Render immediately with local data so badges never flash empty
+  _renderBadgeGrid(stats, []);
+  // Then refresh challenge-winner badges from Firestore
   var uid = currentUid();
   if (uid) {
     db.collection('users').doc(uid).get().then(function(doc) {
@@ -7847,9 +7863,7 @@ function renderBadges(analyzed, watchlistLen, portfolioLen, streak) {
       var wins = firestoreBadges.filter(function(b) { return b.id && b.id.startsWith('challenge-winner'); }).length;
       localStorage.setItem('challenge-wins', wins);
       _renderBadgeGrid(Object.assign(stats, { challengeWins: wins }), firestoreBadges);
-    }).catch(function() { _renderBadgeGrid(stats, []); });
-  } else {
-    _renderBadgeGrid(stats, []);
+    }).catch(function() {});
   }
 }
 
@@ -8861,6 +8875,7 @@ function renderProfile() {
   document.getElementById('stat-watchlist').textContent = watchlist.length;
   document.getElementById('stat-portfolio').textContent = portCount;
   document.getElementById('stat-streak').textContent    = streak;
+  refreshXPProgress();
   renderBadges(analyzed, watchlist.length, portCount, streak);
   renderChallengeSection();
   renderBrokerSection();
