@@ -37,7 +37,7 @@
   --shadow-md:    0 4px 20px rgba(0,0,0,0.06);
   --shadow-lg:    0 8px 32px rgba(0,0,0,0.08);
   --shadow-xl:    0 16px 48px rgba(0,0,0,0.10);
-  --mono:    'JetBrains Mono', monospace;
+  --mono:    'DM Mono', monospace;
   --sans:    'Inter', system-ui, sans-serif;
   --display: 'Syne', system-ui, sans-serif;
   /* ── Spacing scale (8pt base) ── */
