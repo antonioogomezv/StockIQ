@@ -6430,7 +6430,7 @@ function renderPortfolio() {
   let list = document.getElementById('portfolio-list');
   let summary = document.getElementById('portfolio-summary');
   if (portfolio.length === 0) {
-    empty.style.display = 'flex'; list.innerHTML = ''; summary.style.display = 'none';
+    empty.style.display = 'flex'; list.innerHTML = ''; if (summary) summary.style.display = 'none';
     var psBar = document.getElementById('port-summary-bar');
     if (psBar) psBar.style.display = 'none';
     var portHeroRow = document.getElementById('port-hero-row');
@@ -6455,7 +6455,7 @@ function renderPortfolio() {
     return;
   }
   empty.style.display = 'none';
-  summary.style.display = 'block';
+  if (summary) summary.style.display = 'block';
   var portHeroRow = document.getElementById('port-hero-row');
   if (portHeroRow) portHeroRow.style.display = 'grid';
   var portBottomRow = document.getElementById('port-bottom-row');
