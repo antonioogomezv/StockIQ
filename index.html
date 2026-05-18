@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es-MX">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -262,7 +262,7 @@
 <div id="dict-drawer">
   <div id="dict-header">
     <span>Financial Terms</span>
-    <button onclick="toggleDictionary()">✕</button>
+    <button onclick="toggleDictionary()" aria-label="Close">✕</button>
   </div>
   <div id="dict-search-wrap">
     <input type="text" id="dict-search" placeholder="Search terms…" oninput="filterDictTerms(this.value)" autocomplete="off" aria-label="Search financial terms">
@@ -948,7 +948,7 @@
         <div id="compare-section" style="display:none;">
           <div id="compare-header">
             <span id="compare-title">Compare</span>
-            <button id="compare-close" onclick="closeCompare()">✕</button>
+            <button id="compare-close" onclick="closeCompare()" aria-label="Close">✕</button>
           </div>
           <div id="compare-search-row" style="position:relative;">
             <input type="text" id="compare-input" placeholder="Search company or ticker…" aria-label="Search for a stock to compare"
@@ -962,8 +962,8 @@
           <div id="compare-result" style="display:none;"></div>
         </div>
         <div id="broker-hint" style="display:none;">
-          StockIQ is for education only — not financial advice. To actually buy stocks, you'll need a brokerage account (e.g. Robinhood, Fidelity, or Schwab).
-          <button onclick="localStorage.setItem('broker-hint-dismissed','1');document.getElementById('broker-hint').style.display='none';">✕</button>
+          StockIQ es solo para educación, no es asesoría financiera. Para invertir de verdad, necesitas una cuenta en una casa de bolsa (ej. GBM+, Kuspit o Actinver).
+          <button onclick="localStorage.setItem('broker-hint-dismissed','1');document.getElementById('broker-hint').style.display='none';" aria-label="Close">✕</button>
         </div>
 
         <!-- CHART — appears right after the stock hero -->
@@ -1536,7 +1536,8 @@
   </div>
 
   <footer>
-    <p>StockIQ — Market data for educational purposes only. Not financial advice.</p>
+    <p>StockIQ — Datos de mercado solo con fines educativos. No es asesoría financiera.</p>
+    <p><a href="/privacy" style="color:inherit;text-underline-offset:3px;">Aviso de Privacidad</a> · <a href="/terms" style="color:inherit;text-underline-offset:3px;">Términos de Uso</a></p>
   </footer>
 
   <!-- Floating Learn Terms button — mobile only -->
@@ -1582,7 +1583,7 @@
     <div id="stock-quiz-modal" onclick="event.stopPropagation()">
       <div id="stock-quiz-header">
         <span id="stock-quiz-label">QUICK QUIZ</span>
-        <button onclick="closeStockQuiz()">✕</button>
+        <button onclick="closeStockQuiz()" aria-label="Close">✕</button>
       </div>
       <div id="stock-quiz-body"></div>
     </div>
@@ -1608,7 +1609,7 @@
     <div id="fpb-text">Add <strong id="fpb-company">this stock</strong> to your paper portfolio to start tracking it</div>
     <button id="fpb-btn" onclick="quickAddToPortfolio()">Add to portfolio →</button>
   </div>
-  <button id="fpb-close" onclick="dismissFirstPortfolioBanner()" aria-label="Dismiss">✕</button>
+  <button id="fpb-close" onclick="dismissFirstPortfolioBanner()" aria-label="Close">✕</button>
 </div>
 
 </body>

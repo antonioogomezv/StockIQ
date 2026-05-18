@@ -6603,7 +6603,7 @@ function renderPortfolio() {
         demoNote = document.createElement('div');
         demoNote.id = 'port-demo-note';
         demoNote.className = 'port-demo-note';
-        demoNote.innerHTML = 'This is a simulated portfolio using fractional shares. Most modern brokers (Robinhood, Fidelity, Schwab) support fractional investing.';
+        demoNote.innerHTML = 'This is a simulated portfolio using fractional shares. Most brokers in Mexico (GBM+, Kuspit, Actinver) support this type of investing.';
         let listEl = document.getElementById('portfolio-list');
         if (listEl) listEl.parentNode.insertBefore(demoNote, listEl);
       }
@@ -8850,14 +8850,14 @@ function renderBrokerSection() {
   if (!el) return;
   var brokers = userProfile && (userProfile.type === 'Aggressive' || userProfile.goal === 'learn')
     ? [
-        { name: 'Robinhood', desc: 'Simple to start, commission-free, fractional shares', url: '#' },
-        { name: 'Webull', desc: 'More data and tools, still commission-free', url: '#' },
-        { name: 'Fidelity', desc: 'Trusted, full-featured, excellent research', url: '#' }
+        { name: 'GBM+', desc: 'Popular en México, fácil de usar, sin comisión por operación', url: '#' },
+        { name: 'Kuspit', desc: 'Ideal para principiantes, educación integrada y bajo monto mínimo', url: '#' },
+        { name: 'Actinver', desc: 'Casa de bolsa establecida, excelente para inversión a largo plazo', url: '#' }
       ]
     : [
-        { name: 'Fidelity', desc: 'Low fees, trusted institution, excellent long-term tools', url: '#' },
-        { name: 'Charles Schwab', desc: 'No minimums, strong research, great for beginners', url: '#' },
-        { name: 'Vanguard', desc: 'Built for long-term, low-cost index investing', url: '#' }
+        { name: 'GBM+', desc: 'La opción más popular en México para invertir en bolsa', url: '#' },
+        { name: 'Actinver', desc: 'Bajo costo, institución de confianza, buenas herramientas', url: '#' },
+        { name: 'Kuspit', desc: 'Sin monto mínimo elevado, pensado para nuevos inversionistas', url: '#' }
       ];
   el.innerHTML =
     '<div class="broker-section">' +
