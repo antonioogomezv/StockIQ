@@ -9093,25 +9093,41 @@ function _renderVaultTransactions() {
       var isBuy = t.type === 'buy';
       var color = isBuy ? 'var(--loss)' : 'var(--win)';
       var sign = isBuy ? '−' : '+';
-      var detailParts = [(isBuy ? 'Bought' : 'Sold') + ' ' + t.shares + ' share' + (t.shares !== 1 ? 's' : ''), escHtml(t.date)];
+      var sharesStr = (typeof t.shares === 'number' ? (t.shares % 1 === 0 ? t.shares : t.shares.toFixed(2)) : t.shares);
+      var detailParts = [(isBuy ? 'Bought' : 'Sold') + ' ' + sharesStr + ' share' + (t.shares !== 1 ? 's' : ''), escHtml(t.date)];
       var gainHtml = '';
       if (!isBuy) {
-        var gainMXN = typeof t.realizedGainMXN === 'number' ? t.realizedGainMXN : (typeof t.realizedGainUSD === 'number' ? Math.round(t.realizedGainUSD * _vaultRate()) : null);
-        if (typeof t.costBasisMXN === 'number') {
-          detailParts.push('cost ' + _fmtVault(t.costBasisMXN) + ' · received ' + _fmtVault(t.amountMXN));
+        var gainMXN = typeof t.realizedGainMXN === 'number' ? t.realizedGainMXN
+          : (typeof t.realizedGainUSD === 'number' ? Math.round(t.realizedGainUSD * _vaultRate()) : null);
+        // Backfill cost basis for old transactions that don't have it stored
+        var costMXN = typeof t.costBasisMXN === 'number' ? t.costBasisMXN
+          : (gainMXN !== null ? t.amountMXN - gainMXN : null);
+        if (costMXN !== null) {
+          detailParts.push('paid ' + _fmtVault(costMXN) + ' → got back ' + _fmtVault(t.amountMXN));
         }
         if (gainMXN !== null) {
           var gc = gainMXN >= 0 ? 'var(--win)' : 'var(--loss)';
-          var gs = gainMXN >= 0 ? '+' : '';
-          gainHtml = ' \xb7 <span style="color:' + gc + ';font-weight:600;">' + gs + _fmtVault(Math.abs(gainMXN)) + ' gain</span>';
+          var gs = gainMXN >= 0 ? '+' : '−';
+          gainHtml = ' \xb7 <span style="color:' + gc + ';font-weight:600;">' + gs + _fmtVault(Math.abs(gainMXN)) + '</span>';
         }
+      }
+      // For sells: right side shows net gain/loss (not full proceeds — that's in the detail)
+      var rightAmt, rightColor, rightSign;
+      if (!isBuy && gainMXN !== null) {
+        rightAmt = Math.abs(gainMXN);
+        rightColor = gainMXN >= 0 ? 'var(--win)' : 'var(--loss)';
+        rightSign = gainMXN >= 0 ? '+' : '−';
+      } else {
+        rightAmt = t.amountMXN;
+        rightColor = color;
+        rightSign = sign;
       }
       return '<div class="vault-txn-row">' +
         '<div class="vault-txn-left">' +
           '<span class="vault-txn-ticker">' + escHtml(t.ticker) + '</span>' +
           '<span class="vault-txn-detail">' + detailParts.join(' \xb7 ') + gainHtml + '</span>' +
         '</div>' +
-        '<span class="vault-txn-amount" style="color:' + color + ';">' + sign + _fmtVault(t.amountMXN) + '</span>' +
+        '<span class="vault-txn-amount" style="color:' + rightColor + ';">' + rightSign + _fmtVault(rightAmt) + '</span>' +
       '</div>';
     }).join('');
 }
