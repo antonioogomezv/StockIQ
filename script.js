@@ -653,6 +653,7 @@ function prefillCurrentPrice() {
     .then(function(q) {
       if (q && q.c > 0) {
         priceEl.value = q.c.toFixed(2);
+        if (q.pc > 0) localStorage.setItem('prevclose_' + ticker, q.pc.toFixed(4));
         if (btn) btn.textContent = 'Use today\'s price →';
       } else {
         if (btn) btn.textContent = 'Price unavailable';
@@ -6356,6 +6357,12 @@ function _doAddToPortfolio() {
 
   let lot = { shares, price: buyPrice, date: buyDate, thesis: thesis };
   if (reasoning) lot.reasoning = reasoning;
+  // Store USD purchase price and exchange rate so G/L % is FX-neutral
+  lot.purchasePriceUSD = buyPrice; // buyPrice is always in USD
+  lot.purchaseExchangeRate = (typeof _fxRate !== 'undefined' ? _fxRate : 1);
+  // Store previous close so Day Change is accurate for same-day buys
+  var savedPrevClose = parseFloat(localStorage.getItem('prevclose_' + ticker) || '0');
+  if (savedPrevClose > 0) lot.previousClose = savedPrevClose;
 
   let portfolio = migratePortfolio(all[id].stocks || []);
   let existing = portfolio.find(function(i) { return i.ticker === ticker; });
@@ -6468,7 +6475,16 @@ function renderPortfolio() {
     let totalShares = item.lots.reduce(function(sum, l) { return sum + l.shares; }, 0);
     let totalLotCost = item.lots.reduce(function(sum, l) { return sum + l.shares * l.price; }, 0);
     let avgPrice = totalShares > 0 ? totalLotCost / totalShares : 0;
-    return { totalShares: totalShares, totalLotCost: totalLotCost, avgPrice: avgPrice };
+    // Weighted average purchase price in USD for FX-neutral G/L %
+    let totalPurchaseCostUSD = item.lots.reduce(function(sum, l) { return sum + l.shares * (l.purchasePriceUSD || l.price); }, 0);
+    let avgPurchasePriceUSD = totalShares > 0 ? totalPurchaseCostUSD / totalShares : avgPrice;
+    // Weighted average previous close for Day Change (lots bought today may have a saved prevClose)
+    let prevCloseLotsWithData = item.lots.filter(function(l) { return l.previousClose > 0; });
+    let avgPreviousCloseSaved = prevCloseLotsWithData.length > 0
+      ? prevCloseLotsWithData.reduce(function(sum, l) { return sum + l.shares * l.previousClose; }, 0) /
+        prevCloseLotsWithData.reduce(function(sum, l) { return sum + l.shares; }, 0)
+      : 0;
+    return { totalShares: totalShares, totalLotCost: totalLotCost, avgPrice: avgPrice, avgPurchasePriceUSD: avgPurchasePriceUSD, avgPreviousCloseSaved: avgPreviousCloseSaved };
   });
   var portSymbols = portfolio.map(function(item) { return item.ticker; });
   getSharedPrices(portSymbols, 60000).then(function(priceMap) {
@@ -6478,10 +6494,15 @@ function renderPortfolio() {
       var currentPrice = q.price || lt.avgPrice;
       var value = currentPrice * lt.totalShares;
       var cost = lt.totalLotCost;
-      var gain = value - cost;
-      var gainPct = cost > 0 ? ((gain / cost) * 100) : 0;
-      // q.change is Finnhub's q.d (dollar change). Fall back to calculating from changePct if missing.
-      var dayChangePer = q.change || (q.changePct && currentPrice > 0 ? (q.changePct / 100) * (currentPrice / (1 + q.changePct / 100)) : 0);
+      // Bug 1 fix: G/L % is USD-pure (FX-neutral); G/L $ stays in USD so fmt$()/fmtSigned$() handle display currency
+      var avgPurchaseUSD = lt.avgPurchasePriceUSD || lt.avgPrice;
+      var gainPct = avgPurchaseUSD > 0 ? ((currentPrice - avgPurchaseUSD) / avgPurchaseUSD * 100) : 0;
+      var gain = (currentPrice - avgPurchaseUSD) * lt.totalShares;
+      // Bug 2 fix: Day Change uses Finnhub's prevClose (q.prevClose), falling back to lot-saved previousClose
+      var prevClose = (q.prevClose > 0 ? q.prevClose : lt.avgPreviousCloseSaved) || 0;
+      // Update saved prevClose in localStorage for next session
+      if (q.prevClose > 0) localStorage.setItem('prevclose_' + item.ticker, q.prevClose.toFixed(4));
+      var dayChangePer = prevClose > 0 ? (currentPrice - prevClose) : (q.change || 0);
       var dayChangeAmt = dayChangePer * lt.totalShares;
       totalValue += value; totalCost += cost; totalDayChange += dayChangeAmt;
       var histScore = JSON.parse(localStorage.getItem('history_score_' + item.ticker) || '[]');
