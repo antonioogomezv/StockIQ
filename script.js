@@ -8928,6 +8928,27 @@ function _vaultSetup(startingBalance) {
     bankruptCount: 0,
     lastResetAt: null
   };
+  // Debit cost of any stocks already in portfolio so the vault balance is correct from day one
+  var active = getActivePortfolio();
+  if (active && active.stocks && active.stocks.length > 0) {
+    var today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    (active.stocks || []).forEach(function(item) {
+      (item.lots || [{ shares: item.shares || 0, price: item.buyPrice || 0, date: item.buyDate || today }]).forEach(function(lot) {
+        var amtMXN = Math.round(lot.shares * lot.price * _vaultRate());
+        if (amtMXN <= 0) return;
+        _vault.balance = Math.max(0, _vault.balance - amtMXN);
+        _vault.transactions.push({
+          type: 'buy', ticker: item.ticker, shares: lot.shares, priceUSD: lot.price,
+          amountMXN: amtMXN,
+          date: lot.date || today,
+          ts: Date.now(),
+          fxRate: _vaultRate(),
+          retroactive: true
+        });
+      });
+    });
+    _vault.balanceHistory[0].balance = Math.round(_vault.balance);
+  }
   _saveVault();
   renderVault();
 }
