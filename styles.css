@@ -9799,3 +9799,91 @@ h2 {
   font-size: 13px;
   font-weight: 500;
 }
+
+/* ── Chip / pill / tag button resets ────────────────────────────────────────
+   The base button{} rule applies box-shadow and opacity-hover to everything.
+   Every chip, pill, and tag must explicitly opt out so no rectangular shadow
+   or glow bleeds through, in both light and dark mode.
+   ─────────────────────────────────────────────────────────────────────── */
+.quick-ticker-chip,
+.search-history-chip,
+.wl-sort-btn,
+.hs-range-btn,
+.hs-view-btn,
+.filter-chip,
+.trending-filter-btn,
+.trend-filter-btn,
+.screener-query-chip,
+.scenario-chip,
+.onboarding-chip,
+.ob-stock-chip,
+.score-signal-chip,
+.risk-profile-tag,
+[class*="-chip"],
+[class*="-pill"]:not(.theme-pill-track):not(.theme-pill-thumb):not(.theme-pill-sun):not(.theme-pill-moon),
+[class*="-tag"] {
+  box-shadow: none !important;
+  outline: none !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  transform: none;
+}
+
+/* Dark mode glow must NOT reach chips */
+[data-theme="dark"] .quick-ticker-chip,
+[data-theme="dark"] .search-history-chip,
+[data-theme="dark"] .wl-sort-btn,
+[data-theme="dark"] .hs-range-btn,
+[data-theme="dark"] .hs-view-btn,
+[data-theme="dark"] .filter-chip,
+[data-theme="dark"] .trending-filter-btn,
+[data-theme="dark"] .trend-filter-btn,
+[data-theme="dark"] .screener-query-chip,
+[data-theme="dark"] .scenario-chip,
+[data-theme="dark"] .onboarding-chip,
+[data-theme="dark"] .ob-stock-chip,
+[data-theme="dark"] .score-signal-chip,
+[data-theme="dark"] [class*="-chip"],
+[data-theme="dark"] [class*="-tag"] {
+  box-shadow: none !important;
+  background: var(--surface);
+}
+
+/* Hover: lift/glow only where chips define their own hover — no inherited transform */
+[data-theme="dark"] .quick-ticker-chip:hover,
+[data-theme="dark"] .search-history-chip:hover,
+[data-theme="dark"] .hs-range-btn:hover,
+[data-theme="dark"] .hs-view-btn:hover,
+[data-theme="dark"] .wl-sort-btn:hover,
+[data-theme="dark"] .trend-filter-btn:hover,
+[data-theme="dark"] .screener-query-chip:hover,
+[data-theme="dark"] .scenario-chip:hover,
+[data-theme="dark"] .onboarding-chip:hover,
+[data-theme="dark"] .ob-stock-chip:hover {
+  box-shadow: none !important;
+  opacity: 1;
+  transform: none;
+}
+
+/* Focus / focus-visible: no outline or shadow on chips */
+.quick-ticker-chip:focus,
+.quick-ticker-chip:focus-visible,
+.search-history-chip:focus,
+.search-history-chip:focus-visible,
+.hs-range-btn:focus,
+.hs-range-btn:focus-visible,
+.hs-view-btn:focus,
+.hs-view-btn:focus-visible,
+.wl-sort-btn:focus,
+.wl-sort-btn:focus-visible,
+.trend-filter-btn:focus,
+.trend-filter-btn:focus-visible,
+.screener-query-chip:focus,
+.screener-query-chip:focus-visible,
+[class*="-chip"]:focus,
+[class*="-chip"]:focus-visible,
+[class*="-tag"]:focus,
+[class*="-tag"]:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
