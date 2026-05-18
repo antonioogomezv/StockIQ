@@ -6859,7 +6859,8 @@ function confirmSell(ticker, totalShares) {
 
   all[id].stocks = portfolio;
   savePortfolios(all);
-  vaultCredit(sh * sp * _vaultRate(), ticker, sh, sp, realizedGain);
+  var costBasisMXN = Math.round(weightedCost * _vaultRate());
+  vaultCredit(sh * sp * _vaultRate(), ticker, sh, sp, realizedGain, costBasisMXN);
   renderPortfolio();
   renderClosedPositions();
 }
@@ -8947,7 +8948,8 @@ function vaultDebit(amountMXN, ticker, shares, priceUSD) {
     type: 'buy', ticker: ticker, shares: shares, priceUSD: priceUSD,
     amountMXN: Math.round(amountMXN),
     date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-    ts: Date.now()
+    ts: Date.now(),
+    fxRate: _vaultRate()
   });
   _vaultWriteHistory();
   _saveVault();
@@ -8958,15 +8960,21 @@ function vaultDebit(amountMXN, ticker, shares, priceUSD) {
   if (txnEl) _renderVaultTransactions();
 }
 
-function vaultCredit(amountMXN, ticker, shares, priceUSD, realizedGain) {
+function vaultCredit(amountMXN, ticker, shares, priceUSD, realizedGain, costBasisMXN) {
   if (!_vault) return;
   _vault.balance += amountMXN;
+  var proceedsMXN = Math.round(amountMXN);
   var txn = {
     type: 'sell', ticker: ticker, shares: shares, priceUSD: priceUSD,
-    amountMXN: Math.round(amountMXN),
+    amountMXN: proceedsMXN,
     date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-    ts: Date.now()
+    ts: Date.now(),
+    fxRate: _vaultRate()
   };
+  if (typeof costBasisMXN === 'number') {
+    txn.costBasisMXN = costBasisMXN;
+    txn.realizedGainMXN = proceedsMXN - costBasisMXN;
+  }
   if (typeof realizedGain === 'number') txn.realizedGainUSD = parseFloat(realizedGain.toFixed(2));
   _vault.transactions.push(txn);
   _vaultWriteHistory();
@@ -8975,6 +8983,7 @@ function vaultCredit(amountMXN, ticker, shares, priceUSD, realizedGain) {
   if (balEl) balEl.textContent = _fmtVault(_vault.balance);
   var txnEl = document.getElementById('vault-transactions');
   if (txnEl) _renderVaultTransactions();
+  renderVaultMiniCard();
 }
 
 function renderVault() {
@@ -9084,18 +9093,23 @@ function _renderVaultTransactions() {
       var isBuy = t.type === 'buy';
       var color = isBuy ? 'var(--loss)' : 'var(--win)';
       var sign = isBuy ? '−' : '+';
+      var detailParts = [(isBuy ? 'Bought' : 'Sold') + ' ' + t.shares + ' share' + (t.shares !== 1 ? 's' : ''), escHtml(t.date)];
       var gainHtml = '';
-      if (!isBuy && typeof t.realizedGainUSD === 'number') {
-        // Convert canonical USD value to MXN for _fmtVault (which handles display currency)
-        var gainMXN = t.realizedGainUSD * _vaultRate();
-        var gc = t.realizedGainUSD >= 0 ? 'var(--win)' : 'var(--loss)';
-        var gs = t.realizedGainUSD >= 0 ? '+' : '';
-        gainHtml = ' \xb7 <span style="color:' + gc + ';">' + gs + _fmtVault(gainMXN) + ' gain</span>';
+      if (!isBuy) {
+        var gainMXN = typeof t.realizedGainMXN === 'number' ? t.realizedGainMXN : (typeof t.realizedGainUSD === 'number' ? Math.round(t.realizedGainUSD * _vaultRate()) : null);
+        if (typeof t.costBasisMXN === 'number') {
+          detailParts.push('cost ' + _fmtVault(t.costBasisMXN) + ' · received ' + _fmtVault(t.amountMXN));
+        }
+        if (gainMXN !== null) {
+          var gc = gainMXN >= 0 ? 'var(--win)' : 'var(--loss)';
+          var gs = gainMXN >= 0 ? '+' : '';
+          gainHtml = ' \xb7 <span style="color:' + gc + ';font-weight:600;">' + gs + _fmtVault(Math.abs(gainMXN)) + ' gain</span>';
+        }
       }
       return '<div class="vault-txn-row">' +
         '<div class="vault-txn-left">' +
           '<span class="vault-txn-ticker">' + escHtml(t.ticker) + '</span>' +
-          '<span class="vault-txn-detail">' + (isBuy ? 'Bought' : 'Sold') + ' ' + t.shares + ' share' + (t.shares !== 1 ? 's' : '') + ' \xb7 ' + escHtml(t.date) + gainHtml + '</span>' +
+          '<span class="vault-txn-detail">' + detailParts.join(' \xb7 ') + gainHtml + '</span>' +
         '</div>' +
         '<span class="vault-txn-amount" style="color:' + color + ';">' + sign + _fmtVault(t.amountMXN) + '</span>' +
       '</div>';
