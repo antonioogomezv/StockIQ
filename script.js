@@ -8860,6 +8860,7 @@ function initVaultFromData(data) {
     if (!_vault.balanceHistory) _vault.balanceHistory = [];
     if (typeof _vault.bankruptCount !== 'number') _vault.bankruptCount = 0;
     if (!_vault.startingBalance) _vault.startingBalance = _vault.balance;
+    localStorage.setItem('vault', JSON.stringify(_vault));
   } else {
     _vault = null;
   }
@@ -8869,6 +8870,7 @@ function _saveVault() {
   if (!_vault) return;
   if (_vault.transactions.length > 150) _vault.transactions = _vault.transactions.slice(-150);
   if (_vault.balanceHistory.length > 120) _vault.balanceHistory = _vault.balanceHistory.slice(-120);
+  localStorage.setItem('vault', JSON.stringify(_vault));
   saveToFirestore({ vault: _vault });
 }
 
@@ -9424,6 +9426,7 @@ function logout() {
   unsubscribeFirestore();
   _vault = null;
   _vaultLoaded = false;
+  localStorage.removeItem('vault');
   auth.signOut().then(function() {
     userProfile = null;
     location.reload();
@@ -9495,11 +9498,12 @@ function _initApp() {
   refreshXPProgress();
   hideAppLoading();
   renderVault();
-  // If Firestore never responds in 5s, stop waiting and show the vault setup card
+  // If Firestore never responds in 5s, fall back to localStorage cache
   setTimeout(function() {
     if (!_vaultLoaded) {
       _vaultLoaded = true;
-      _vault = null;
+      var cached = localStorage.getItem('vault');
+      _vault = cached ? JSON.parse(cached) : null;
       renderVault();
     }
   }, 5000);
