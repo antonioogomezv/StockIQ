@@ -8251,13 +8251,13 @@ function renderVaultMiniCard() {
   var arrow = diff >= 0 ? '▲' : '▼';
 
   el.style.display = 'block';
+  var miniBalanceStr = (isAdmin() || v.isUnlimited) ? '∞' : _fmtVault(v.balance);
+  var miniChangeStr  = (isAdmin() || v.isUnlimited) ? 'Unlimited' : (arrow + ' ' + sign + _fmtVault(Math.abs(diff)) + ' (' + sign + pct.toFixed(1) + '%) vs ' + _fmtVault(v.startingBalance) + ' start');
   el.innerHTML =
     '<div class="vault-mini-wrap">' +
       '<div class="vault-mini-label">IQ VAULT</div>' +
-      '<div class="vault-mini-balance">' + _fmtVault(v.balance) + '</div>' +
-      '<div class="vault-mini-change" style="color:' + color + ';">' +
-        arrow + ' ' + sign + _fmtVault(Math.abs(diff)) + ' (' + sign + pct.toFixed(1) + '%) vs ' + _fmtVault(v.startingBalance) + ' start' +
-      '</div>' +
+      '<div class="vault-mini-balance">' + miniBalanceStr + '</div>' +
+      '<div class="vault-mini-change" style="color:' + color + ';">' + miniChangeStr + '</div>' +
     '</div>';
 }
 
@@ -8955,6 +8955,8 @@ function _vaultWriteHistory() {
 }
 
 function _vaultSetup(startingBalance) {
+  var adminUnlimited = isAdmin();
+  if (adminUnlimited) startingBalance = 999999999;
   _vault = {
     balance: startingBalance,
     startingBalance: startingBalance,
@@ -8964,6 +8966,7 @@ function _vaultSetup(startingBalance) {
     bankruptCount: 0,
     lastResetAt: null
   };
+  if (adminUnlimited) _vault.isUnlimited = true;
   // Debit cost of any stocks already in portfolio so the vault balance is correct from day one
   var active = getActivePortfolio();
   if (active && active.stocks && active.stocks.length > 0) {
@@ -9000,6 +9003,17 @@ function obPickVaultBalance(amount) {
 
 function vaultDebit(amountMXN, ticker, shares, priceUSD) {
   if (!_vault) return;
+  if (isAdmin() || _vault.isUnlimited) {
+    // Admin bypass: log the transaction but don't deduct balance
+    _vault.transactions.push({
+      type: 'buy', ticker: ticker, shares: shares, priceUSD: priceUSD,
+      amountMXN: Math.round(amountMXN),
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      ts: Date.now(), fxRate: _vaultRate()
+    });
+    _saveVault();
+    return;
+  }
   _vault.balance = Math.max(0, _vault.balance - amountMXN);
   _vault.transactions.push({
     type: 'buy', ticker: ticker, shares: shares, priceUSD: priceUSD,
@@ -9080,9 +9094,9 @@ function renderVault() {
     '<div class="vault-card">' +
       '<div class="vault-header">' +
         '<div class="vault-label">IQ Vault ' + badgeHtml + '</div>' +
-        '<div class="vault-balance" id="vault-balance">' + _fmtVault(_vault.balance) + '</div>' +
+        '<div class="vault-balance" id="vault-balance">' + (isAdmin() || _vault.isUnlimited ? '∞' : _fmtVault(_vault.balance)) + '</div>' +
         '<div class="vault-change" style="color:' + changeColor + ';">' +
-          sign + _fmtVault(Math.abs(diff)) + ' (' + sign + pct + '%) vs ' + _fmtVault(_vault.startingBalance) + ' start' +
+          (isAdmin() || _vault.isUnlimited ? 'Unlimited' : sign + _fmtVault(Math.abs(diff)) + ' (' + sign + pct + '%) vs ' + _fmtVault(_vault.startingBalance) + ' start') +
         '</div>' +
       '</div>' +
       '<div id="vault-chart-wrap" style="display:none;"><canvas id="vault-chart" height="80"></canvas></div>' +
