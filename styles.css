@@ -103,7 +103,7 @@
 /* ── Dark mode: glassmorphism cards ── */
 [data-theme="dark"] .card-surface,
 [data-theme="dark"] #trending-section,
-[data-theme="dark"] #search-section > *,
+[data-theme="dark"] #search-section > #screener-panel,
 [data-theme="dark"] #company-about,
 [data-theme="dark"] #fundamentals-card,
 [data-theme="dark"] #ai-explanation,
