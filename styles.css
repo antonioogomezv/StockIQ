@@ -4747,7 +4747,8 @@ footer {
   font-size: 12px;
   font-weight: 600;
   font-family: var(--mono);
-  padding: 2px 8px;
+  padding: 10px 12px;
+  min-height: 44px;
   border-radius: 5px;
   cursor: pointer;
   box-shadow: none;
@@ -7217,7 +7218,7 @@ footer {
   .score-item-header { flex-wrap: wrap; gap: 4px; }
   .score-item-name { font-size: 12px; }
   .score-item-value { font-size: 12px; }
-  .score-why-btn { font-size: 12px; padding: 2px 6px; }
+  .score-why-btn { font-size: 12px; padding: 10px 10px; min-height: 44px; }
   .score-item-num { font-size: 12px; }
   .score-why { font-size: 12px; padding: 10px 12px; }
 
@@ -7754,7 +7755,8 @@ header p {
 .score-why-btn {
   border-radius: 20px;
   font-size: 12px;
-  padding: 2px 9px;
+  padding: 10px 12px;
+  min-height: 44px;
   font-weight: 700;
   border-width: 1.5px;
   letter-spacing: 0.3px;
