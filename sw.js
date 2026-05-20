@@ -1,4 +1,4 @@
-const CACHE = "stockiq-1779297747252";
+const CACHE = "stockiq-1779300144181";
 const SHELL = ["/", "/index.html", "/styles.css", "/script.js", "/config.js",
                "https://cdn.jsdelivr.net/npm/chart.js",
                "https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap"];
